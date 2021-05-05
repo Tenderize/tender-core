@@ -1,0 +1,29 @@
+{
+  "name": "hardhat-project",
+  "devDependencies": {
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@types/mocha": "^8.2.2",
+    "@types/node": "^14.14.37",
+    "ethereum-waffle": "^3.3.0",
+    "ethers": "^5.1.0",
+    "hardhat": "^2.1.2",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.2.3"
+  },
+  "dependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-web3": "^2.0.0",
+    "@openzeppelin/contracts": "^4.0.0",
+    "@typechain/ethers-v5": "^6.0.5",
+    "@typechain/truffle-v5": "^4.0.1",
+    "@typechain/web3-v1": "^2.2.0",
+    "balancer-core": "https://github.com/balancer-labs/balancer-core",
+    "chai": "^4.3.4",
+    "configurable-rights-pool": "https://github.com/balancer-labs/configurable-rights-pool",
+    "hardhat-deploy": "^0.7.4",
+    "hardhat-deploy-ethers": "^0.3.0-beta.7",
+    "hardhat-typechain": "^0.3.5",
+    "ts-generator": "^0.1.1",
+    "typechain": "^4.0.3"
+  }
+}
