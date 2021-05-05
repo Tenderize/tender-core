@@ -94,8 +94,6 @@ contract Controller is Ownable {
     function gulp() public {
         // gulp steak balance of Tenderizer and stake it
         tenderizer.stake(address(0), (0));
-
-        _updateTotalPooledTokens();
     }
 
     function collectFees() public onlyOwner {

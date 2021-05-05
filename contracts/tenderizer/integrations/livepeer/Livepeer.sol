@@ -116,7 +116,12 @@ contract Livepeer is Tenderizer {
         // Let's just code this with everything we need and benchmark gas
 
         // Account for LPT rewards
-        livepeer.claimEarnings(MAX_ROUND);
+        try livepeer.claimEarnings(MAX_ROUND) {
+
+        } catch {
+            return; // NO-OP
+        }
+
         (uint256 stake, uint256 ethFees,,,,,) = livepeer.getDelegator(address(this));
         uint256 rewards = stake.sub(currentPrincipal);
 
