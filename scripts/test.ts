@@ -10,11 +10,15 @@ async function main () {
     const TenderToken: TenderToken = (await hre.ethers.getContractAt('TenderToken', deployments.contracts.TenderToken.address)) as TenderToken
     const Esp: ElasticSupplyPool = (await hre.ethers.getContractAt('ElasticSupplyPool', deployments.contracts.ElasticSupplyPool.address)) as ElasticSupplyPool
     const Controller: Controller = (await hre.ethers.getContractAt('Controller', deployments.contracts.Controller.address)) as Controller
-     
+    const Tenderizer: Tenderizer = (await hre.ethers.getContractAt('Tenderizer', deployments.contracts.Livepeer.address)) as Tenderizer
+
     // First run scripts/rewards.js in livepeer protocol repo to generate rewards
     // Then rebase
     // Values should increase by a little bit
+
     await Controller.rebase()
+    // await Controller.gulp()
+    console.log((await Tenderizer.currentPrincipal()).toString())
     console.log((await TenderToken.getTotalPooledTokens()).toString())
     console.log((await TenderToken.totalSupply()).toString())
     console.log(hre.ethers.utils.formatEther(await TenderToken.balanceOf(await Esp.bPool())))

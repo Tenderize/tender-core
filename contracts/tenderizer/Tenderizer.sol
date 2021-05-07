@@ -18,9 +18,9 @@ abstract contract Tenderizer is Ownable, ITenderizer {
     address public node; 
 
     // TODO: Make governance param
-    uint256 public protocolFee = 25**17; // 2.5%
+    uint256 public protocolFee = 25 * 10 **16; // 2.5%
     // TODO: Make constant
-    uint256 perc_divisor = 1**20;
+    uint256 perc_divisor = 1*10**18;
 
     uint256 public pendingFees; // pending protocol fees since last distribution
     uint256 public currentPrincipal; // Principal since last claiming earnings

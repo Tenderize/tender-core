@@ -12,6 +12,8 @@ import "../../Tenderizer.sol";
 import "./ILivepeer.sol";
 import "../../../IOneInch.sol";
 
+import "hardhat/console.sol";
+
 contract Livepeer is Tenderizer {
     using SafeMath for uint256;
 
@@ -41,10 +43,10 @@ contract Livepeer is Tenderizer {
         if (amount == 0) {
             amount = IERC20(steak).balanceOf(address(this));
         }
-        
+
         if (amount == 0) {
             return;
-            // TODO: revert ? 
+            // TODO: revert ?
         }
 
         // if no _node is specified, stake towards the default node
@@ -53,7 +55,7 @@ contract Livepeer is Tenderizer {
             node_ = node;
         }
 
-        currentPrincipal = currentPrincipal.add(_amount);
+        currentPrincipal = currentPrincipal.add(amount);
 
         // approve amount to Livepeer protocol
         steak.approve(address(livepeer), amount);
@@ -121,34 +123,33 @@ contract Livepeer is Tenderizer {
         // Let's just code this with everything we need and benchmark gas
 
         // Account for LPT rewards
-        try livepeer.claimEarnings(MAX_ROUND) {
+        address del = address(this);
+        uint256 stake = livepeer.pendingStake(del, MAX_ROUND);
+        uint256 ethFees = livepeer.pendingFees(del, MAX_ROUND);
 
-        } catch {
-            return; // NO-OP
-        }
-
-        (uint256 stake, uint256 ethFees,,,,,) = livepeer.getDelegator(address(this));
         uint256 rewards = stake.sub(currentPrincipal);
 
-        withdraw fees
+        console.log("stake after claiming earnings %s", stake);
+        console.log("current rewards %s", rewards);
+        // withdraw fees
         if (ethFees >= ethFees_threshold) {
             livepeer.withdrawFees();
+
+            // swap ETH fees for LPT
+            if (address(oneInch) != address(0)) {
+                uint256 swapAmount = address(this).balance;
+                (uint256 returnAmount, uint256[] memory distribution) = oneInch.getExpectedReturn(IERC20(address(0)), steak, swapAmount, 1, 0);
+                uint256 swappedLPT = oneInch.swap(IERC20(address(0)), steak, swapAmount, returnAmount, distribution, 0);
+                // Add swapped LPT to rewards
+                rewards = rewards.add(swappedLPT);
+            }
         }
 
-        // swap ETH fees for LPT
-        if (address(oneInch) != address(0)) {
-            uint256 swapAmount = address(this).balance;
-            (uint256 returnAmount, uint256[] memory distribution) = oneInch.getExpectedReturn(IERC20(address(0)), steak, swapAmount, 1, 0);
-            uint256 swappedLPT = oneInch.swap(IERC20(address(0)), steak, swapAmount, returnAmount, distribution, 0);
-            // Add swapped LPT to rewards
-            rewards = rewards.add(swappedLPT);
-        }
-        
         // Substract protocol fee amount and add it to pendingFees
         uint256 fee = rewards.mul(protocolFee).div(perc_divisor);
         pendingFees = pendingFees.add(fee);
-
-        Add current pending stake minus fees and set it as current principal
+        console.log("fee on the rewards %s", fee);
+        // Add current pending stake minus fees and set it as current principal
         currentPrincipal = stake.sub(fee);
     }
 
