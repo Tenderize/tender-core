@@ -8,7 +8,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   const {deployer} = await getNamedAccounts() // Fetch named accounts from hardhat.config.ts
 
   await deploy('SafeMath', {
-    from: deployer, // msg.sender overwrite, use named account
+    from: deployer, // msg.sender overwrite, use named Account
+    log: true, // display the address and gas used in the console (not when run in test though)
   })
 }
 export default func

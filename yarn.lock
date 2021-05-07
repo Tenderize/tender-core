@@ -6564,6 +6564,10 @@ promise-to-callback@^1.0.0:
     is-fn "^1.0.0"
     set-immediate-shim "^1.0.1"
 
+"protocol@https://github.com/Tenderize/protocol#tenderize":
+  version "1.0.0"
+  resolved "https://github.com/Tenderize/protocol#17e58eb700c8525b8644750342753ac2175ebf6e"
+
 proxy-addr@~2.0.5:
   version "2.0.6"
   resolved "https://registry.yarnpkg.com/proxy-addr/-/proxy-addr-2.0.6.tgz#fdc2336505447d3f2f2c638ed272caf614bbb2bf"

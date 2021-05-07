@@ -47,8 +47,6 @@ contract Controller is Ownable {
             "TENDER_MINT_FAILED"
         );
 
-
-    // RE-ENTRANCY POSSIBLE
         _updateTotalPooledTokens();
     }
 
@@ -88,7 +86,12 @@ contract Controller is Ownable {
         _updateTotalPooledTokens();
 
         // Resync weight for tenderToken
-        esp.resyncWeight(address(tenderToken));
+        // try esp.resyncWeight(address(tenderToken)) {
+
+        // } catch {
+        //     // No-op
+        // }
+
     }
 
     function gulp() public {

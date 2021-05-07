@@ -25,14 +25,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   const bootstrapSupply: BigNumber = ethers.utils.parseEther(steakAmount).div(2)
 
+  console.log("Deploying Livepeer Tenderizer")
+
   const tenderizer = await deploy('Livepeer', {
     from: deployer,
-    args: [process.env.LIVEPEER_TOKEN, process.env.LIVEPEER_BONDINGMANAGER, process.env.LIVEPEER_ORCHESTRATOR],
+    args: [process.env.LIVEPEER_TOKEN, process.env.LIVEPEER_BONDINGMANAGER, process.env.LIVEPEER_ORCHESTRATOR || deployer],
     log: true, // display the address and gas used in the console (not when run in test though),
     libraries: {
       SafeMath: safeMathFixture["SafeMath"].address
     }
   })
+
+  console.log("Deploying Livepeer TenderToken")
 
   const tenderToken = await deploy('TenderToken', {
     from: deployer,
@@ -64,6 +68,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     "swapFee": "3000000000000000"
   }
 
+  console.log("Deploying Livepeer Elastic Supply Pool")
+
   const esp = await deploy('ElasticSupplyPool', {
     from: deployer,
     libraries: {
@@ -75,6 +81,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     args: [balancerFixture["BFactory"].address, poolParams, permissions]
   })
 
+  console.log("Deploying Controller")
+
   const controller = await deploy('Controller', {
     from: deployer,
     args: [process.env.LIVEPEER_TOKEN, tenderizer.address, tenderToken.address, esp.address]
@@ -85,33 +93,46 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   const Esp: ElasticSupplyPool = (await ethers.getContractAt('ElasticSupplyPool', esp.address)) as ElasticSupplyPool
   const Steak: ERC20 = (await ethers.getContractAt('ERC20', process.env.LIVEPEER_TOKEN || ethers.constants.AddressZero)) as ERC20
   const Controller: Controller = (await ethers.getContractAt('Controller', controller.address)) as Controller
+  
+  console.log("Transferring ownership for TenderToken to Controller")
+
   await TenderToken.transferOwnership(controller.address, {from: deployer})
+  
+  console.log("Transferring ownership for Tenderizer to Controller")
+
   await Tenderizer.transferOwnership(controller.address, {from: deployer})
-  await Esp.setController(controller.address) 
 
   const pcTokenSupply = '1000000000000000000000' // 1000e18
   const minimumWeightChangeBlockPeriod = 10;
   const addTokenTimeLockInBlocks = 10;
 
+  console.log("Approving Livepeer Token for depositing in Tenderizer")
+
   await Steak.approve(controller.address, bootstrapSupply)
+
+  console.log("Depositing Livepeer Tokens in Tenderizer")
+
   await Controller.deposit(bootstrapSupply)
+
+  console.log("Approving Livepeer Token and Tender Livepeer Token for creating the Elastic Supply Pool")
 
   await Steak.approve(esp.address, bootstrapSupply)
   await TenderToken.approve(esp.address, bootstrapSupply)
 
+  console.log("Creating Elastic Supply Pool")
+
   await Esp.createPool(pcTokenSupply, minimumWeightChangeBlockPeriod, addTokenTimeLockInBlocks)
   bpoolAddr = await Esp.bPool()
 
+  console.log("Transferring ownership for Elastic Supply Pool to Controller")
+
   await Esp.setController(controller.address)
 
-  // TODO: get steak and tenderToken
-  // create ESP 
+  console.log("Stake the deposited tokens")
+
+  await Controller.gulp()
+
+  console.log("Succesfully Deployed ! ")
 }
 export default func
 func.tags = ['Livepeer'] // this setup a tag so you can execute the script on its own (and its dependencies)
-
-// TODO: Deployment strategy for a Tenderizer
-// - Controller should probably be last 
-// - However the ESP requires funds to be created
-// - The Tenderizer only depends on outside dependencies so can be deployed first
-// - The Token can be deployed and ownership transferred once the Controller is deployed 

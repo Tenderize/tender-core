@@ -41,6 +41,11 @@ contract Livepeer is Tenderizer {
         if (amount == 0) {
             amount = IERC20(steak).balanceOf(address(this));
         }
+        
+        if (amount == 0) {
+            return;
+            // TODO: revert ? 
+        }
 
         // if no _node is specified, stake towards the default node
         address node_ = _node;
@@ -125,24 +130,25 @@ contract Livepeer is Tenderizer {
         (uint256 stake, uint256 ethFees,,,,,) = livepeer.getDelegator(address(this));
         uint256 rewards = stake.sub(currentPrincipal);
 
-        // withdraw fees
+        withdraw fees
         if (ethFees >= ethFees_threshold) {
             livepeer.withdrawFees();
         }
 
         // swap ETH fees for LPT
-        uint256 swapAmount = address(this).balance;
-        (uint256 returnAmount, uint256[] memory distribution) = oneInch.getExpectedReturn(IERC20(address(0)), steak, swapAmount, 1, 0);
-        uint256 swappedLPT = oneInch.swap(IERC20(address(0)), steak, swapAmount, returnAmount, distribution, 0);
-
-        // Add swapped LPT to rewards
-        rewards = rewards.add(swappedLPT);
-
+        if (address(oneInch) != address(0)) {
+            uint256 swapAmount = address(this).balance;
+            (uint256 returnAmount, uint256[] memory distribution) = oneInch.getExpectedReturn(IERC20(address(0)), steak, swapAmount, 1, 0);
+            uint256 swappedLPT = oneInch.swap(IERC20(address(0)), steak, swapAmount, returnAmount, distribution, 0);
+            // Add swapped LPT to rewards
+            rewards = rewards.add(swappedLPT);
+        }
+        
         // Substract protocol fee amount and add it to pendingFees
         uint256 fee = rewards.mul(protocolFee).div(perc_divisor);
         pendingFees = pendingFees.add(fee);
 
-        // Add current pending stake minus fees and set it as current principal
+        Add current pending stake minus fees and set it as current principal
         currentPrincipal = stake.sub(fee);
     }
 

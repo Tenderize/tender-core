@@ -93,7 +93,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   // await SimpleToken.approve(controller.address, )
 }
 export default func
-func.tags = ['Livepeer'] // this setup a tag so you can execute the script on its own (and its dependencies)
+func.tags = ['Mock'] // this setup a tag so you can execute the script on its own (and its dependencies)
 
 // TODO: Deployment strategy for a Tenderizer
 // - Controller should probably be last 

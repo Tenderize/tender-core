@@ -29,6 +29,9 @@ const config: HardhatUserConfig = {
     },
     mainnet: {
       url: `https://mainnet.infura.io/v3/89c0af4958584a0f9dfffec473236056`
+    },
+    localhost: {
+      url: "http://127.0.0.1:8545"
     }
   }
 }
