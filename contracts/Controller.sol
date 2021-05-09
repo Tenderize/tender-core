@@ -79,6 +79,9 @@ contract Controller is Ownable {
     }
 
     function rebase() public onlyOwner {
+        // stake tokens
+        gulp();
+
         // claim rewards
         tenderizer.claimRewards();
 
@@ -86,11 +89,11 @@ contract Controller is Ownable {
         _updateTotalPooledTokens();
 
         // Resync weight for tenderToken
-        // try esp.resyncWeight(address(tenderToken)) {
+        try esp.resyncWeight(address(tenderToken)) {
 
-        // } catch {
-        //     // No-op
-        // }
+        } catch {
+            // No-op
+        }
 
     }
 
@@ -125,7 +128,5 @@ contract Controller is Ownable {
     }
     // TODO:
     // - Migrate to new tenderizer
-    // - Set Esp
-    // Remove setConfig and Config
     // Add rescuefunds to tenderizer:
 }
