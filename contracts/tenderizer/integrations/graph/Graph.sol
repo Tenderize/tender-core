@@ -13,14 +13,18 @@ import "./IGraph.sol";
 
 import "hardhat/console.sol";
 
-contract Livepeer is Tenderizer {
+contract Graph is Tenderizer {
     using SafeMath for uint256;
 
     uint256 constant private MAX_ROUND = 2**256 - 1;
 
+    address private _this = address(this);
+
     IGraph graph;
 
     uint256 ethFees_threshold = 1**17;
+
+    mapping (address => uint256) pendingWithdrawals;
 
     constructor(IERC20 _steak, IGraph _graph, address _node) Tenderizer(_steak, _node) {
         graph = _graph;
@@ -46,7 +50,7 @@ contract Livepeer is Tenderizer {
 
         currentPrincipal = currentPrincipal.add(amount);
 
-        // approve amount to Livepeer protocol
+        // approve amount to Graph protocol
         steak.approve(address(graph), amount);
 
         // stake tokens
@@ -54,11 +58,14 @@ contract Livepeer is Tenderizer {
     }
 
     function _unstake(address _account, address _node, uint256 _amount) internal override {
+         // Check that no withdrawal is pending
+        require(pendingWithdrawals[_account] == 0, "PENDING_WITHDRAWAL");
         uint256 amount = _amount;
+
         // Sanity check. Controller already checks user deposits and withdrawals > 0
         if (_account != owner()) require(amount > 0, "ZERO_AMOUNT");
         if (amount == 0) {
-            amount = IERC20(steak).balanceOf(address(this));
+            amount = IERC20(steak).balanceOf(_this);
         }
 
         // if no _node is specified, stake towards the default node
@@ -69,8 +76,21 @@ contract Livepeer is Tenderizer {
 
         currentPrincipal = currentPrincipal.sub(_amount);
 
-        // Unbond tokens
-        graph.undelegate(node_, amount);
+        // Calculate the amount of shares to undelegate
+        IGraph.Delegation memory delegation = graph.getDelegation(node, _this);
+        IGraph.DelegationPool memory delPool = graph.delegationPools(node);
+
+        uint256 delShares = delegation.shares;
+        uint256 totalShares = delPool.shares;
+        uint256 totalTokens = delPool.tokens;
+
+        uint256 stake = delShares.mul(totalTokens).div(totalShares);
+        uint shares = delShares.mul(amount).div(stake);
+
+        pendingWithdrawals[_account] = amount;
+
+        // undelegate shares
+        graph.undelegate(node_, shares);
     }
 
     function _withdraw(address _account, uint256 /*_amount*/) internal override {
@@ -82,7 +102,7 @@ contract Livepeer is Tenderizer {
     }
 
     function _claimRewards() internal override {
-        // Livepeer automatically compounds
+        // GRT automatically compounds
         // The rewards is the difference between
         // pending stake and the latest cached stake amount
 
