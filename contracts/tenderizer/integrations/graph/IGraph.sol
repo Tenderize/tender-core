@@ -43,8 +43,12 @@ interface IGraph {
 
     function delegationPools(address _indexer) external view returns (DelegationPool memory);
 
-     function getWithdraweableDelegatedTokens(Delegation memory _delegation)
+    function getWithdraweableDelegatedTokens(Delegation memory _delegation)
         external
         view
         returns (uint256);
+
+    function thawingPeriod() external view returns (uint256);
+
+    function delegationTaxPercentage() external view returns (uint32);
 }

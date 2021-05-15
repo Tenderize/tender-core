@@ -14,13 +14,13 @@ import "./ITenderizer.sol";
 abstract contract Tenderizer is Ownable, ITenderizer {
     using SafeMath for uint256;
 
+    uint256 constant PERC_DIVISOR = 1e18;
+    address constant ZERO_ADDRESS = address(0);
+
     IERC20 public steak;
     address public node; 
 
-    // TODO: Make governance param
-    uint256 public protocolFee = 25 * 10 **16; // 2.5%
-    // TODO: Make constant
-    uint256 perc_divisor = 1*10**18;
+    uint256 public protocolFee = 25 * 1e16; // 2.5%
 
     uint256 public pendingFees; // pending protocol fees since last distribution
     uint256 public currentPrincipal; // Principal since last claiming earnings
@@ -28,6 +28,10 @@ abstract contract Tenderizer is Ownable, ITenderizer {
     constructor(IERC20 _steak, address _node) {
         steak = _steak;
         node = _node;
+    }
+
+    function deposit(address _from, uint256 _amount) external override onlyOwner {
+        _deposit(_from, _amount);
     }
 
     function stake(address _account, uint256 _amount) external override onlyOwner {
@@ -78,6 +82,8 @@ abstract contract Tenderizer is Ownable, ITenderizer {
     function totalStakedTokens() external override view returns (uint256) {
         return _totalStakedTokens();
     }
+
+    function _deposit(address _account, uint256 _amount) internal virtual;
 
     function _stake(address _account, uint256 _amount) internal virtual;
 

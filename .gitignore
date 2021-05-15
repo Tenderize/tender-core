@@ -3,3 +3,4 @@
 /cache
 /typechain
 /deployments/localhost.json
+deployments/localhost

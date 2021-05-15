@@ -16,18 +16,22 @@ import "hardhat/console.sol";
 contract Graph is Tenderizer {
     using SafeMath for uint256;
 
-    uint256 constant private MAX_ROUND = 2**256 - 1;
-
-    address private _this = address(this);
+    // 100% in parts per million
+    uint32 private constant MAX_PPM = 1000000;
 
     IGraph graph;
 
-    uint256 ethFees_threshold = 1**17;
-
     mapping (address => uint256) pendingWithdrawals;
+    uint256 totalPendingWithdrawals;
 
     constructor(IERC20 _steak, IGraph _graph, address _node) Tenderizer(_steak, _node) {
         graph = _graph;
+    }
+
+    function _deposit(address /*_from*/, uint256 _amount) internal override {
+        uint256 delTax = graph.delegationTaxPercentage();
+        uint256 tax = _amount.mul(delTax).div(MAX_PPM);
+        currentPrincipal = currentPrincipal.add(_amount.sub(tax));
     }
 
     function _stake(address _node, uint256 _amount) internal override {
@@ -44,11 +48,9 @@ contract Graph is Tenderizer {
 
         // if no _node is specified, stake towards the default node
         address node_ = _node;
-        if (node_ == address(0)) {
+        if (node_ == ZERO_ADDRESS) {
             node_ = node;
         }
-
-        currentPrincipal = currentPrincipal.add(amount);
 
         // approve amount to Graph protocol
         steak.approve(address(graph), amount);
@@ -65,19 +67,19 @@ contract Graph is Tenderizer {
         // Sanity check. Controller already checks user deposits and withdrawals > 0
         if (_account != owner()) require(amount > 0, "ZERO_AMOUNT");
         if (amount == 0) {
-            amount = IERC20(steak).balanceOf(_this);
+            amount = IERC20(steak).balanceOf(address(this));
         }
 
         // if no _node is specified, stake towards the default node
         address node_ = _node;
-        if (node_ == address(0)) {
+        if (node_ == ZERO_ADDRESS) {
             node_ = node;
         }
 
         currentPrincipal = currentPrincipal.sub(_amount);
 
         // Calculate the amount of shares to undelegate
-        IGraph.Delegation memory delegation = graph.getDelegation(node, _this);
+        IGraph.Delegation memory delegation = graph.getDelegation(node, address(this));
         IGraph.DelegationPool memory delPool = graph.delegationPools(node);
 
         uint256 delShares = delegation.shares;
@@ -95,7 +97,7 @@ contract Graph is Tenderizer {
 
     function _withdraw(address _account, uint256 /*_amount*/) internal override {
         // Check that a withdrawal is pending
-        uint256 amount = graph.withdrawDelegated(node, address(0));
+        uint256 amount = graph.withdrawDelegated(node, ZERO_ADDRESS);
 
         // Transfer amount from unbondingLock to _account
         steak.transfer(_account, amount);
@@ -127,7 +129,7 @@ contract Graph is Tenderizer {
         console.log("stake after claiming earnings %s", stake);
 
         // Substract protocol fee amount and add it to pendingFees
-        uint256 fee = rewards.mul(protocolFee).div(perc_divisor);
+        uint256 fee = rewards.mul(protocolFee).div(PERC_DIVISOR);
         pendingFees = pendingFees.add(fee);
 
         console.log("fee on the rewards %s", fee);
@@ -144,8 +146,7 @@ contract Graph is Tenderizer {
     }
 
     function _totalStakedTokens() internal override view returns (uint256) {
-        uint256 bal = IERC20(steak).balanceOf(address(this));
-        return bal.add(currentPrincipal);
+        return currentPrincipal;
     }
 
 }

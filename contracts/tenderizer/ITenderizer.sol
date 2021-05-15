@@ -6,6 +6,9 @@
 pragma solidity ^0.8.0;
 
 interface ITenderizer {
+
+    function deposit(address _from, uint256 _amount) external;
+
     function stake(address _node, uint256 _amount) external;
 
     function unstake(address _account, uint256 _amount) external;

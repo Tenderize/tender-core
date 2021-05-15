@@ -37,6 +37,10 @@ contract Livepeer is Tenderizer {
         livepeer = _livepeer;
     }
 
+    function _deposit(address /*_from*/, uint256 _amount) internal override {
+        currentPrincipal = currentPrincipal.add(_amount);
+    }
+
     function _stake(address _node, uint256 _amount) internal override {
         // if no amount is specified, stake all available tokens
         uint256 amount = _amount;
@@ -54,8 +58,6 @@ contract Livepeer is Tenderizer {
         if (node_ == address(0)) {
             node_ = node;
         }
-
-        currentPrincipal = currentPrincipal.add(amount);
 
         // approve amount to Livepeer protocol
         steak.approve(address(livepeer), amount);
@@ -146,7 +148,7 @@ contract Livepeer is Tenderizer {
         }
 
         // Substract protocol fee amount and add it to pendingFees
-        uint256 fee = rewards.mul(protocolFee).div(perc_divisor);
+        uint256 fee = rewards.mul(protocolFee).div(PERC_DIVISOR);
         pendingFees = pendingFees.add(fee);
         console.log("fee on the rewards %s", fee);
         // Add current pending stake minus fees and set it as current principal
@@ -162,8 +164,7 @@ contract Livepeer is Tenderizer {
     }
 
     function _totalStakedTokens() internal override view returns (uint256) {
-        uint256 bal = IERC20(steak).balanceOf(address(this));
-        return bal.add(currentPrincipal);
+        return currentPrincipal;
     }
 
 }
