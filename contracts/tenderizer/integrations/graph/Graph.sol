@@ -149,4 +149,8 @@ contract Graph is Tenderizer {
         return currentPrincipal;
     }
 
+    function _setStakingContract(address _stakingContract) internal override {
+        graph = IGraph(_stakingContract);
+    }
+
 }

@@ -167,4 +167,8 @@ contract Livepeer is Tenderizer {
         return currentPrincipal;
     }
 
+    function _setStakingContract(address _stakingContract) internal override {
+        livepeer = ILivepeer(_stakingContract);
+    }
+
 }

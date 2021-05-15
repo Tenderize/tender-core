@@ -75,8 +75,12 @@ abstract contract Tenderizer is Ownable, ITenderizer {
         protocolFee = _protocolFee;
     }
 
+    function setStakingContract(address _stakingContract) external onlyOwner {
+        _setStakingContract(_stakingContract);
+    }
+
     function collectFees() external override onlyOwner returns (uint256) {
-        _collectFees();
+        return _collectFees();
     }
 
     function totalStakedTokens() external override view returns (uint256) {
@@ -97,4 +101,6 @@ abstract contract Tenderizer is Ownable, ITenderizer {
 
     function _totalStakedTokens() internal virtual view returns (uint256);
 
+    // Internal governance functions 
+    function _setStakingContract(address _stakingContract) internal virtual; 
 }
