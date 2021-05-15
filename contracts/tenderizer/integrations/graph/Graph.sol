@@ -9,36 +9,29 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import "../../Tenderizer.sol";
-import "./ILivepeer.sol";
-import "../../../IOneInch.sol";
+import "./IGraph.sol";
 
 import "hardhat/console.sol";
 
-contract Livepeer is Tenderizer {
+contract Graph is Tenderizer {
     using SafeMath for uint256;
 
-    uint256 constant private MAX_ROUND = 2**256 - 1;
+    // 100% in parts per million
+    uint32 private constant MAX_PPM = 1000000;
 
-    IOneInch constant private oneInch = IOneInch(address(0));
+    IGraph graph;
 
-    ILivepeer livepeer;
+    mapping (address => uint256) pendingWithdrawals;
+    uint256 totalPendingWithdrawals;
 
-    struct unbondingLock {
-        uint256 id;
-        uint256 amount;
-    }
-
-    mapping (address => unbondingLock) unbondingLocks;
-    uint256 private nextUnbondingLockID;
-
-    uint256 ethFees_threshold = 1**17;
-
-    constructor(IERC20 _steak, ILivepeer _livepeer, address _node) Tenderizer(_steak, _node) {
-        livepeer = _livepeer;
+    constructor(IERC20 _steak, IGraph _graph, address _node) Tenderizer(_steak, _node) {
+        graph = _graph;
     }
 
     function _deposit(address /*_from*/, uint256 _amount) internal override {
-        currentPrincipal = currentPrincipal.add(_amount);
+        uint256 delTax = graph.delegationTaxPercentage();
+        uint256 tax = _amount.mul(delTax).div(MAX_PPM);
+        currentPrincipal = currentPrincipal.add(_amount.sub(tax));
     }
 
     function _stake(address _node, uint256 _amount) internal override {
@@ -55,22 +48,22 @@ contract Livepeer is Tenderizer {
 
         // if no _node is specified, stake towards the default node
         address node_ = _node;
-        if (node_ == address(0)) {
+        if (node_ == ZERO_ADDRESS) {
             node_ = node;
         }
 
-        // approve amount to Livepeer protocol
-        steak.approve(address(livepeer), amount);
+        // approve amount to Graph protocol
+        steak.approve(address(graph), amount);
 
         // stake tokens
-        livepeer.bond(amount, node_);
+        graph.delegate(node_, amount);
     }
 
     function _unstake(address _account, address _node, uint256 _amount) internal override {
-        // Check that no withdrawal is pending
-        require(unbondingLocks[_account].amount == 0, "PENDING_WITHDRAWAL");
-
+         // Check that no withdrawal is pending
+        require(pendingWithdrawals[_account] == 0, "PENDING_WITHDRAWAL");
         uint256 amount = _amount;
+
         // Sanity check. Controller already checks user deposits and withdrawals > 0
         if (_account != owner()) require(amount > 0, "ZERO_AMOUNT");
         if (amount == 0) {
@@ -79,44 +72,39 @@ contract Livepeer is Tenderizer {
 
         // if no _node is specified, stake towards the default node
         address node_ = _node;
-        if (node_ == address(0)) {
+        if (node_ == ZERO_ADDRESS) {
             node_ = node;
         }
 
         currentPrincipal = currentPrincipal.sub(_amount);
 
-        // Unbond tokens
-        livepeer.unbond(_amount);
+        // Calculate the amount of shares to undelegate
+        IGraph.Delegation memory delegation = graph.getDelegation(node, address(this));
+        IGraph.DelegationPool memory delPool = graph.delegationPools(node);
 
-        // Manage Livepeer unbonding locks
-        uint256 unbondingLockID = nextUnbondingLockID;
-        nextUnbondingLockID = unbondingLockID.add(1);
+        uint256 delShares = delegation.shares;
+        uint256 totalShares = delPool.shares;
+        uint256 totalTokens = delPool.tokens;
 
-        unbondingLocks[_account] = unbondingLock({
-            id: unbondingLockID,
-            amount: _amount
-        });
+        uint256 stake = delShares.mul(totalTokens).div(totalShares);
+        uint shares = delShares.mul(amount).div(stake);
+
+        pendingWithdrawals[_account] = amount;
+
+        // undelegate shares
+        graph.undelegate(node_, shares);
     }
 
     function _withdraw(address _account, uint256 /*_amount*/) internal override {
         // Check that a withdrawal is pending
-        require(unbondingLocks[_account].amount > 0, "NO_PENDING_WITHDRAWAL");
-
-        // Init storage pointer
-        unbondingLock storage _unbondingLock = unbondingLocks[_account];
-
-        // Remove it from the locks
-        delete unbondingLocks[_account];
-
-        // Withdraw stake, transfers steak tokens to address(this)
-        livepeer.withdrawStake(_unbondingLock.id);
+        uint256 amount = graph.withdrawDelegated(node, ZERO_ADDRESS);
 
         // Transfer amount from unbondingLock to _account
-        steak.transfer(_account, _unbondingLock.amount);
+        steak.transfer(_account, amount);
     }
 
     function _claimRewards() internal override {
-        // Livepeer automatically compounds
+        // GRT automatically compounds
         // The rewards is the difference between
         // pending stake and the latest cached stake amount
 
@@ -126,30 +114,24 @@ contract Livepeer is Tenderizer {
 
         // Account for LPT rewards
         address del = address(this);
-        uint256 stake = livepeer.pendingStake(del, MAX_ROUND);
-        uint256 ethFees = livepeer.pendingFees(del, MAX_ROUND);
+        IGraph.Delegation memory delegation = graph.getDelegation(node, del);
+
+        IGraph.DelegationPool memory delPool = graph.delegationPools(node);
+
+        uint256 delShares = delegation.shares;
+        uint256 totalShares = delPool.shares;
+        uint256 totalTokens = delPool.tokens;
+
+        uint256 stake = delShares.mul(totalTokens).div(totalShares);
 
         uint256 rewards = stake.sub(currentPrincipal);
 
         console.log("stake after claiming earnings %s", stake);
-        console.log("current rewards %s", rewards);
-        // withdraw fees
-        if (ethFees >= ethFees_threshold) {
-            livepeer.withdrawFees();
-
-            // swap ETH fees for LPT
-            if (address(oneInch) != address(0)) {
-                uint256 swapAmount = address(this).balance;
-                (uint256 returnAmount, uint256[] memory distribution) = oneInch.getExpectedReturn(IERC20(address(0)), steak, swapAmount, 1, 0);
-                uint256 swappedLPT = oneInch.swap(IERC20(address(0)), steak, swapAmount, returnAmount, distribution, 0);
-                // Add swapped LPT to rewards
-                rewards = rewards.add(swappedLPT);
-            }
-        }
 
         // Substract protocol fee amount and add it to pendingFees
         uint256 fee = rewards.mul(protocolFee).div(PERC_DIVISOR);
         pendingFees = pendingFees.add(fee);
+
         console.log("fee on the rewards %s", fee);
         // Add current pending stake minus fees and set it as current principal
         currentPrincipal = stake.sub(fee);
