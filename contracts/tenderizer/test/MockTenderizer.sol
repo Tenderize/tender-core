@@ -23,8 +23,11 @@ contract MockTenderizer is Tenderizer {
         rewardAmount = _rewardAmount;
     }
 
-    function _stake(address /*_node*/, uint256 _amount) internal override {
+    function _deposit(address _from, uint256 _amount) internal override {
         currentPrincipal = currentPrincipal.add(_amount);
+    }
+
+    function _stake(address /*_node*/, uint256 _amount) internal override {
     }
 
     function _unstake(address /*_account*/, address /*_node*/, uint256 _amount) internal override {
@@ -40,7 +43,7 @@ contract MockTenderizer is Tenderizer {
         uint256 rewards = rewardAmount;
 
         // Substract protocol fee amount and add it to pendingFees
-        uint256 fee = rewards.mul(protocolFee).div(perc_divisor);
+        uint256 fee = rewards.mul(protocolFee).div(PERC_DIVISOR);
         pendingFees = pendingFees.add(fee);
 
         // Add current pending stake minus fees and set it as current principal
@@ -57,6 +60,10 @@ contract MockTenderizer is Tenderizer {
 
     function _totalStakedTokens() internal override view returns (uint256) {
         return IERC20(steak).balanceOf(address(this));
+    }
+
+    function _setStakingContract(address _stakingContract) internal override {
+
     }
 
 }

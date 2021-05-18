@@ -29,7 +29,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   const tenderizer = await deploy('Livepeer', {
     from: deployer,
-    args: [process.env.LIVEPEER_TOKEN, process.env.LIVEPEER_BONDINGMANAGER, process.env.LIVEPEER_ORCHESTRATOR || deployer],
+    args: [process.env.LIVEPEER_TOKEN, process.env.LIVEPEER_BONDINGMANAGER, process.env.LIVEPEER_NODE],
     log: true, // display the address and gas used in the console (not when run in test though),
     libraries: {
       SafeMath: safeMathFixture["SafeMath"].address

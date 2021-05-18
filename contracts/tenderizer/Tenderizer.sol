@@ -61,21 +61,21 @@ abstract contract Tenderizer is Ownable, ITenderizer {
         _claimRewards();
     }
 
-    function setNode(address _node) external onlyOwner {
+    function setNode(address _node) external override onlyOwner {
         require(_node != address(0), "ZERO_ADDRESS");
         node = _node;
     }
 
-    function setSteak(IERC20 _steak) external onlyOwner {
+    function setSteak(IERC20 _steak) external override  onlyOwner {
         require(address(_steak) != address(0), "ZERO_ADDRESS");
         steak = _steak;
     }
 
-    function setProtocolFee(uint256 _protocolFee) external onlyOwner {
+    function setProtocolFee(uint256 _protocolFee) external override onlyOwner {
         protocolFee = _protocolFee;
     }
 
-    function setStakingContract(address _stakingContract) external onlyOwner {
+    function setStakingContract(address _stakingContract) external override onlyOwner {
         _setStakingContract(_stakingContract);
     }
 

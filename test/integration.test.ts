@@ -2,7 +2,6 @@ import {
     ethers
 } from "hardhat";
 import ethersTypes, { BigNumber } from "ethers"
-import chai from "chai";
 import {
     solidity
 } from "ethereum-waffle";

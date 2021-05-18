@@ -119,7 +119,11 @@ contract Controller is Ownable {
     }
 
     function migrateToNewTenderizer(ITenderizer _tenderizer) public onlyOwner {
+        
+    }
 
+    function updateStakingContract(address _stakingContract) public onlyOwner {
+        tenderizer.setStakingContract(_stakingContract);
     }
 
     function _updateTotalPooledTokens() internal {

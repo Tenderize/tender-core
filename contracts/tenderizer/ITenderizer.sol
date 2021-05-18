@@ -5,6 +5,8 @@
 // /* See contracts/COMPILERS.md */
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 interface ITenderizer {
 
     function deposit(address _from, uint256 _amount) external;
@@ -20,4 +22,14 @@ interface ITenderizer {
     function collectFees() external returns (uint256);
 
     function totalStakedTokens() external view returns (uint256);
+
+    // Governance
+
+    function setNode(address _node) external;
+
+    function setSteak(IERC20 _steak) external;
+
+    function setProtocolFee(uint256 _protocolFee) external;
+
+    function setStakingContract(address _stakingContract) external;
 }
