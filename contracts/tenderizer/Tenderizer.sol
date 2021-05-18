@@ -20,7 +20,7 @@ abstract contract Tenderizer is Ownable, ITenderizer {
     IERC20 public steak;
     address public node; 
 
-    uint256 public protocolFee = 25 * 1e16; // 2.5%
+    uint256 public protocolFee = 25 * 1e15; // 2.5%
 
     uint256 public pendingFees; // pending protocol fees since last distribution
     uint256 public currentPrincipal; // Principal since last claiming earnings

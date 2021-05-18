@@ -3,7 +3,7 @@ import hre, {ethers} from "hardhat"
 import { MockContract, smockit } from '@eth-optimism/smock'
 
 import {
-    SimpleToken, LivepeerMock, Controller, Tenderizer, ElasticSupplyPool, TenderToken, ILivepeer
+    SimpleToken, LivepeerMock, Controller, Tenderizer, ElasticSupplyPool, TenderToken, ILivepeer, BPool
   } from "../../typechain/";
 
 import chai from "chai";
@@ -12,6 +12,7 @@ import {
 } from "ethereum-waffle";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { Deployment } from "hardhat-deploy/dist/types";
+import { BigNumber } from "@ethersproject/bignumber";
 
 chai.use(solidity);
 const {
@@ -28,7 +29,7 @@ describe('Livepeer Integration Test', () => {
     let Tenderizer: Tenderizer
     let TenderToken: TenderToken
     let Esp: ElasticSupplyPool
-    let bpoolAddr: string
+    let BPool: BPool
 
     let Livepeer: {[name: string]: Deployment}
 
@@ -81,6 +82,8 @@ describe('Livepeer Integration Test', () => {
         Controller = (await ethers.getContractAt('Controller', Livepeer['Controller'].address)) as Controller
         Tenderizer = (await ethers.getContractAt('Tenderizer', Livepeer['Livepeer'].address)) as Tenderizer
         TenderToken = (await ethers.getContractAt('TenderToken', Livepeer['TenderToken'].address)) as TenderToken
+        Esp = (await ethers.getContractAt('ElasticSupplyPool', Livepeer['ElasticSupplyPool'].address)) as ElasticSupplyPool
+        BPool = (await ethers.getContractAt('BPool', await Esp.bPool())) as BPool
     })
 
     let initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div("2")
@@ -119,6 +122,126 @@ describe('Livepeer Integration Test', () => {
             // Smock doesn't support executing code 
             expect(LivepeerMock.smocked.bond.calls[0]._amount).to.eq(deposit.add(initialStake))
         })
+    })
+
+    describe('rebase', () => {
+
+        describe("stake increased", () => {
+            const increase = ethers.BigNumber.from("10000000000")
+            const newStake = deposit.add(initialStake).add(increase)
+            const percDiv = ethers.utils.parseEther("1")
+            let protocolFee: BigNumber = ethers.utils.parseEther("0.025") 
+            const expFee = increase.mul(protocolFee).div(percDiv)
+            let totalShares: BigNumber = ethers.utils.parseEther("1")
+
+            before(async () => {
+                protocolFee = await Tenderizer.protocolFee()
+                totalShares = await TenderToken.getTotalShares()
+                LivepeerMock.smocked.pendingStake.will.return.with(newStake)
+                await Controller.rebase()
+            })
+
+            it("updates currentPrincipal", async () => {
+                expect(await Tenderizer.currentPrincipal()).to.eq(newStake.sub(expFee))
+            })
+
+            it("increases tendertoken balances when rewards are added", async () => {
+                // account 0
+                let shares = await TenderToken.sharesOf(deployer)
+                expect(await TenderToken.balanceOf(deployer)).to.eq(deposit.add(increase.sub(expFee).mul(shares).div(totalShares)))
+            })
+
+            it("increases pending fees", async () => {
+                expect(await Tenderizer.pendingFees()).to.eq(expFee)
+            })
+
+            it("increases the tenderToken balance of the AMM", async () => {
+                let shares = await TenderToken.sharesOf(BPool.address)
+                expect(await TenderToken.balanceOf(BPool.address)).to.eq(initialStake.add(increase.sub(expFee).mul(shares).div(totalShares)))
+            })
+
+            it("changes the weights of the AMM", async () => {
+                const tBal = await TenderToken.balanceOf(BPool.address)
+                const bal = await LivepeerToken.balanceOf(BPool.address)
+
+                const acceptableDelta = ethers.BigNumber.from("100")
+
+                const expected = tBal.mul(percDiv).div(tBal.add(bal))
+                const actual = await BPool.getNormalizedWeight(TenderToken.address)
+                expect(actual.sub(expected).abs()).to.be.lte(acceptableDelta)
+            })
+        })
+
+        describe('stake decrease', () => {
+            // The decrease will offset the increase from the previous test
+            const newStake = deposit.add(initialStake)
+            const percDiv = ethers.utils.parseEther("1")
+            let totalShares: BigNumber = ethers.utils.parseEther("1")
+
+            let feesBefore: BigNumber = ethers.constants.Zero
+
+            before(async () => {
+                totalShares = await TenderToken.getTotalShares()
+                feesBefore = await Tenderizer.pendingFees()
+                LivepeerMock.smocked.pendingStake.will.return.with(newStake)
+                await Controller.rebase()
+            })
+
+            it("updates currentPrincipal", async () => {
+                expect(await Tenderizer.currentPrincipal()).to.eq(newStake)
+            })
+
+            it("decreases tendertoken balances when rewards are added", async () => {
+                // account 0
+                let shares = await TenderToken.sharesOf(deployer)
+                expect(await TenderToken.balanceOf(deployer)).to.eq(deposit)
+            })
+
+            it("doesn't increase pending fees", async () => {
+                expect(await Tenderizer.pendingFees()).to.eq(feesBefore)
+            })
+
+            it("decreases the tenderToken balance of the AMM", async () => {
+                expect(await TenderToken.balanceOf(BPool.address)).to.eq(initialStake)
+            })
+
+            it("changes the weights of the AMM", async () => {
+                const tBal = await TenderToken.balanceOf(BPool.address)
+                const bal = await LivepeerToken.balanceOf(BPool.address)
+
+                const acceptableDelta = ethers.BigNumber.from("100")
+
+                const expected = percDiv.div(2)
+                const actual = await BPool.getNormalizedWeight(TenderToken.address)
+                expect(actual.sub(expected).abs()).to.be.lte(acceptableDelta)
+            })
+        })
+    })
+
+    describe('collect fees', () => {
+        let fees: BigNumber
+        let ownerBalBefore: BigNumber
+        before(async () => {
+            fees = await Tenderizer.pendingFees()
+            ownerBalBefore = await TenderToken.balanceOf(deployer)
+            await Controller.collectFees()
+        })
+
+        it("should reset pendingFees", async () => {
+            expect(await Tenderizer.pendingFees()).to.eq(ethers.constants.Zero)
+        })
+
+        it('should increase tenderToken balance of owner', async () => {
+            expect(await TenderToken.balanceOf(deployer)).to.eq(ownerBalBefore.add(fees))
+        })
+    })
+
+    describe('unlock', () => {
+
+    })
+
+    describe('withdraw', () => {
+
     })
 
 })

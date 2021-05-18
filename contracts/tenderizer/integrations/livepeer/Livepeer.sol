@@ -128,8 +128,12 @@ contract Livepeer is Tenderizer {
         address del = address(this);
         uint256 stake = livepeer.pendingStake(del, MAX_ROUND);
         uint256 ethFees = livepeer.pendingFees(del, MAX_ROUND);
+        uint256 currentPrincipal_ = currentPrincipal;
 
-        uint256 rewards = stake.sub(currentPrincipal);
+        uint256 rewards;
+        if (stake >= currentPrincipal_) {
+            rewards = stake.sub(currentPrincipal_);
+        }
 
         console.log("stake after claiming earnings %s", stake);
         console.log("current rewards %s", rewards);
