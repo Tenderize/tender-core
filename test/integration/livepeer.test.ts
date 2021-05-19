@@ -236,6 +236,40 @@ describe('Livepeer Integration Test', () => {
         })
     })
 
+    describe('swap against ESP', () => {
+        it('swaps tenderToken for Token', async () => {
+            const amount = deposit.div(2)
+            const lptBalBefore = await LivepeerToken.balanceOf(deployer)
+
+            const tenderBal = await BPool.getBalance(TenderToken.address)
+            const lptBal = await BPool.getBalance(LivepeerToken.address)
+            const tenderWeight = await BPool.getDenormalizedWeight(TenderToken.address)
+            const lptWeight = await BPool.getDenormalizedWeight(LivepeerToken.address)
+            const swapFee = await BPool.getSwapFee()
+            const expOut = await BPool.calcOutGivenIn(
+                tenderBal,
+                tenderWeight,
+                lptBal,
+                lptWeight,
+                amount,
+                swapFee
+            )
+            
+            await TenderToken.approve(BPool.address, amount)
+            await BPool.swapExactAmountIn(
+                TenderToken.address,
+                amount,
+                LivepeerToken.address,
+                ethers.constants.One,
+                ethers.utils.parseEther("10")
+            )
+            
+
+            const lptBalAfter = await LivepeerToken.balanceOf(deployer)
+            expect(lptBalAfter.sub(lptBalBefore)).to.eq(expOut)
+        })
+    })
+
     describe('unlock', () => {
 
     })
