@@ -254,16 +254,15 @@ describe('Livepeer Integration Test', () => {
                 amount,
                 swapFee
             )
-            
+
             await TenderToken.approve(BPool.address, amount)
             await BPool.swapExactAmountIn(
                 TenderToken.address,
                 amount,
                 LivepeerToken.address,
-                ethers.constants.One,
-                ethers.utils.parseEther("10")
-            )
-            
+                ethers.constants.One, // TODO: set proper value
+                ethers.utils.parseEther("10") // TODO: set proper value
+            )            
 
             const lptBalAfter = await LivepeerToken.balanceOf(deployer)
             expect(lptBalAfter.sub(lptBalBefore)).to.eq(expOut)

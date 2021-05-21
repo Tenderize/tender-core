@@ -17,9 +17,38 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   const {deployer} = await getNamedAccounts() // Fetch named accounts from hardhat.config.ts
 
-  const safeMathFixture = await deployments.fixture(["SafeMath"])
+  console.log("Deploying SafeMath library")
 
-  const balancerFixture = await deployments.fixture(["Balancer"])
+  const SafeMath = await deploy('SafeMath', {
+    from: deployer, // msg.sender overwrite, use named Account
+    log: true, // display the address and gas used in the console (not when run in test though)
+  })
+
+  console.log("Deploying BalancerSafeMath")
+  const BalancerSafeMath = await deploy('BalancerSafeMath', {
+    from: deployer, // msg.sender overwrite, use named account
+    args: [], // constructor arguments
+    log: true, // display the address and gas used in the console (not when run in test though)
+  })
+
+  console.log("Deploying Balancer RightsManager")
+  const RightsManager = await deploy('RightsManager', {
+    from: deployer,
+    log: true
+  })
+
+  console.log("Deploying Balancer SmartPoolManager")
+  const SmartPoolManager = await deploy('SmartPoolManager', {
+    from: deployer,
+    log: true
+  })
+
+  console.log("Deploying Balancer Factory")
+  const BFactory = await deploy('BFactory', {
+    from: deployer,
+    log: true
+  })
+
 
   const steakAmount = process.env.STEAK_AMOUNT || "0"
 
@@ -32,7 +61,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     args: [process.env.LIVEPEER_TOKEN, process.env.LIVEPEER_BONDINGMANAGER, process.env.LIVEPEER_NODE],
     log: true, // display the address and gas used in the console (not when run in test though),
     libraries: {
-      SafeMath: safeMathFixture["SafeMath"].address
+      SafeMath: SafeMath.address
     }
   })
 
@@ -43,7 +72,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     args: ['Livepeer', 'LPT'],
     log: true, // display the address and gas used in the console (not when run in test though)
     libraries: {
-      SafeMath: safeMathFixture["SafeMath"].address
+      SafeMath: SafeMath.address
     }
   })
 
@@ -73,18 +102,19 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   const esp = await deploy('ElasticSupplyPool', {
     from: deployer,
     libraries: {
-      BalancerSafeMath: balancerFixture["BalancerSafeMath"].address,
-      RightsManager: balancerFixture["RightsManager"].address,
-      SmartPoolManager: balancerFixture["SmartPoolManager"].address
+      BalancerSafeMath: BalancerSafeMath.address,
+      RightsManager: RightsManager.address,
+      SmartPoolManager: SmartPoolManager.address
     },
     log: true, // display the address and gas used in the console (not when run in test though)
-    args: [balancerFixture["BFactory"].address, poolParams, permissions]
+    args: [BFactory.address, poolParams, permissions]
   })
 
   console.log("Deploying Controller")
 
   const controller = await deploy('Controller', {
     from: deployer,
+    log: true,
     args: [process.env.LIVEPEER_TOKEN, tenderizer.address, tenderToken.address, esp.address]
   })
 
@@ -112,7 +142,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   console.log("Depositing Livepeer Tokens in Tenderizer")
 
-  await Controller.deposit(bootstrapSupply)
+  await Controller.deposit(bootstrapSupply, {gasLimit: 500000})
 
   console.log("Approving Livepeer Token and Tender Livepeer Token for creating the Elastic Supply Pool")
 
@@ -121,7 +151,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   console.log("Creating Elastic Supply Pool")
 
-  await Esp.createPool(pcTokenSupply, minimumWeightChangeBlockPeriod, addTokenTimeLockInBlocks)
+  await Esp.createPool(pcTokenSupply, minimumWeightChangeBlockPeriod, addTokenTimeLockInBlocks, {gasLimit: 8000000})
   bpoolAddr = await Esp.bPool()
 
   console.log("Transferring ownership for Elastic Supply Pool to Controller")
@@ -130,9 +160,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   console.log("Stake the deposited tokens")
 
-  await Controller.gulp()
+  await Controller.gulp({gasLimit: 1500000})
+
+  console.log("Balancer pool address", bpoolAddr)
 
   console.log("Succesfully Deployed ! ")
 }
-export default func
+
 func.tags = ['Livepeer'] // this setup a tag so you can execute the script on its own (and its dependencies)
+func.dependencies = ['SafeMath, Balancer']
+export default func
+

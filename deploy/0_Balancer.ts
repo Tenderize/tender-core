@@ -26,5 +26,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   })
 
 }
-export default func
+
 func.tags = ['Balancer'] // this setup a tag so you can execute the script on its own (and its dependencies)
+export default func

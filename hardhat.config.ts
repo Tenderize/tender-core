@@ -9,11 +9,27 @@ import 'hardhat-deploy-ethers';
 
 import { HardhatUserConfig } from "hardhat/types"
 
+const PRIVATE_KEY = process.env.PRIVATE_KEY || '182f9c4b5181c9bbf54cb7c142e13157353b62e4be815632a846ba351f3f78b0'
+const INFURA_KEY = process.env.INFURA_KEY || '42a353682886462f9f7b6b602f577a53'
+
 const config: HardhatUserConfig = {
   solidity: {
     compilers: [
-      { version: "0.5.12", settings: {} },
-      { version: "0.6.12", settings: {} },
+      { version: "0.5.12", settings: {
+        evmVersion: 'istanbul',
+        optimizer: {
+          enabled: true,
+          runs: 200
+        } 
+      } },
+      { version: "0.6.12", settings: {
+        evmVersion: 'istanbul',
+        optimizer: {
+          enabled: true,
+          runs: 200
+        } 
+      }
+      },
       { version: "0.8.0", settings: {} },
     ]
   },
@@ -28,7 +44,14 @@ const config: HardhatUserConfig = {
       blockGasLimit: 12000000,
     },
     mainnet: {
-      url: `https://mainnet.infura.io/v3/89c0af4958584a0f9dfffec473236056`
+      url: `https://mainnet.infura.io/v3/${INFURA_KEY}`,
+      accounts: [`0x${PRIVATE_KEY}`]
+    },
+    rinkeby: {
+      url: `https://rinkeby.infura.io/v3/${INFURA_KEY}`,
+      accounts: [`0x${PRIVATE_KEY}`],
+      allowUnlimitedContractSize: true,
+      blockGasLimit: 12000000,
     },
     localhost: {
       url: "http://127.0.0.1:8545"

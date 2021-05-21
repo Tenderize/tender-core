@@ -12,5 +12,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     log: true, // display the address and gas used in the console (not when run in test though)
   })
 }
-export default func
+
 func.tags = ['SafeMath'] // this setup a tag so you can execute the script on its own (and its dependencies)
+export default func
