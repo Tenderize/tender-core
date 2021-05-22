@@ -114,8 +114,9 @@ contract Graph is Tenderizer {
 
         // Account for LPT rewards
         address del = address(this);
-        IGraph.Delegation memory delegation = graph.getDelegation(node, del);
+        uint256 currentPrincipal_ = currentPrincipal;
 
+        IGraph.Delegation memory delegation = graph.getDelegation(node, del);
         IGraph.DelegationPool memory delPool = graph.delegationPools(node);
 
         uint256 delShares = delegation.shares;
@@ -124,7 +125,10 @@ contract Graph is Tenderizer {
 
         uint256 stake = delShares.mul(totalTokens).div(totalShares);
 
-        uint256 rewards = stake.sub(currentPrincipal);
+        uint256 rewards;
+        if (stake >= currentPrincipal_) {
+            rewards = stake.sub(currentPrincipal_);
+        }
 
         console.log("stake after claiming earnings %s", stake);
 
