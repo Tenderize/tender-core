@@ -75,7 +75,7 @@ describe('Matic Integration Test', () => {
     before('deploy Matic Tenderizer', async () => {
         process.env.MATIC_VALIDATOR = MaticMock.address
         process.env.MATIC_TOKEN = MaticToken.address
-        process.env.MATIC_STAKE_MANAGER = '0x0000000000000000000000000000000000000000' //dummy
+        process.env.MATIC_STAKE_MANAGER = '0x0000000000000000000000000000000000000101' //dummy
         process.env.STEAK_AMOUNT = STEAK_AMOUNT
         Matic = await hre.deployments.fixture(['Matic'])
         Controller = (await ethers.getContractAt('Controller', Matic['Controller'].address)) as Controller
@@ -209,7 +209,7 @@ describe('Matic Integration Test', () => {
                 const tBal = await TenderToken.balanceOf(BPool.address)
                 const bal = await MaticToken.balanceOf(BPool.address)
 
-                const acceptableDelta = ethers.BigNumber.from("100")
+                const acceptableDelta = ethers.BigNumber.from("10")
 
                 const expected = percDiv.div(2)
                 const actual = await BPool.getNormalizedWeight(TenderToken.address)
@@ -232,7 +232,10 @@ describe('Matic Integration Test', () => {
         })
 
         it('should increase tenderToken balance of owner', async () => {
-            expect(await TenderToken.balanceOf(deployer)).to.eq(ownerBalBefore.add(fees))
+            const newBalance = await TenderToken.balanceOf(deployer)
+            const acceptableDelta = ethers.BigNumber.from("10")
+
+            expect(newBalance.sub(ownerBalBefore.add(fees)).abs()).to.be.lte(acceptableDelta)
         })
     })
 

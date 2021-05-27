@@ -17,9 +17,38 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   const {deployer} = await getNamedAccounts() // Fetch named accounts from hardhat.config.ts
 
-  const safeMathFixture = await deployments.fixture(["SafeMath"])
+  console.log("Deploying SafeMath library")
 
-  const balancerFixture = await deployments.fixture(["Balancer"])
+  const SafeMath = await deploy('SafeMath', {
+    from: deployer, // msg.sender overwrite, use named Account
+    log: true, // display the address and gas used in the console (not when run in test though)
+  })
+
+  console.log("Deploying BalancerSafeMath")
+  const BalancerSafeMath = await deploy('BalancerSafeMath', {
+    from: deployer, // msg.sender overwrite, use named account
+    args: [], // constructor arguments
+    log: true, // display the address and gas used in the console (not when run in test though)
+  })
+
+  console.log("Deploying Balancer RightsManager")
+  const RightsManager = await deploy('RightsManager', {
+    from: deployer,
+    log: true
+  })
+
+  console.log("Deploying Balancer SmartPoolManager")
+  const SmartPoolManager = await deploy('SmartPoolManager', {
+    from: deployer,
+    log: true
+  })
+
+  console.log("Deploying Balancer Factory")
+  const BFactory = await deploy('BFactory', {
+    from: deployer,
+    log: true
+  })
+
 
   const steakAmount = process.env.STEAK_AMOUNT || "0"
 
@@ -32,7 +61,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     args: [process.env.MATIC_TOKEN,  process.env.MATIC_STAKE_MANAGER/*dummy address*/, process.env.MATIC_VALIDATOR || deployer],
     log: true, // display the address and gas used in the console (not when run in test though),
     libraries: {
-      SafeMath: safeMathFixture["SafeMath"].address
+      SafeMath: SafeMath.address
     }
   })
 
@@ -43,7 +72,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     args: ['Matic', 'MATIC'],
     log: true, // display the address and gas used in the console (not when run in test though)
     libraries: {
-      SafeMath: safeMathFixture["SafeMath"].address
+      SafeMath: SafeMath.address
     }
   })
 
@@ -73,12 +102,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   const esp = await deploy('ElasticSupplyPool', {
     from: deployer,
     libraries: {
-      BalancerSafeMath: balancerFixture["BalancerSafeMath"].address,
-      RightsManager: balancerFixture["RightsManager"].address,
-      SmartPoolManager: balancerFixture["SmartPoolManager"].address
+      BalancerSafeMath: BalancerSafeMath.address,
+      RightsManager: RightsManager.address,
+      SmartPoolManager: SmartPoolManager.address
     },
     log: true, // display the address and gas used in the console (not when run in test though)
-    args: [balancerFixture["BFactory"].address, poolParams, permissions]
+    args: [BFactory.address, poolParams, permissions]
   })
 
   console.log("Deploying Controller")
@@ -112,7 +141,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   console.log("Depositing Matic Tokens in Tenderizer")
 
-  await Controller.deposit(bootstrapSupply)
+  await Controller.deposit(bootstrapSupply, {gasLimit: 500000})
 
   console.log("Approving Matic Token and Tender Matic Token for creating the Elastic Supply Pool")
 
@@ -130,9 +159,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   console.log("Stake the deposited tokens")
 
-  await Controller.gulp()
+  await Controller.gulp({gasLimit: 1500000})
 
   console.log("Succesfully Deployed ! ")
 }
 export default func
+func.dependencies = ['SafeMath, Balancer']
 func.tags = ['Matic'] // this setup a tag so you can execute the script on its own (and its dependencies)

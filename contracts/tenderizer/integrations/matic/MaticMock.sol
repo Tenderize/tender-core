@@ -9,17 +9,11 @@ contract MaticMock {
 
     IERC20 matic;
 
-    function withdrawRewardsValidator() external returns (uint256) {}
-
     function withdrawRewards() public {}
 
     function unstakeClaimTokens() public {}
 
     function getLiquidRewards(address user) public view returns (uint256) {}
-    
-    function activeAmount() public view returns (uint256) {}
-
-    function owner() public view returns (address) {}
 
     function restake() public {}
 
@@ -28,6 +22,8 @@ contract MaticMock {
     function sellVoucher(uint256 _minClaimAmount) external {}
 
     function exchangeRate() external view returns (uint256) {}
+
+    function balanceOf(address _from) external view returns (uint256) {}
 
     struct Delegator {
         uint256 shares;

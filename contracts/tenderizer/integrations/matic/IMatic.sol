@@ -3,15 +3,9 @@ pragma solidity ^0.8.0;
 
 // note this contract interface is only for stakeManager use
 interface IMatic {
-    function withdrawRewardsValidator() external returns (uint256);
-
-    function withdrawRewards() external;
-
     function unstakeClaimTokens() external;
 
     function getLiquidRewards(address user) external view returns (uint256);
-    
-    function activeAmount() external view returns (uint256);
 
     function owner() external view returns (address);
 
