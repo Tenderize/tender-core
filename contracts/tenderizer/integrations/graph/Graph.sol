@@ -29,9 +29,7 @@ contract Graph is Tenderizer {
     }
 
     function _deposit(address /*_from*/, uint256 _amount) internal override {
-        uint256 delTax = graph.delegationTaxPercentage();
-        uint256 tax = _amount.mul(delTax).div(MAX_PPM);
-        currentPrincipal = currentPrincipal.add(_amount.sub(tax));
+        currentPrincipal = currentPrincipal.add(_amount);
     }
 
     function _stake(address _node, uint256 _amount) internal override {

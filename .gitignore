@@ -2,5 +2,7 @@
 /artifacts
 /cache
 /typechain
+/deployments
 /deployments/localhost.json
 deployments/localhost
+deployments/rinkeby
