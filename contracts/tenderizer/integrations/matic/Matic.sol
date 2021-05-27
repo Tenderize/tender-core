@@ -19,13 +19,13 @@ contract Matic is Tenderizer {
     // Matic exchange rate precision
     uint256 constant EXCHANGE_RATE_PRECISION = 100;
 
-    // IMatic matic;
-    // IMaticValidatorShare node;
+    address maticStakeManagerAddreess;
 
     mapping (address => uint256) pendingWithdrawals;
     uint256 totalPendingWithdrawals;
 
-    constructor(IERC20 _steak, IMatic _matic, address _node) Tenderizer(_steak, _node) {
+    constructor(IERC20 _steak, address _matic, address _node) Tenderizer(_steak, _node) {
+        maticStakeManagerAddreess = _matic;
         node = _node;
     }
 
@@ -51,6 +51,9 @@ contract Matic is Tenderizer {
         if (_node == address(0)) {
             node_ = IMatic(node);
         }
+
+        // approve tokens
+        steak.approve(maticStakeManagerAddreess, amount);
 
         // stake tokens
         node_.buyVoucher(amount, 0);

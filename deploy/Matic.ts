@@ -29,7 +29,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   const tenderizer = await deploy('Matic', {
     from: deployer,
-    args: [process.env.MATIC_TOKEN,  process.env.MATIC_VALIDATOR/*dummy address*/, process.env.MATIC_VALIDATOR || deployer],
+    args: [process.env.MATIC_TOKEN,  process.env.MATIC_STAKE_MANAGER/*dummy address*/, process.env.MATIC_VALIDATOR || deployer],
     log: true, // display the address and gas used in the console (not when run in test though),
     libraries: {
       SafeMath: safeMathFixture["SafeMath"].address
