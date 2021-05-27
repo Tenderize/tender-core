@@ -46,7 +46,6 @@ contract Matic is Tenderizer {
         }
 
         // if no _node is specified, stake towards the default node
-        // make this an if/else?
         IMatic node_ = IMatic(_node);
         if (_node == address(0)) {
             node_ = IMatic(node);
@@ -97,7 +96,7 @@ contract Matic is Tenderizer {
         node_.restake();
 
         // calculate rewards and fees
-        uint256 newPrinciple = node_.delegators(address(this)).shares.div(node_.exchangeRate()).mul(EXCHANGE_RATE_PRECISION);
+        uint256 newPrinciple = node_.balanceOf(address(this)).div(node_.exchangeRate()).mul(EXCHANGE_RATE_PRECISION);
         uint256 fee = newPrinciple.sub(currentPrincipal).mul(protocolFee).div(PERC_DIVISOR);
         
         // update principle and pendignFees

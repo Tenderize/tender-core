@@ -29,4 +29,6 @@ interface IMatic {
     }
 
     function delegators(address) external view returns (Delegator memory);
+
+    function balanceOf(address) external view returns (uint256);
 }

@@ -75,7 +75,7 @@ describe('Matic Integration Test', () => {
     before('deploy Matic Tenderizer', async () => {
         process.env.MATIC_VALIDATOR = MaticMock.address
         process.env.MATIC_TOKEN = MaticToken.address
-        process.env.MATIC_STAKE_MANAGER = '0x0' //dummy
+        process.env.MATIC_STAKE_MANAGER = '0x0000000000000000000000000000000000000000' //dummy
         process.env.STEAK_AMOUNT = STEAK_AMOUNT
         Matic = await hre.deployments.fixture(['Matic'])
         Controller = (await ethers.getContractAt('Controller', Matic['Controller'].address)) as Controller
@@ -135,12 +135,7 @@ describe('Matic Integration Test', () => {
             before(async () => {
                 protocolFee = await Tenderizer.protocolFee()
                 totalShares = await TenderToken.getTotalShares()
-                MaticMock.smocked.delegators.will.return.with(
-                    {
-                        shares: newStake,
-                        withdrawEpoch: 0, //dummy
-                    }
-                )
+                MaticMock.smocked.balanceOf.will.return.with(newStake)
                 MaticMock.smocked.exchangeRate.will.return.with(100)
                 await Controller.rebase()
             })
@@ -187,12 +182,7 @@ describe('Matic Integration Test', () => {
             before(async () => {
                 totalShares = await TenderToken.getTotalShares()
                 feesBefore = await Tenderizer.pendingFees()
-                MaticMock.smocked.delegators.will.return.with(
-                    {
-                        shares: newStake,
-                        withdrawEpoch: 0, //dummy
-                    }
-                )
+                MaticMock.smocked.balanceOf.will.return.with(newStake)
                 MaticMock.smocked.exchangeRate.will.return.with(100)
                 await Controller.rebase()
             })
