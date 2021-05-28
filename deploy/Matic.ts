@@ -58,7 +58,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   const tenderizer = await deploy('Matic', {
     from: deployer,
-    args: [process.env.MATIC_TOKEN,  process.env.MATIC_STAKE_MANAGER/*dummy address*/, process.env.MATIC_VALIDATOR || deployer],
+    args: [process.env.TOKEN,  process.env.CONTRACT/*dummy address*/, process.env.NODE || deployer],
     log: true, // display the address and gas used in the console (not when run in test though),
     libraries: {
       SafeMath: SafeMath.address
@@ -90,7 +90,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     "poolTokenName": "Balancer Rebasing Smart Pool Token V1 (tMATIC-MATIC)",
     "constituentTokens": [
       tenderToken.address,
-      process.env.MATIC_TOKEN
+      process.env.TOKEN
     ],
     "tokenBalances": [bootstrapSupply, bootstrapSupply],
     "tokenWeights": ["7071067811870000000", "7071067811870000000"],
@@ -114,13 +114,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   const controller = await deploy('Controller', {
     from: deployer,
-    args: [process.env.MATIC_TOKEN, tenderizer.address, tenderToken.address, esp.address]
+    args: [process.env.TOKEN, tenderizer.address, tenderToken.address, esp.address]
   })
 
   const TenderToken: TenderToken = (await ethers.getContractAt('TenderToken', tenderToken.address)) as TenderToken
   const Tenderizer: Tenderizer = (await ethers.getContractAt('Tenderizer', tenderizer.address)) as Tenderizer
   const Esp: ElasticSupplyPool = (await ethers.getContractAt('ElasticSupplyPool', esp.address)) as ElasticSupplyPool
-  const Steak: ERC20 = (await ethers.getContractAt('ERC20', process.env.MATIC_TOKEN || ethers.constants.AddressZero)) as ERC20
+  const Steak: ERC20 = (await ethers.getContractAt('ERC20', process.env.TOKEN || ethers.constants.AddressZero)) as ERC20
   const Controller: Controller = (await ethers.getContractAt('Controller', controller.address)) as Controller
   
   console.log("Transferring ownership for TenderToken to Controller")
@@ -150,7 +150,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   console.log("Creating Elastic Supply Pool")
 
-  await Esp.createPool(pcTokenSupply, minimumWeightChangeBlockPeriod, addTokenTimeLockInBlocks)
+  await Esp.createPool(pcTokenSupply, minimumWeightChangeBlockPeriod, addTokenTimeLockInBlocks, {gasLimit: 8000000})
   bpoolAddr = await Esp.bPool()
 
   console.log("Transferring ownership for Elastic Supply Pool to Controller")

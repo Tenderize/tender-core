@@ -11,15 +11,17 @@ async function main () {
     const Esp: ElasticSupplyPool = (await hre.ethers.getContractAt('ElasticSupplyPool', deployments.contracts.ElasticSupplyPool.address)) as ElasticSupplyPool
     const Controller: Controller = (await hre.ethers.getContractAt('Controller', deployments.contracts.Controller.address)) as Controller
     const Tenderizer: Tenderizer = (await hre.ethers.getContractAt('Tenderizer', deployments.contracts.Livepeer.address)) as Tenderizer
-    const Token: ERC20 = (await hre.ethers.getContractAt('ERC20', process.env.LIVEPEER_TOKEN))
+    const Token: ERC20 = (await hre.ethers.getContractAt('ERC20', process.env.TOKEN))
     // // First run scripts/rewards.js in livepeer protocol repo to generate rewards
     // // Then rebase
     // // Values should increase by a little bit
 
-      await Controller.rebase({gasLimit: 5000000})
+    console.log("Controller", Controller.address)
+    console.log("bPool", await Esp.bPool())
+    // await Controller.rebase({gasLimit: 5000000})
     // // await Controller.gulp()
     // console.log((await Tenderizer.currentPrincipal()).toString())
-     console.log((await TenderToken.getTotalPooledTokens()).toString())
+    // console.log((await TenderToken.getTotalPooledTokens()).toString())
     // console.log((await TenderToken.totalSupply()).toString())
     // console.log(hre.ethers.utils.formatEther(await TenderToken.balanceOf(await Esp.bPool())))
 
