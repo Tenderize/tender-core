@@ -126,11 +126,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   
   console.log("Transferring ownership for TenderToken to Controller")
 
-  await TenderToken.transferOwnership(controller.address, {from: deployer})
+  await TenderToken.transferOwnership(controller.address, {from: deployer, gasLimit: 1000000})
   
   console.log("Transferring ownership for Tenderizer to Controller")
 
-  await Tenderizer.transferOwnership(controller.address, {from: deployer})
+  await Tenderizer.transferOwnership(controller.address, {from: deployer, gasLimit: 1000000})
 
   const pcTokenSupply = '1000000000000000000000' // 1000e18
   const minimumWeightChangeBlockPeriod = 10;

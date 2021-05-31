@@ -63,7 +63,11 @@ contract Matic is Tenderizer {
         uint256 fxRate = matic.exchangeRate();
         if (fxRate == 0) fxRate = 1;
         uint256 min = amount.mul(EXCHANGE_RATE_PRECISION).div(fxRate);
-        matic_.buyVoucher(amount, min);
+        try matic_.buyVoucher(amount, min) {
+
+        } catch {
+            
+        }
     }
 
     function _unstake(address _account, address _node, uint256 _amount) internal override {

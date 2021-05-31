@@ -114,7 +114,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   const controller = await deploy('Controller', {
     from: deployer,
-    args: [process.env.TOKEN, tenderizer.address, tenderToken.address, esp.address]
+    args: [process.env.TOKEN, tenderizer.address, tenderToken.address, esp.address],
+    log: true,
   })
 
   const TenderToken: TenderToken = (await ethers.getContractAt('TenderToken', tenderToken.address)) as TenderToken
@@ -150,7 +151,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   console.log("Creating Elastic Supply Pool")
 
-  await Esp.createPool(pcTokenSupply, minimumWeightChangeBlockPeriod, addTokenTimeLockInBlocks, {gasLimit: 8000000})
+  let tx = await Esp.createPool(pcTokenSupply, minimumWeightChangeBlockPeriod, addTokenTimeLockInBlocks, {gasLimit: 8000000})
+  await tx.wait()
   bpoolAddr = await Esp.bPool()
 
   console.log("Transferring ownership for Elastic Supply Pool to Controller")
@@ -162,6 +164,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   await Controller.gulp({gasLimit: 1500000})
 
   console.log("Succesfully Deployed ! ")
+
+  console.log("Balancer Pool: ", bpoolAddr)
 }
 export default func
 func.dependencies = ['SafeMath, Balancer']

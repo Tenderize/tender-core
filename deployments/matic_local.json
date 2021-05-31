@@ -1,17 +1,17 @@
 {
-  "name": "rinkeby",
-  "chainId": "4",
+  "name": "localhost",
+  "chainId": "31337",
   "contracts": {
     "SafeMath": {
-      "address": "0x5069De6b277619742C70A54fF277e788A46ec491",
+      "address": "0xf953b3A269d80e3eB0F2947630Da976B896A8C5b",
       "abi": []
     },
     "BalancerSafeMath": {
-      "address": "0x02D557E2ca05299B0915a709aF2f693188dE9C0c",
+      "address": "0xAA292E8611aDF267e563f334Ee42320aC96D0463",
       "abi": []
     },
     "RightsManager": {
-      "address": "0x17A7f4f436f2F2DfF8AE49fA7E40A1a58058e801",
+      "address": "0x5c74c94173F05dA1720953407cbb920F3DF9f887",
       "abi": [
         {
           "inputs": [],
@@ -252,7 +252,7 @@
       ]
     },
     "SmartPoolManager": {
-      "address": "0xb0deFd270D0F361dD24d444A6D912A2C43914A82",
+      "address": "0x720472c8ce72c2A2D711333e064ABD3E6BbEAdd3",
       "abi": [
         {
           "inputs": [
@@ -501,7 +501,7 @@
       ]
     },
     "BFactory": {
-      "address": "0x023C9b894A1Fa6fF13cccA85DE8b153b616a6891",
+      "address": "0xe8D2A1E88c91DCd5433208d4152Cc4F399a7e91d",
       "abi": [
         {
           "inputs": [],
@@ -646,7 +646,7 @@
       ]
     },
     "Matic": {
-      "address": "0x115A8A95aD741Ce2F8e9CeD8A002289E01d48111",
+      "address": "0x5067457698Fd6Fa1C6964e416b3f42713513B3dD",
       "abi": [
         {
           "inputs": [
@@ -946,7 +946,7 @@
       ]
     },
     "TenderToken": {
-      "address": "0x37200F651d0CB9Ae012f93774f8EcC13e61781ad",
+      "address": "0x18E317A7D70d8fBf8e6E893616b52390EbBdb629",
       "abi": [
         {
           "inputs": [
@@ -1433,7 +1433,7 @@
       ]
     },
     "ElasticSupplyPool": {
-      "address": "0xde7f3f60F59944900F2a4501dD0051e6aC6Ec7d0",
+      "address": "0x4b6aB5F819A515382B0dEB6935D793817bB4af28",
       "abi": [
         {
           "inputs": [
@@ -2684,7 +2684,7 @@
       ]
     },
     "Controller": {
-      "address": "0xd7bDE8310D9Dc99bEcdaa7B30b4D0752d10DA0F5",
+      "address": "0xCace1b78160AE76398F486c8a18044da0d66d86D",
       "abi": [
         {
           "inputs": [
