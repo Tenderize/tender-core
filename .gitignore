@@ -1,6 +1,5 @@
-/node_modules
-/artifacts
-/cache
-/typechain
-/deployments/localhost.json
-deployments/localhost
+node_modules
+artifacts
+cache
+typechain
+deployments

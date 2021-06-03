@@ -11,8 +11,6 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../../Tenderizer.sol";
 import "./IGraph.sol";
 
-import "hardhat/console.sol";
-
 contract Graph is Tenderizer {
     using SafeMath for uint256;
 
@@ -29,9 +27,7 @@ contract Graph is Tenderizer {
     }
 
     function _deposit(address /*_from*/, uint256 _amount) internal override {
-        uint256 delTax = graph.delegationTaxPercentage();
-        uint256 tax = _amount.mul(delTax).div(MAX_PPM);
-        currentPrincipal = currentPrincipal.add(_amount.sub(tax));
+        currentPrincipal = currentPrincipal.add(_amount);
     }
 
     function _stake(address _node, uint256 _amount) internal override {
@@ -114,8 +110,9 @@ contract Graph is Tenderizer {
 
         // Account for LPT rewards
         address del = address(this);
-        IGraph.Delegation memory delegation = graph.getDelegation(node, del);
+        uint256 currentPrincipal_ = currentPrincipal;
 
+        IGraph.Delegation memory delegation = graph.getDelegation(node, del);
         IGraph.DelegationPool memory delPool = graph.delegationPools(node);
 
         uint256 delShares = delegation.shares;
@@ -124,15 +121,15 @@ contract Graph is Tenderizer {
 
         uint256 stake = delShares.mul(totalTokens).div(totalShares);
 
-        uint256 rewards = stake.sub(currentPrincipal);
-
-        console.log("stake after claiming earnings %s", stake);
+        uint256 rewards;
+        if (stake >= currentPrincipal_) {
+            rewards = stake.sub(currentPrincipal_);
+        }
 
         // Substract protocol fee amount and add it to pendingFees
         uint256 fee = rewards.mul(protocolFee).div(PERC_DIVISOR);
         pendingFees = pendingFees.add(fee);
 
-        console.log("fee on the rewards %s", fee);
         // Add current pending stake minus fees and set it as current principal
         currentPrincipal = stake.sub(fee);
     }
