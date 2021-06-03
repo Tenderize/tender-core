@@ -10,9 +10,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "hardhat/console.sol";
-
-
 /**
  * @title Interest-bearing ERC20-like token for Tenderize protocol.
  *
@@ -375,8 +372,6 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
         require(_recipient != address(0), "TRANSFER_TO_THE_ZERO_ADDRESS");
 
         uint256 currentSenderShares = shares[_sender];
-        console.log("current sender shares %s", currentSenderShares);
-        console.log("Shares amount to transfer %s", _sharesAmount);
         require(_sharesAmount <= currentSenderShares, "TRANSFER_AMOUNT_EXCEEDS_BALANCE");
 
         shares[_sender] = currentSenderShares.sub(_sharesAmount);
