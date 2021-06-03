@@ -74,9 +74,9 @@ describe('Graph Integration Test', () => {
     const NODE  = "0xf4e8Ef0763BCB2B1aF693F5970a00050a6aC7E1B"
 
     before('deploy Graph Tenderizer', async () => {
-        process.env.LIVEPEER_BONDINGMANAGER = GraphMock.address
-        process.env.LIVEPEER_TOKEN = GraphToken.address
-        process.env.LIVEPEER_NODE = NODE
+        process.env.CONTRACT = GraphMock.address
+        process.env.TOKEN = GraphToken.address
+        process.env.NODE = NODE
         process.env.STEAK_AMOUNT = STEAK_AMOUNT
         Graph = await hre.deployments.fixture(['Graph'])
         Controller = (await ethers.getContractAt('Controller', Graph['Controller'].address)) as Controller

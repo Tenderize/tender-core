@@ -8,14 +8,14 @@ import {
 } from "ethereum-waffle";
 import {
     Controller
-} from "../typechain/";
+} from "../../typechain/";
 import hre from "hardhat"
 chai.use(solidity);
 const {
     expect
 } = chai;
 
-import * as rpc from "./util/snapshot"
+import * as rpc from "../util/snapshot"
 
 describe('Controller', () => {
     let snapshotId: any

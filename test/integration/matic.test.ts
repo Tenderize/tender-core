@@ -73,9 +73,9 @@ describe('Matic Integration Test', () => {
     const STEAK_AMOUNT = "100000"
 
     before('deploy Matic Tenderizer', async () => {
-        process.env.MATIC_VALIDATOR = MaticMock.address
-        process.env.MATIC_TOKEN = MaticToken.address
-        process.env.MATIC_STAKE_MANAGER = '0x0000000000000000000000000000000000000101' //dummy
+        process.env.NODE = MaticMock.address
+        process.env.TOKEN = MaticToken.address
+        process.env.CONTRACT = '0x0000000000000000000000000000000000000101' //dummy
         process.env.STEAK_AMOUNT = STEAK_AMOUNT
         Matic = await hre.deployments.fixture(['Matic'])
         Controller = (await ethers.getContractAt('Controller', Matic['Controller'].address)) as Controller

@@ -150,7 +150,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   await TenderToken.approve(esp.address, bootstrapSupply)
 
   
-  console.log((await TenderToken.getSharesByPooledTokens(bootstrapSupply)).toString())
+  console.log((await TenderToken.tokensToShares(bootstrapSupply)).toString())
   console.log("Creating Elastic Supply Pool")
 
   await Esp.createPool(pcTokenSupply, minimumWeightChangeBlockPeriod, addTokenTimeLockInBlocks, {gasLimit: 8000000})

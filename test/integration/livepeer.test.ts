@@ -74,9 +74,9 @@ describe('Livepeer Integration Test', () => {
     const NODE  = "0xf4e8Ef0763BCB2B1aF693F5970a00050a6aC7E1B"
 
     before('deploy Livepeer Tenderizer', async () => {
-        process.env.LIVEPEER_BONDINGMANAGER = LivepeerMock.address
-        process.env.LIVEPEER_TOKEN = LivepeerToken.address
-        process.env.LIVEPEER_NODE = NODE
+        process.env.CONTRACT = LivepeerMock.address
+        process.env.TOKEN = LivepeerToken.address
+        process.env.NODE = NODE
         process.env.STEAK_AMOUNT = STEAK_AMOUNT
         Livepeer = await hre.deployments.fixture(['Livepeer'])
         Controller = (await ethers.getContractAt('Controller', Livepeer['Controller'].address)) as Controller
