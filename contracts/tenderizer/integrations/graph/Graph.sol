@@ -11,8 +11,6 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../../Tenderizer.sol";
 import "./IGraph.sol";
 
-import "hardhat/console.sol";
-
 contract Graph is Tenderizer {
     using SafeMath for uint256;
 
@@ -128,13 +126,10 @@ contract Graph is Tenderizer {
             rewards = stake.sub(currentPrincipal_);
         }
 
-        console.log("stake after claiming earnings %s", stake);
-
         // Substract protocol fee amount and add it to pendingFees
         uint256 fee = rewards.mul(protocolFee).div(PERC_DIVISOR);
         pendingFees = pendingFees.add(fee);
 
-        console.log("fee on the rewards %s", fee);
         // Add current pending stake minus fees and set it as current principal
         currentPrincipal = stake.sub(fee);
     }
