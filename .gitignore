@@ -1,8 +1,5 @@
-/node_modules
-/artifacts
-/cache
-/typechain
-/deployments
-/deployments/localhost.json
-deployments/localhost
-deployments/rinkeby
+node_modules
+artifacts
+cache
+typechain
+deployments
