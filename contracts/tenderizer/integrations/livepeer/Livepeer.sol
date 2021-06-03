@@ -12,8 +12,6 @@ import "../../Tenderizer.sol";
 import "./ILivepeer.sol";
 import "../../../IOneInch.sol";
 
-import "hardhat/console.sol";
-
 contract Livepeer is Tenderizer {
     using SafeMath for uint256;
 
@@ -135,8 +133,6 @@ contract Livepeer is Tenderizer {
             rewards = stake.sub(currentPrincipal_);
         }
 
-        console.log("stake after claiming earnings %s", stake);
-        console.log("current rewards %s", rewards);
         // withdraw fees
         if (ethFees >= ethFees_threshold) {
             livepeer.withdrawFees();
@@ -154,7 +150,6 @@ contract Livepeer is Tenderizer {
         // Substract protocol fee amount and add it to pendingFees
         uint256 fee = rewards.mul(protocolFee).div(PERC_DIVISOR);
         pendingFees = pendingFees.add(fee);
-        console.log("fee on the rewards %s", fee);
         // Add current pending stake minus fees and set it as current principal
         currentPrincipal = stake.sub(fee);
     }

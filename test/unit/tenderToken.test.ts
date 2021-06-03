@@ -8,14 +8,14 @@ import {
 } from "ethereum-waffle";
 import {
     TenderToken
-} from "../typechain/TenderToken";
+} from "../../typechain/TenderToken";
 import hre from "hardhat"
 chai.use(solidity);
 const {
     expect
 } = chai;
 
-import * as rpc from "./util/snapshot"
+import * as rpc from "../util/snapshot"
 
 describe('TenderToken', () => {
 
@@ -593,20 +593,20 @@ describe('TenderToken', () => {
                 expect(await tenderToken.sharesOf(account0)).to.eq(zero)
             })
 
-            it('getPooledTokensByShares', async () => {
-                expect(await tenderToken.getPooledTokensByShares(ethers.utils.parseEther("0"))).to.eq(zero)
-                expect(await tenderToken.getPooledTokensByShares(ethers.utils.parseEther("1"))).to.eq(zero)
-                expect(await tenderToken.getPooledTokensByShares(ethers.utils.parseEther("100"))).to.eq(zero)
+            it('tokensToShares', async () => {
+                expect(await tenderToken.tokensToShares(ethers.utils.parseEther("0"))).to.eq(zero)
+                expect(await tenderToken.tokensToShares(ethers.utils.parseEther("1"))).to.eq(zero)
+                expect(await tenderToken.tokensToShares(ethers.utils.parseEther("100"))).to.eq(zero)
             })
 
             it('balanceOf', async () => {
                 expect(await tenderToken.balanceOf(account0)).to.eq(zero)
             })
 
-            it('getSharesByPooledTokens', async () => {
-                expect(await tenderToken.getSharesByPooledTokens(ethers.utils.parseEther("0"))).to.eq(zero)
-                expect(await tenderToken.getSharesByPooledTokens(ethers.utils.parseEther("1"))).to.eq(zero)
-                expect(await tenderToken.getSharesByPooledTokens(ethers.utils.parseEther("100"))).to.eq(zero)
+            it('sharesToTokens', async () => {
+                expect(await tenderToken.sharesToTokens(ethers.utils.parseEther("0"))).to.eq(zero)
+                expect(await tenderToken.sharesToTokens(ethers.utils.parseEther("1"))).to.eq(zero)
+                expect(await tenderToken.sharesToTokens(ethers.utils.parseEther("100"))).to.eq(zero)
             })
         })
 
@@ -639,11 +639,11 @@ describe('TenderToken', () => {
                 expect(await tenderToken.sharesOf(account2)).to.eq(acc2Balance)
             })
 
-            it('getPooledTokensByShares', async () => {
-                expect(await tenderToken.getPooledTokensByShares(ethers.constants.Zero)).to.eq(ethers.constants.Zero)
-                expect(await tenderToken.getPooledTokensByShares(ethers.utils.parseEther("1"))).to.eq(ethers.utils.parseEther("1"))
-                expect(await tenderToken.getPooledTokensByShares(ethers.utils.parseEther("2"))).to.eq(ethers.utils.parseEther("2"))
-                expect(await tenderToken.getPooledTokensByShares(totalSupply)).to.eq(totalSupply)
+            it('sharesToTokens', async () => {
+                expect(await tenderToken.sharesToTokens(ethers.constants.Zero)).to.eq(ethers.constants.Zero)
+                expect(await tenderToken.sharesToTokens(ethers.utils.parseEther("1"))).to.eq(ethers.utils.parseEther("1"))
+                expect(await tenderToken.sharesToTokens(ethers.utils.parseEther("2"))).to.eq(ethers.utils.parseEther("2"))
+                expect(await tenderToken.sharesToTokens(totalSupply)).to.eq(totalSupply)
           
             })
 
@@ -653,11 +653,11 @@ describe('TenderToken', () => {
                 expect(await tenderToken.balanceOf(account2)).to.eq(acc2Balance)
             })
 
-            it('getSharesByPooledTokens', async () => {
-                expect(await tenderToken.getSharesByPooledTokens(ethers.constants.Zero)).to.eq(ethers.constants.Zero)
-                expect(await tenderToken.getSharesByPooledTokens(ethers.utils.parseEther("1"))).to.eq(ethers.utils.parseEther("1"))
-                expect(await tenderToken.getSharesByPooledTokens(ethers.utils.parseEther("2"))).to.eq(ethers.utils.parseEther("2"))
-                expect(await tenderToken.getSharesByPooledTokens(totalSupply)).to.eq(totalSupply)
+            it('tokensToShares', async () => {
+                expect(await tenderToken.tokensToShares(ethers.constants.Zero)).to.eq(ethers.constants.Zero)
+                expect(await tenderToken.tokensToShares(ethers.utils.parseEther("1"))).to.eq(ethers.utils.parseEther("1"))
+                expect(await tenderToken.tokensToShares(ethers.utils.parseEther("2"))).to.eq(ethers.utils.parseEther("2"))
+                expect(await tenderToken.tokensToShares(totalSupply)).to.eq(totalSupply)
             })
 
             describe("rebase occurs", () => {
@@ -686,11 +686,11 @@ describe('TenderToken', () => {
                     expect(await tenderToken.sharesOf(account2)).to.eq(acc2Balance)
                 })
     
-                it('getPooledTokensByShares', async () => {
-                    expect(await tenderToken.getPooledTokensByShares(ethers.constants.Zero)).to.eq(ethers.constants.Zero)
-                    expect(await tenderToken.getPooledTokensByShares(ethers.utils.parseEther("1"))).to.eq(ethers.utils.parseEther("1").mul(newTotalPooledTokens).div(totalSupply))
-                    expect(await tenderToken.getPooledTokensByShares(ethers.utils.parseEther("2"))).to.eq(ethers.utils.parseEther("2").mul(newTotalPooledTokens).div(totalSupply))
-                    expect(await tenderToken.getPooledTokensByShares(totalSupply)).to.eq(totalSupply.mul(newTotalPooledTokens).div(totalSupply))
+                it('sharesToTokens', async () => {
+                    expect(await tenderToken.sharesToTokens(ethers.constants.Zero)).to.eq(ethers.constants.Zero)
+                    expect(await tenderToken.sharesToTokens(ethers.utils.parseEther("1"))).to.eq(ethers.utils.parseEther("1").mul(newTotalPooledTokens).div(totalSupply))
+                    expect(await tenderToken.sharesToTokens(ethers.utils.parseEther("2"))).to.eq(ethers.utils.parseEther("2").mul(newTotalPooledTokens).div(totalSupply))
+                    expect(await tenderToken.sharesToTokens(totalSupply)).to.eq(totalSupply.mul(newTotalPooledTokens).div(totalSupply))
               
                 })
     
@@ -700,11 +700,11 @@ describe('TenderToken', () => {
                     expect(await tenderToken.balanceOf(account2)).to.eq(acc2Balance.mul(newTotalPooledTokens).div(totalSupply))
                 })
     
-                it('getSharesByPooledTokens', async () => {
-                    expect(await tenderToken.getSharesByPooledTokens(ethers.constants.Zero)).to.eq(ethers.constants.Zero)
-                    expect(await tenderToken.getSharesByPooledTokens(ethers.utils.parseEther("1"))).to.eq(ethers.utils.parseEther("1").mul(totalSupply).div(newTotalPooledTokens))
-                    expect(await tenderToken.getSharesByPooledTokens(ethers.utils.parseEther("2"))).to.eq(ethers.utils.parseEther("2").mul(totalSupply).div(newTotalPooledTokens))
-                    expect(await tenderToken.getSharesByPooledTokens(totalSupply)).to.eq(totalSupply.mul(totalSupply).div(newTotalPooledTokens))
+                it('tokensToShares', async () => {
+                    expect(await tenderToken.tokensToShares(ethers.constants.Zero)).to.eq(ethers.constants.Zero)
+                    expect(await tenderToken.tokensToShares(ethers.utils.parseEther("1"))).to.eq(ethers.utils.parseEther("1").mul(totalSupply).div(newTotalPooledTokens))
+                    expect(await tenderToken.tokensToShares(ethers.utils.parseEther("2"))).to.eq(ethers.utils.parseEther("2").mul(totalSupply).div(newTotalPooledTokens))
+                    expect(await tenderToken.tokensToShares(totalSupply)).to.eq(totalSupply.mul(totalSupply).div(newTotalPooledTokens))
                 })
             })
         })
