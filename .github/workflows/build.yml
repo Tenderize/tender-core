@@ -1,0 +1,22 @@
+name: Build
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+      - name: Checkout
+        uses: actions/checkout@v2 
+        with:
+          # Needed for commands that depend on git tags
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Install dependencies
+        run: |
+          yarn
+      - name: Compile contracts
+        run: |
+          npx hardhat compile
+      - name: 💡 Run contract tests
+        run: |
+          npx hardhat test
