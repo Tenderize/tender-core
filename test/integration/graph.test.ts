@@ -6,6 +6,8 @@ import {
     SimpleToken, GraphMock, Controller, Tenderizer, ElasticSupplyPool, TenderToken, IGraph, BPool
   } from "../../typechain/";
 
+import {sharesToTokens, tokensToShares} from '../util/helpers'
+
 import chai from "chai";
 import {
     solidity
@@ -162,7 +164,7 @@ describe('Graph Integration Test', () => {
             it("increases tendertoken balances when rewards are added", async () => {
                 // account 0
                 let shares = await TenderToken.sharesOf(deployer)
-                expect(await TenderToken.balanceOf(deployer)).to.eq(deposit.add(increase.sub(expFee).mul(shares).div(totalShares)))
+                expect(await TenderToken.balanceOf(deployer)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
             })
 
             it("increases pending fees", async () => {
@@ -171,7 +173,7 @@ describe('Graph Integration Test', () => {
 
             it("increases the tenderToken balance of the AMM", async () => {
                 let shares = await TenderToken.sharesOf(BPool.address)
-                expect(await TenderToken.balanceOf(BPool.address)).to.eq(initialStake.add(increase.sub(expFee).mul(shares).div(totalShares)))
+                expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
             })
 
             it("changes the weights of the AMM", async () => {
