@@ -77,6 +77,8 @@ describe('Livepeer Integration Test', () => {
     const NODE  = "0xf4e8Ef0763BCB2B1aF693F5970a00050a6aC7E1B"
 
     before('deploy Livepeer Tenderizer', async () => {
+        process.env.NAME = "Livepeer"
+        process.env.SYMBOL = "LPT"
         process.env.CONTRACT = LivepeerMock.address
         process.env.TOKEN = LivepeerToken.address
         process.env.NODE = NODE

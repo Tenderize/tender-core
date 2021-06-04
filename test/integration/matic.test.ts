@@ -76,6 +76,8 @@ describe('Matic Integration Test', () => {
     const STEAK_AMOUNT = "100000"
 
     before('deploy Matic Tenderizer', async () => {
+        process.env.NAME = "Matic"
+        process.env.SYMBOL = "MATIC"
         process.env.NODE = MaticMock.address
         process.env.TOKEN = MaticToken.address
         process.env.CONTRACT = '0x0000000000000000000000000000000000000101' //dummy

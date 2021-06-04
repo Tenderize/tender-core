@@ -6,10 +6,18 @@ import {
 
 import {
   TenderToken, Tenderizer, ElasticSupplyPool, ERC20, Controller
-} from "../typechain/";
+} from "../typechain";
 import { BigNumber } from '@ethersproject/bignumber';
 
+const NAME = process.env.NAME || ""
+const SYMBOL = process.env.NAME || ""
+
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { // the deploy function receive the hardhat runtime env as argument
+
+  if (!NAME || !SYMBOL) {
+    throw new Error("Must provide Tenderizer Name and Symbol");
+  }
+
   const {deployments, getNamedAccounts} = hre // Get the deployments and getNamedAccounts which are provided by hardhat-deploy
   const {deploy} = deployments // the deployments field itself contains the deploy function
 
@@ -24,19 +32,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     log: true, // display the address and gas used in the console (not when run in test though)
   })
 
-  console.log("Deploying Balancer RightsManager")
   const RightsManager = await deploy('RightsManager', {
     from: deployer,
     log: true
   })
 
-  console.log("Deploying Balancer SmartPoolManager")
   const SmartPoolManager = await deploy('SmartPoolManager', {
     from: deployer,
     log: true
   })
 
-  console.log("Deploying Balancer Factory")
   const BFactory = await deploy('BFactory', {
     from: deployer,
     log: true
@@ -47,19 +52,21 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   const bootstrapSupply: BigNumber = ethers.utils.parseEther(steakAmount).div(2)
 
-  console.log("Deploying Matic Tenderizer")
+  console.log(`Bootstrap Tenderizer with ${steakAmount} ${SYMBOL}`)
 
-  const tenderizer = await deploy('Matic', {
+  const tenderizer = await deploy(NAME, {
     from: deployer,
-    args: [process.env.TOKEN,  process.env.CONTRACT/*dummy address*/, process.env.NODE || deployer],
+    args: [process.env.TOKEN, process.env.CONTRACT, process.env.NODE],
     log: true, // display the address and gas used in the console (not when run in test though),
+    proxy: {
+      owner: deployer,
+      methodName: 'initialize'
+    }
   })
-
-  console.log("Deploying Matic TenderToken")
 
   const tenderToken = await deploy('TenderToken', {
     from: deployer,
-    args: ['Matic', 'MATIC'],
+    args: [NAME, SYMBOL],
     log: true, // display the address and gas used in the console (not when run in test though)
   })
 
@@ -73,8 +80,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   }
   
   const poolParams = {
-    "poolTokenSymbol": "BAL-REBASING-SMART-V1-tMATIC-MATIC",
-    "poolTokenName": "Balancer Rebasing Smart Pool Token V1 (tMATIC-MATIC)",
+    "poolTokenSymbol": `BAL-REBASING-SMART-V1-t${SYMBOL}-${SYMBOL}`,
+    "poolTokenName": `Balancer Rebasing Smart Pool Token V1 (t${SYMBOL}-${SYMBOL})`,
     "constituentTokens": [
       tenderToken.address,
       process.env.TOKEN
@@ -83,8 +90,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     "tokenWeights": ["7071067811870000000", "7071067811870000000"],
     "swapFee": "3000000000000000"
   }
-
-  console.log("Deploying Matic Elastic Supply Pool")
 
   const esp = await deploy('ElasticSupplyPool', {
     from: deployer,
@@ -97,10 +102,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     args: [BFactory.address, poolParams, permissions]
   })
 
-  console.log("Deploying Controller")
-
   const controller = await deploy('Controller', {
     from: deployer,
+    log: true,
     args: [process.env.TOKEN, tenderizer.address, tenderToken.address, esp.address]
   })
 
@@ -110,27 +114,25 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   const Steak: ERC20 = (await ethers.getContractAt('ERC20', process.env.TOKEN || ethers.constants.AddressZero)) as ERC20
   const Controller: Controller = (await ethers.getContractAt('Controller', controller.address)) as Controller
   
-  console.log("Transferring ownership for TenderToken to Controller")
+  console.log("Setting controller on Tenderizer")
+  await Tenderizer.setController(controller.address, {from: deployer})
 
+  console.log("Transferring ownership for TenderToken to Controller")
   await TenderToken.transferOwnership(controller.address, {from: deployer})
   
-  console.log("Transferring ownership for Tenderizer to Controller")
-
-  await Tenderizer.transferOwnership(controller.address, {from: deployer})
-
   const pcTokenSupply = '1000000000000000000000' // 1000e18
   const minimumWeightChangeBlockPeriod = 10;
   const addTokenTimeLockInBlocks = 10;
 
-  console.log("Approving Matic Token for depositing in Tenderizer")
+  console.log("Approving tokens for depositing in Tenderizer")
 
   await Steak.approve(controller.address, bootstrapSupply)
 
-  console.log("Depositing Matic Tokens in Tenderizer")
+  console.log("Depositing tokens in Tenderizer")
 
   await Controller.deposit(bootstrapSupply, {gasLimit: 500000})
 
-  console.log("Approving Matic Token and Tender Matic Token for creating the Elastic Supply Pool")
+  console.log("Approving tokens and tender tokens for creating the Elastic Supply Pool")
 
   await Steak.approve(esp.address, bootstrapSupply)
   await TenderToken.approve(esp.address, bootstrapSupply)
@@ -148,8 +150,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   await Controller.gulp({gasLimit: 1500000})
 
+  console.log("Balancer pool address", bpoolAddr)
+
   console.log("Succesfully Deployed ! ")
 }
+
+func.tags = [NAME] // this setup a tag so you can execute the script on its own (and its dependencies)
 export default func
-func.dependencies = ['Balancer']
-func.tags = ['Matic'] // this setup a tag so you can execute the script on its own (and its dependencies)
+

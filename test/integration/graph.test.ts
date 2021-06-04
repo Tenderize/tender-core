@@ -76,6 +76,8 @@ describe('Graph Integration Test', () => {
     const NODE  = "0xf4e8Ef0763BCB2B1aF693F5970a00050a6aC7E1B"
 
     before('deploy Graph Tenderizer', async () => {
+        process.env.NAME = "Graph"
+        process.env.SYMBOL = "GRT"
         process.env.CONTRACT = GraphMock.address
         process.env.TOKEN = GraphToken.address
         process.env.NODE = NODE
