@@ -9,6 +9,7 @@ import "./NamedToken.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "../libs/MathUtils.sol";
 
 /**
  * @title Interest-bearing ERC20-like token for Tenderize protocol.
@@ -131,9 +132,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
         } else if (_totalShares == 0) {
             return _tokens;
         } else {
-            return _tokens
-                .mul(_totalShares)
-                .div(_totalPooledTokens);
+            return MathUtils.percOf(_tokens, _totalShares, _totalPooledTokens);
         }
     }
 
@@ -147,9 +146,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
         if (currShares == 0) {
             return 0;
         } else {
-            return _shares
-                .mul(_getTotalPooledTokens())
-                .div(currShares);
+            return MathUtils.percOf(_shares, _getTotalPooledTokens(), currShares);
         }
     }
 

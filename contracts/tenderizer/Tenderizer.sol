@@ -14,13 +14,12 @@ import "./ITenderizer.sol";
 abstract contract Tenderizer is Ownable, ITenderizer {
     using SafeMath for uint256;
 
-    uint256 constant PERC_DIVISOR = 1e18;
     address constant ZERO_ADDRESS = address(0);
 
     IERC20 public steak;
     address public node; 
 
-    uint256 public protocolFee = 25 * 1e15; // 2.5%
+    uint256 public protocolFee = 25 * 1e15; // 2.5% because PERC DIVISOR = 1e18
 
     uint256 public pendingFees; // pending protocol fees since last distribution
     uint256 public currentPrincipal; // Principal since last claiming earnings

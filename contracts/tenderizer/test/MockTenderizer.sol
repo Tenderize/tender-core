@@ -7,6 +7,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "../../libs/MathUtils.sol";
 
 import "../Tenderizer.sol";
 
@@ -43,7 +44,7 @@ contract MockTenderizer is Tenderizer {
         uint256 rewards = rewardAmount;
 
         // Substract protocol fee amount and add it to pendingFees
-        uint256 fee = rewards.mul(protocolFee).div(PERC_DIVISOR);
+        uint256 fee = MathUtils.percOf(rewards, protocolFee);
         pendingFees = pendingFees.add(fee);
 
         // Add current pending stake minus fees and set it as current principal
