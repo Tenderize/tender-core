@@ -73,7 +73,8 @@ contract Livepeer is Tenderizer {
         // Sanity check. Controller already checks user deposits and withdrawals > 0
         if (_account != owner()) require(amount > 0, "ZERO_AMOUNT");
         if (amount == 0) {
-            amount = IERC20(steak).balanceOf(address(this));
+            amount = livepeer.pendingStake(address(this), MAX_ROUND);
+            require(amount > 0, "ZERO_STAKE");
         }
 
         // if no _node is specified, stake towards the default node
