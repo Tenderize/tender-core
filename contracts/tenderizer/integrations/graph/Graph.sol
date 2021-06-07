@@ -6,14 +6,12 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../../../libs/MathUtils.sol";
 
 import "../../Tenderizer.sol";
 import "./IGraph.sol";
 
 contract Graph is Tenderizer {
-    using SafeMath for uint256;
 
     // 100% in parts per million
     uint32 private constant MAX_PPM = 1000000;
@@ -28,7 +26,7 @@ contract Graph is Tenderizer {
     }
 
     function _deposit(address /*_from*/, uint256 _amount) internal override {
-        currentPrincipal = currentPrincipal.add(_amount);
+        currentPrincipal += _amount;
     }
 
     function _stake(address _node, uint256 _amount) internal override {
@@ -73,7 +71,7 @@ contract Graph is Tenderizer {
             node_ = node;
         }
 
-        currentPrincipal = currentPrincipal.sub(_amount);
+        currentPrincipal -= _amount;
 
         // Calculate the amount of shares to undelegate
         IGraph.Delegation memory delegation = graph.getDelegation(node, address(this));
@@ -83,8 +81,8 @@ contract Graph is Tenderizer {
         uint256 totalShares = delPool.shares;
         uint256 totalTokens = delPool.tokens;
 
-        uint256 stake = delShares.mul(totalTokens).div(totalShares);
-        uint shares = delShares.mul(amount).div(stake);
+        uint256 stake = MathUtils.percOf(delShares, totalTokens, totalShares);
+        uint shares = MathUtils.percOf(delShares, amount, stake);
 
         pendingWithdrawals[_account] = amount;
 
@@ -120,19 +118,19 @@ contract Graph is Tenderizer {
         uint256 totalShares = delPool.shares;
         uint256 totalTokens = delPool.tokens;
 
-        uint256 stake = delShares.mul(totalTokens).div(totalShares);
+        uint256 stake = MathUtils.percOf(delShares, totalTokens, totalShares);
 
         uint256 rewards;
         if (stake >= currentPrincipal_) {
-            rewards = stake.sub(currentPrincipal_);
+            rewards = stake - currentPrincipal_;
         }
 
         // Substract protocol fee amount and add it to pendingFees
         uint256 fee = MathUtils.percOf(rewards, protocolFee);
-        pendingFees = pendingFees.add(fee);
+        pendingFees += fee;
 
         // Add current pending stake minus fees and set it as current principal
-        currentPrincipal = stake.sub(fee);
+        currentPrincipal = stake - fee;
     }
 
     function _collectFees() internal override returns (uint256) {

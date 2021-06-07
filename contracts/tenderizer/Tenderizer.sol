@@ -6,13 +6,11 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./ITenderizer.sol";
 
 abstract contract Tenderizer is Ownable, ITenderizer {
-    using SafeMath for uint256;
 
     address constant ZERO_ADDRESS = address(0);
 

@@ -14,34 +14,23 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   const {deployer} = await getNamedAccounts() // Fetch named accounts from hardhat.config.ts
 
-  const safeMathFixture = await deployments.fixture(["SafeMath"])
-
   const balancerFixture = await deployments.fixture(["Balancer"])
 
   const steak = await deploy('SimpleToken', {
       from: deployer,
       args: ['SimpleToken', 'SIM', ethers.utils.parseEther("5000")],
-      libraries: {
-        SafeMath: safeMathFixture["SafeMath"].address
-      }
   })
 
   const tenderizer = await deploy('MockTenderizer', {
     from: deployer,
     args: [steak.address, ethers.constants.AddressZero, ethers.utils.parseEther("50")],
     log: true, // display the address and gas used in the console (not when run in test though),
-    libraries: {
-      SafeMath: safeMathFixture["SafeMath"].address
-    }
   })
 
   const tenderToken = await deploy('TenderToken', {
     from: deployer,
     args: ['Livepeer', 'LPT'],
     log: true, // display the address and gas used in the console (not when run in test though)
-    libraries: {
-      SafeMath: safeMathFixture["SafeMath"].address
-    }
   })
 
   const permissions = {

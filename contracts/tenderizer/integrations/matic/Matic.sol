@@ -6,7 +6,6 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../../../libs/MathUtils.sol";
 
 import "../../Tenderizer.sol";
@@ -15,7 +14,6 @@ import "./IMatic.sol";
 import "hardhat/console.sol";
 
 contract Matic is Tenderizer {
-    using SafeMath for uint256;
 
     // Matic exchange rate precision
     uint256 constant EXCHANGE_RATE_PRECISION = 100;
@@ -36,7 +34,7 @@ contract Matic is Tenderizer {
     }
 
     function _deposit(address /*_from*/, uint256 _amount) internal override {
-        currentPrincipal = currentPrincipal.add(_amount);
+        currentPrincipal += _amount;
     }
 
     function _stake(address _node, uint256 _amount) internal override {
@@ -63,7 +61,7 @@ contract Matic is Tenderizer {
         // stake tokens
         uint256 fxRate = matic.exchangeRate();
         if (fxRate == 0) fxRate = 1;
-        uint256 min = amount.mul(EXCHANGE_RATE_PRECISION).div(fxRate);
+        uint256 min = MathUtils.percOf(amount, EXCHANGE_RATE_PRECISION, fxRate);
         matic_.buyVoucher(amount, min);
     }
 
@@ -84,7 +82,7 @@ contract Matic is Tenderizer {
         //     node_ = IMatic(node);
         // }
 
-        // currentPrincipal = currentPrincipal.sub(_amount);
+        // currentPrincipal = currentPrincipal - _amount;
 
       
         // // undelegate shares
@@ -117,24 +115,24 @@ contract Matic is Tenderizer {
             uint256 shares = matic.balanceOf(address(this));
             uint256 fxRate = matic.exchangeRate();
             if (fxRate == 0) fxRate = 1;
-            stake = shares.mul(fxRate).div(EXCHANGE_RATE_PRECISION);
+            stake = MathUtils.percOf(shares, fxRate, EXCHANGE_RATE_PRECISION);
             
             uint256 currentPrincipal_ = currentPrincipal;
 
             if (stake >= currentPrincipal_) {
-                rewards = stake.sub(currentPrincipal_);
+                rewards = stake - currentPrincipal_;
             }
         }
 
         // Calculate fee
         uint256 fee = MathUtils.percOf(rewards, protocolFee);
-        
+
         if (fee > 0 ) {
-            pendingFees = pendingFees.add(fee);
+            pendingFees += fee;
         }
         
         // update principle and pendignFees
-        currentPrincipal = stake.sub(fee);
+        currentPrincipal = stake - fee;
     }
 
     function _collectFees() internal override returns (uint256) {

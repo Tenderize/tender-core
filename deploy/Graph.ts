@@ -17,13 +17,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   const {deployer} = await getNamedAccounts() // Fetch named accounts from hardhat.config.ts
 
-  console.log("Deploying SafeMath library")
-
-  const SafeMath = await deploy('SafeMath', {
-    from: deployer, // msg.sender overwrite, use named Account
-    log: true, // display the address and gas used in the console (not when run in test though)
-  })
-
   console.log("Deploying BalancerSafeMath")
   const BalancerSafeMath = await deploy('BalancerSafeMath', {
     from: deployer, // msg.sender overwrite, use named account
@@ -60,9 +53,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     from: deployer,
     args: [process.env.TOKEN, process.env.CONTRACT, process.env.NODE],
     log: true, // display the address and gas used in the console (not when run in test though),
-    libraries: {
-      SafeMath: SafeMath.address
-    }
   })
 
   console.log("Deploying Graph TenderToken")
@@ -71,9 +61,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     from: deployer,
     args: ['Graph', 'GRT'],
     log: true, // display the address and gas used in the console (not when run in test though)
-    libraries: {
-      SafeMath: SafeMath.address
-    }
   })
 
   const permissions = {
@@ -170,6 +157,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 }
 
 func.tags = ['Graph'] // this setup a tag so you can execute the script on its own (and its dependencies)
-func.dependencies = ['SafeMath, Balancer']
+func.dependencies = ['Balancer']
 export default func
 

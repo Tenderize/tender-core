@@ -7,7 +7,6 @@ pragma solidity ^0.8.0;
 
 import "./NamedToken.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../libs/MathUtils.sol";
 
@@ -22,7 +21,6 @@ import "../libs/MathUtils.sol";
     shares[account] * _getTotalPooledTokens() / _getTotalShares()
  */
 contract TenderToken is NamedToken, Ownable, IERC20 {
-    using SafeMath for uint256;
 
     uint8 internal constant DECIMALS = 18;
 
@@ -200,7 +198,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
         require(currentAllowance >= _amount, "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE");
 
         _transfer(_sender, _recipient, _amount);
-        _approve(_sender, msg.sender, currentAllowance.sub(_amount));
+        _approve(_sender, msg.sender, currentAllowance - _amount);
         return true;
     }
 
@@ -215,7 +213,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
         - `_spender` cannot be the the zero address.
      */
     function increaseAllowance(address _spender, uint256 _addedValue) public returns (bool) {
-        _approve(msg.sender, _spender, allowances[msg.sender][_spender].add(_addedValue));
+        _approve(msg.sender, _spender, allowances[msg.sender][_spender] + _addedValue);
         return true;
     }
 
@@ -233,7 +231,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
     function decreaseAllowance(address _spender, uint256 _subtractedValue) public returns (bool) {
         uint256 currentAllowance = allowances[msg.sender][_spender];
         require(currentAllowance >= _subtractedValue, "DECREASED_ALLOWANCE_BELOW_ZERO");
-        _approve(msg.sender, _spender, currentAllowance.sub(_subtractedValue));
+        _approve(msg.sender, _spender, currentAllowance - _subtractedValue);
         return true;
     }
 
@@ -254,7 +252,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
             uint256 _sharesToMint = sharesToTokens(_amount);
             _mintShares(_recipient, _sharesToMint);
         }
-        _setTotalPooledTokens(totalPooledTokens.add(_amount));
+        _setTotalPooledTokens(totalPooledTokens + _amount);
         return true;
     }
 
@@ -270,7 +268,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
     function burn(address _account, uint256 _amount) public onlyOwner returns (bool) {
         uint256 _sharesToburn = sharesToTokens(_amount);
         _burnShares(_account, _sharesToburn);
-        _setTotalPooledTokens(totalPooledTokens.sub(_amount));
+        _setTotalPooledTokens(totalPooledTokens - _amount);
         return true;
     }
 
@@ -349,8 +347,8 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
         uint256 currentSenderShares = shares[_sender];
         require(_shares <= currentSenderShares, "TRANSFER_AMOUNT_EXCEEDS_BALANCE");
 
-        shares[_sender] = currentSenderShares.sub(_shares);
-        shares[_recipient] = shares[_recipient].add(_shares);
+        shares[_sender] -= _shares;
+        shares[_recipient] += _shares;
     }
 
     /**
@@ -362,9 +360,9 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
     function _mintShares(address _recipient, uint256 _shares) internal returns (uint256 newTotalShares) {
         require(_recipient != address(0), "MINT_TO_THE_ZERO_ADDRESS");
 
-        newTotalShares = totalShares.add(_shares);
+        newTotalShares = totalShares+ _shares;
 
-        shares[_recipient] = shares[_recipient].add(_shares);
+        shares[_recipient] += _shares;
 
         // Notice: we're not emitting a Transfer event from the zero address here since shares mint
         // works by taking the amount of tokens corresponding to the minted shares from all other
@@ -388,9 +386,9 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
         uint256 accountShares = shares[_account];
         require(_shares <= accountShares, "BURN_AMOUNT_EXCEEDS_BALANCE");
 
-        newTotalShares = totalShares.sub(_shares);
+        newTotalShares = totalShares - _shares;
 
-        shares[_account] = accountShares.sub(_shares);
+        shares[_account] -= _shares;
 
         // Notice: we're not emitting a Transfer event to the zero address here since shares burn
         // works by redistributing the amount of tokens corresponding to the burned shares between
