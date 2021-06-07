@@ -5,7 +5,7 @@ import {
 } from "hardhat";
 
 import {
-  TenderToken, Tenderizer, ElasticSupplyPool, ERC20, Controller
+  TenderToken, Tenderizer, ElasticSupplyPool, ERC20, Controller, EIP173Proxy
 } from "../typechain";
 import { BigNumber } from '@ethersproject/bignumber';
 
@@ -113,10 +113,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   const Esp: ElasticSupplyPool = (await ethers.getContractAt('ElasticSupplyPool', esp.address)) as ElasticSupplyPool
   const Steak: ERC20 = (await ethers.getContractAt('ERC20', process.env.TOKEN || ethers.constants.AddressZero)) as ERC20
   const Controller: Controller = (await ethers.getContractAt('Controller', controller.address)) as Controller
-  
+  const Proxy: EIP173Proxy = (await ethers.getContractAt('EIP173Proxy', tenderizer.address)) as EIP173Proxy
   console.log("Setting controller on Tenderizer")
   await Tenderizer.setController(controller.address, {from: deployer})
-
+  await Proxy.transferOwnership(Controller.address)
   console.log("Transferring ownership for TenderToken to Controller")
   await TenderToken.transferOwnership(controller.address, {from: deployer})
   
@@ -155,6 +155,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   console.log("Succesfully Deployed ! ")
 }
 
-func.tags = [NAME] // this setup a tag so you can execute the script on its own (and its dependencies)
+func.tags = [NAME, "Deploy"] // this setup a tag so you can execute the script on its own (and its dependencies)
 export default func
 
