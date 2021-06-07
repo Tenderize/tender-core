@@ -3,7 +3,7 @@ import hre, {ethers} from "hardhat"
 import { MockContract, smockit } from '@eth-optimism/smock'
 
 import {
-    SimpleToken, GraphMock, Controller, Tenderizer, ElasticSupplyPool, TenderToken, IGraph, BPool
+    SimpleToken, GraphMock, Controller, Tenderizer, ElasticSupplyPool, TenderToken, IGraph, BPool, EIP173Proxy
   } from "../../typechain/";
 
 import {sharesToTokens, tokensToShares} from '../util/helpers'
@@ -121,7 +121,7 @@ describe('Graph Integration Test', () => {
             expect(GraphMock.smocked.delegate.calls.length).to.eq(1)
             expect(GraphMock.smocked.delegate.calls[0]._indexer).to.eq(NODE)
             // A smocked contract doesn't execute its true code
-            // So livepeer.bond() never calls ERC20.transferFrom() under the hood
+            // So Graph.bond() never calls ERC20.transferFrom() under the hood
             // Therefore when we call gulp() it will be for the deposit and bootstrapped supply on deployment
             // Smock doesn't support executing code 
             expect(GraphMock.smocked.delegate.calls[0]._tokens).to.eq(deposit.add(initialStake))
@@ -307,6 +307,42 @@ describe('Graph Integration Test', () => {
 
     describe('withdraw', () => {
 
+    })
+
+    describe('upgrade', () => {
+        let proxy: EIP173Proxy
+        let newTenderizer:any
+        let beforeBalance: BigNumber
+        before(async () => {
+            proxy = (await ethers.getContractAt('EIP173Proxy', Graph['Graph_Proxy'].address)) as EIP173Proxy
+            beforeBalance = await Tenderizer.currentPrincipal()
+            const newFac = await ethers.getContractFactory('Graph', signers[0])
+            newTenderizer = await newFac.deploy()
+        })
+
+        it('upgrade tenderizer', async () => {
+            await hre.network.provider.request({
+                method: "hardhat_impersonateAccount",
+                params: [Controller.address]}
+            )
+
+            const signer = await ethers.provider.getSigner(Controller.address)
+
+            expect(await proxy.connect(signer).upgradeTo(newTenderizer.address, {gasLimit: 400000, gasPrice: 0})).to.emit(
+                proxy,
+                'ProxyImplementationUpdated'
+            ).withArgs(Graph['Graph_Implementation'].address, newTenderizer.address)
+
+            await hre.network.provider.request({
+                method: "hardhat_stopImpersonatingAccount",
+                params: [Controller.address]}
+            )
+        })
+
+        it("current principal still matches", async () => {
+            const newPrincipal = await Tenderizer.currentPrincipal()
+            expect(newPrincipal).to.equal(beforeBalance)
+        })
     })
 
 })
