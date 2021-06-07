@@ -109,17 +109,17 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         controller = _controller;
     }
 
-    function setNode(address _node) external override onlyController {
+    function setNode(address _node) external virtual override onlyController {
         require(_node != address(0), "ZERO_ADDRESS");
         node = _node;
     }
 
-    function setSteak(IERC20 _steak) external override  onlyController {
+    function setSteak(IERC20 _steak) external virtual override  onlyController {
         require(address(_steak) != address(0), "ZERO_ADDRESS");
         steak = _steak;
     }
 
-    function setProtocolFee(uint256 _protocolFee) external override onlyController {
+    function setProtocolFee(uint256 _protocolFee) external virtual override onlyController {
         protocolFee = _protocolFee;
     }
 

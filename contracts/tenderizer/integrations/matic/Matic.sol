@@ -31,6 +31,12 @@ contract Matic is Tenderizer {
         matic = IMatic(_node);
     }
 
+    function setNode(address _node) external override onlyController {
+        require(_node != address(0), "ZERO_ADDRESS");
+        node = _node;
+        matic = IMatic(_node);
+    }
+
     function _deposit(address /*_from*/, uint256 _amount) internal override {
         currentPrincipal += _amount;
     }
@@ -146,7 +152,7 @@ contract Matic is Tenderizer {
     }
 
     function _setStakingContract(address _stakingContract) internal override {
-        node = _stakingContract;
+        maticStakeManager = _stakingContract;
     }
 
 }
