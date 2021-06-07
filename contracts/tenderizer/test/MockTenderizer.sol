@@ -6,13 +6,11 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../../libs/MathUtils.sol";
 
 import "../Tenderizer.sol";
 
 contract MockTenderizer is Tenderizer {
-    using SafeMath for uint256;
 
     uint256 public rewardAmount;
 
@@ -24,15 +22,15 @@ contract MockTenderizer is Tenderizer {
         rewardAmount = _rewardAmount;
     }
 
-    function _deposit(address _from, uint256 _amount) internal override {
-        currentPrincipal = currentPrincipal.add(_amount);
+    function _deposit(address /*_from*/, uint256 _amount) internal override {
+        currentPrincipal += _amount;
     }
 
     function _stake(address /*_node*/, uint256 _amount) internal override {
     }
 
     function _unstake(address /*_account*/, address /*_node*/, uint256 _amount) internal override {
-        currentPrincipal = currentPrincipal.sub(_amount);
+        currentPrincipal -= _amount;
     }
 
     function _withdraw(address _account, uint256 _amount) internal override {
@@ -45,10 +43,10 @@ contract MockTenderizer is Tenderizer {
 
         // Substract protocol fee amount and add it to pendingFees
         uint256 fee = MathUtils.percOf(rewards, protocolFee);
-        pendingFees = pendingFees.add(fee);
+        pendingFees += fee;
 
         // Add current pending stake minus fees and set it as current principal
-        currentPrincipal = currentPrincipal.add(rewards).sub(fee);
+        currentPrincipal = currentPrincipal + rewards - fee;
     }
 
     function _collectFees() internal override returns (uint256) {

@@ -6,7 +6,6 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../../../libs/MathUtils.sol";
 
 import "../../Tenderizer.sol";
@@ -14,7 +13,6 @@ import "./ILivepeer.sol";
 import "../../../IOneInch.sol";
 
 contract Livepeer is Tenderizer {
-    using SafeMath for uint256;
 
     uint256 constant private MAX_ROUND = 2**256 - 1;
 
@@ -37,7 +35,7 @@ contract Livepeer is Tenderizer {
     }
 
     function _deposit(address /*_from*/, uint256 _amount) internal override {
-        currentPrincipal = currentPrincipal.add(_amount);
+        currentPrincipal += _amount;
     }
 
     function _stake(address _node, uint256 _amount) internal override {
@@ -83,14 +81,14 @@ contract Livepeer is Tenderizer {
             node_ = node;
         }
 
-        currentPrincipal = currentPrincipal.sub(_amount);
+        currentPrincipal -= _amount;
 
         // Unbond tokens
         livepeer.unbond(_amount);
 
         // Manage Livepeer unbonding locks
         uint256 unbondingLockID = nextUnbondingLockID;
-        nextUnbondingLockID = unbondingLockID.add(1);
+        nextUnbondingLockID += 1;
 
         unbondingLocks[_account] = unbondingLock({
             id: unbondingLockID,
@@ -132,7 +130,7 @@ contract Livepeer is Tenderizer {
 
         uint256 rewards;
         if (stake >= currentPrincipal_) {
-            rewards = stake.sub(currentPrincipal_);
+            rewards = stake - currentPrincipal_;
         }
 
         // withdraw fees
@@ -145,15 +143,16 @@ contract Livepeer is Tenderizer {
                 (uint256 returnAmount, uint256[] memory distribution) = oneInch.getExpectedReturn(IERC20(address(0)), steak, swapAmount, 1, 0);
                 uint256 swappedLPT = oneInch.swap(IERC20(address(0)), steak, swapAmount, returnAmount, distribution, 0);
                 // Add swapped LPT to rewards
-                rewards = rewards.add(swappedLPT);
+                rewards += swappedLPT;
             }
         }
 
         // Substract protocol fee amount and add it to pendingFees
         uint256 fee = MathUtils.percOf(rewards, protocolFee);
-        pendingFees = pendingFees.add(fee);
+        pendingFees += fee;
+
         // Add current pending stake minus fees and set it as current principal
-        currentPrincipal = stake.sub(fee);
+        currentPrincipal = stake - fee;
     }
 
     function _collectFees() internal override returns (uint256) {
