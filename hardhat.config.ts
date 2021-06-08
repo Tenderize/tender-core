@@ -7,6 +7,7 @@ import "hardhat-typechain"
 import 'hardhat-deploy';
 import 'hardhat-deploy-ethers';
 
+// Tools
 import "hardhat-gas-reporter"
 import "solidity-coverage"
 

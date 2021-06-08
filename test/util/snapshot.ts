@@ -12,4 +12,8 @@ const revert = async (snapshotId: any) => {
     return await sendAsync("evm_revert", [snapshotId])
 }
 
-export {sendAsync, snapshot, revert}
+const blockNumber = async () => {
+    return await sendAsync("eth_blockNumber")
+}
+
+export {sendAsync, snapshot, revert, blockNumber}

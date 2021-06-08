@@ -5,7 +5,7 @@ import {
 } from "hardhat";
 
 import {
-  TenderToken, Tenderizer, ElasticSupplyPool, ERC20, Controller, EIP173Proxy
+  TenderToken, Tenderizer, ElasticSupplyPool, ERC20, Controller, EIP173Proxy, TenderFarm
 } from "../typechain";
 import { BigNumber } from '@ethersproject/bignumber';
 
@@ -108,17 +108,19 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     args: [process.env.TOKEN, tenderizer.address, tenderToken.address, esp.address]
   })
 
+
   const TenderToken: TenderToken = (await ethers.getContractAt('TenderToken', tenderToken.address)) as TenderToken
   const Tenderizer: Tenderizer = (await ethers.getContractAt('Tenderizer', tenderizer.address)) as Tenderizer
   const Esp: ElasticSupplyPool = (await ethers.getContractAt('ElasticSupplyPool', esp.address)) as ElasticSupplyPool
   const Steak: ERC20 = (await ethers.getContractAt('ERC20', process.env.TOKEN || ethers.constants.AddressZero)) as ERC20
   const Controller: Controller = (await ethers.getContractAt('Controller', controller.address)) as Controller
   const Proxy: EIP173Proxy = (await ethers.getContractAt('EIP173Proxy', tenderizer.address)) as EIP173Proxy
+
   console.log("Setting controller on Tenderizer")
-  await Tenderizer.setController(controller.address, {from: deployer})
+  await Tenderizer.setController(controller.address)
   await Proxy.transferOwnership(Controller.address)
   console.log("Transferring ownership for TenderToken to Controller")
-  await TenderToken.transferOwnership(controller.address, {from: deployer})
+  await TenderToken.transferOwnership(controller.address)
   
   const pcTokenSupply = '1000000000000000000000' // 1000e18
   const minimumWeightChangeBlockPeriod = 10;
@@ -153,6 +155,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   console.log("Balancer pool address", bpoolAddr)
 
   console.log("Succesfully Deployed ! ")
+
+  console.log("Deploy TenderFarm")
+  const tenderFarm = await deploy('TenderFarm', {
+    from: deployer,
+    log: true,
+    args: [await Esp.bPool(), tenderToken.address]
+  })
+  const TenderFarm: TenderFarm = (await ethers.getContractAt('TenderFarm', tenderFarm.address)) as TenderFarm 
+  await TenderFarm.transferOwnership(controller.address)
+
+  console.log("Deployed TenderFarm")
 
   // Deploy faucet if not mainnet
   if (hre.network.name != 'mainnet') {

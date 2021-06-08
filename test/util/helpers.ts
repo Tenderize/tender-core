@@ -18,3 +18,11 @@ export function tokensToShares(tokens:BigNumber, totalShares:BigNumber, totalTok
 
     return tokens.mul(totalShares.mul(PERC_DIVISOR).div(totalTokens)).div(PERC_DIVISOR)
 }
+
+export function percOf(amount: BigNumber, fracNum:BigNumber, fracDenom:BigNumber): BigNumber {
+    return amount.mul(fracNum.mul(PERC_DIVISOR).div(fracDenom)).div(PERC_DIVISOR)
+}
+
+export function percOf2(amount:BigNumber, fracNum:BigNumber): BigNumber {
+    return amount.mul(fracNum).div(PERC_DIVISOR)
+}
