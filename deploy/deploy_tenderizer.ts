@@ -10,7 +10,7 @@ import {
 import { BigNumber } from '@ethersproject/bignumber';
 
 const NAME = process.env.NAME || ""
-const SYMBOL = process.env.NAME || ""
+const SYMBOL = process.env.SYMBOL || ""
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { // the deploy function receive the hardhat runtime env as argument
 
@@ -157,4 +157,3 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
 func.tags = [NAME, "Deploy"] // this setup a tag so you can execute the script on its own (and its dependencies)
 export default func
-
