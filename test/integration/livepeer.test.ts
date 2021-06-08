@@ -3,7 +3,7 @@ import hre, {ethers} from "hardhat"
 import { MockContract, smockit } from '@eth-optimism/smock'
 
 import {
-    SimpleToken, LivepeerMock, Controller, Tenderizer, ElasticSupplyPool, TenderToken, ILivepeer, BPool
+    SimpleToken, LivepeerMock, Controller, Tenderizer, ElasticSupplyPool, TenderToken, ILivepeer, BPool, EIP173Proxy, Livepeer, Proxy
   } from "../../typechain/";
 
 import chai from "chai";
@@ -77,6 +77,8 @@ describe('Livepeer Integration Test', () => {
     const NODE  = "0xf4e8Ef0763BCB2B1aF693F5970a00050a6aC7E1B"
 
     before('deploy Livepeer Tenderizer', async () => {
+        process.env.NAME = "Livepeer"
+        process.env.SYMBOL = "LPT"
         process.env.CONTRACT = LivepeerMock.address
         process.env.TOKEN = LivepeerToken.address
         process.env.NODE = NODE
@@ -278,6 +280,42 @@ describe('Livepeer Integration Test', () => {
 
     describe('withdraw', () => {
 
+    })
+
+    describe('upgrade', () => {
+        let proxy: EIP173Proxy
+        let newTenderizer:any
+        let beforeBalance: BigNumber
+        before(async () => {
+            proxy = (await ethers.getContractAt('EIP173Proxy', Livepeer['Livepeer_Proxy'].address)) as EIP173Proxy
+            beforeBalance = await Tenderizer.currentPrincipal()
+            const newFac = await ethers.getContractFactory('Livepeer', signers[0])
+            newTenderizer = await newFac.deploy()
+        })
+
+        it('upgrade tenderizer', async () => {
+            await hre.network.provider.request({
+                method: "hardhat_impersonateAccount",
+                params: [Controller.address]}
+            )
+
+            const signer = await ethers.provider.getSigner(Controller.address)
+
+            expect(await proxy.connect(signer).upgradeTo(newTenderizer.address, {gasLimit: 400000, gasPrice: 0})).to.emit(
+                proxy,
+                'ProxyImplementationUpdated'
+            ).withArgs(Livepeer['Livepeer_Implementation'].address, newTenderizer.address)
+
+            await hre.network.provider.request({
+                method: "hardhat_stopImpersonatingAccount",
+                params: [Controller.address]}
+            )
+        })
+
+        it("current principal still matches", async () => {
+            const newPrincipal = await Tenderizer.currentPrincipal()
+            expect(newPrincipal).to.equal(beforeBalance)
+        })
     })
 
 })

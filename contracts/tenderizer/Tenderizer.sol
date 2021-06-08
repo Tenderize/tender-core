@@ -7,24 +7,33 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 import "./ITenderizer.sol";
 
-abstract contract Tenderizer is Ownable, ITenderizer {
-
+abstract contract Tenderizer is Initializable, ITenderizer {
     address constant ZERO_ADDRESS = address(0);
 
     IERC20 public steak;
     address public node; 
 
-    uint256 public protocolFee = 25 * 1e15; // 2.5% because PERC DIVISOR = 1e18
+    address public controller;
+
+    uint256 public protocolFee;
 
     uint256 public pendingFees; // pending protocol fees since last distribution
     uint256 public currentPrincipal; // Principal since last claiming earnings
 
-    constructor(IERC20 _steak, address _node) {
+    modifier onlyController() {
+        require(msg.sender == controller);
+        _;
+    }
+
+    function _initialize(IERC20 _steak, address _node, address _controller) internal initializer {
         steak = _steak;
         node = _node;
+        protocolFee = 25 * 1e15; // 2.5%
+        controller = _controller;
     }
 
     /**
@@ -36,7 +45,7 @@ abstract contract Tenderizer is Ownable, ITenderizer {
         awaiting to be staked
      * @dev requires '_amount' to be approved by '_from'
      */
-    function deposit(address _from, uint256 _amount) external override onlyOwner {
+    function deposit(address _from, uint256 _amount) external override onlyController {
         _deposit(_from, _amount);
     }
 
@@ -48,7 +57,7 @@ abstract contract Tenderizer is Ownable, ITenderizer {
      * @dev If '_amount' is 0, stake the entire current token balance of the Tenderizer
      * @dev Only callable by controller
      */
-    function stake(address _account, uint256 _amount) external override onlyOwner {
+    function stake(address _account, uint256 _amount) external override onlyController {
         // Execute state updates
         // approve pendingTokens for staking
         // Stake tokens
@@ -63,7 +72,7 @@ abstract contract Tenderizer is Ownable, ITenderizer {
      * @dev If '_amount' is 0, unstake the entire amount staked towards _account
      * @dev Only callable by controller
      */
-    function unstake(address _account, uint256 _amount) external override onlyOwner {
+    function unstake(address _account, uint256 _amount) external override onlyController {
         // Execute state updates to pending withdrawals
         // Unstake tokens
         _unstake(_account, address(0), _amount);
@@ -77,7 +86,7 @@ abstract contract Tenderizer is Ownable, ITenderizer {
      * @dev Requires '_account' to have unstaked prior to calling withdraw
      * @dev Only callable by controller
      */
-    function withdraw(address _account, uint256 _amount) external override onlyOwner {
+    function withdraw(address _account, uint256 _amount) external override onlyController {
         // Execute state updates to pending withdrawals
         // Transfer tokens to _account
         _withdraw(_account, _amount);
@@ -87,7 +96,7 @@ abstract contract Tenderizer is Ownable, ITenderizer {
      * @notice Claim staking rewards for the underlying protocol
      * @dev Only callable by controller
      */
-    function claimRewards() external override onlyOwner {
+    function claimRewards() external override onlyController {
         // Claim rewards
         // If received staking rewards in steak don't automatically compound, add to pendingTokens
         // Swap tokens with address != steak to steak
@@ -95,25 +104,30 @@ abstract contract Tenderizer is Ownable, ITenderizer {
         _claimRewards();
     }
 
-    function setNode(address _node) external override onlyOwner {
+    function setController(address _controller) external override onlyController {
+        require(_controller != address(0), "ZERO_ADDRESS");
+        controller = _controller;
+    }
+
+    function setNode(address _node) external virtual override onlyController {
         require(_node != address(0), "ZERO_ADDRESS");
         node = _node;
     }
 
-    function setSteak(IERC20 _steak) external override  onlyOwner {
+    function setSteak(IERC20 _steak) external virtual override  onlyController {
         require(address(_steak) != address(0), "ZERO_ADDRESS");
         steak = _steak;
     }
 
-    function setProtocolFee(uint256 _protocolFee) external override onlyOwner {
+    function setProtocolFee(uint256 _protocolFee) external virtual override onlyController {
         protocolFee = _protocolFee;
     }
 
-    function setStakingContract(address _stakingContract) external override onlyOwner {
+    function setStakingContract(address _stakingContract) external override onlyController {
         _setStakingContract(_stakingContract);
     }
 
-    function collectFees() external override onlyOwner returns (uint256) {
+    function collectFees() external override onlyController returns (uint256) {
         return _collectFees();
     }
 

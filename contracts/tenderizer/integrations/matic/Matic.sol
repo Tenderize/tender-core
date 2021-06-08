@@ -11,8 +11,6 @@ import "../../../libs/MathUtils.sol";
 import "../../Tenderizer.sol";
 import "./IMatic.sol";
 
-import "hardhat/console.sol";
-
 contract Matic is Tenderizer {
 
     // Matic exchange rate precision
@@ -27,8 +25,14 @@ contract Matic is Tenderizer {
     mapping (address => uint256) pendingWithdrawals;
     uint256 totalPendingWithdrawals;
 
-    constructor(IERC20 _steak, address _matic, address _node) Tenderizer(_steak, _node) {
+    function initialize(IERC20 _steak, address _matic, address _node) public {
+        Tenderizer._initialize(_steak, _node, msg.sender);
         maticStakeManager = _matic;
+        matic = IMatic(_node);
+    }
+
+    function setNode(address _node) external override onlyController {
+        require(_node != address(0), "ZERO_ADDRESS");
         node = _node;
         matic = IMatic(_node);
     }
@@ -148,7 +152,7 @@ contract Matic is Tenderizer {
     }
 
     function _setStakingContract(address _stakingContract) internal override {
-        node = _stakingContract;
+        maticStakeManager = _stakingContract;
     }
 
 }

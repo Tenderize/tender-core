@@ -21,7 +21,8 @@ contract Graph is Tenderizer {
     mapping (address => uint256) pendingWithdrawals;
     uint256 totalPendingWithdrawals;
 
-    constructor(IERC20 _steak, IGraph _graph, address _node) Tenderizer(_steak, _node) {
+    function initialize(IERC20 _steak, IGraph _graph, address _node) public {
+        Tenderizer._initialize(_steak, _node, msg.sender);
         graph = _graph;
     }
 
@@ -60,7 +61,7 @@ contract Graph is Tenderizer {
         uint256 amount = _amount;
 
         // Sanity check. Controller already checks user deposits and withdrawals > 0
-        if (_account != owner()) require(amount > 0, "ZERO_AMOUNT");
+        if (_account != controller) require(amount > 0, "ZERO_AMOUNT");
         if (amount == 0) {
             amount = IERC20(steak).balanceOf(address(this));
         }

@@ -25,6 +25,8 @@ interface ITenderizer {
 
     // Governance
 
+    function setController(address _controller) external;
+
     function setNode(address _node) external;
 
     function setSteak(IERC20 _steak) external;

@@ -14,11 +14,12 @@ contract MockTenderizer is Tenderizer {
 
     uint256 public rewardAmount;
 
-    constructor(IERC20 _steak, address _node, uint256 _rewardAmount) Tenderizer(_steak, _node) {
+    function initialize(IERC20 _steak, address _node, address _controller, uint256 _rewardAmount) public {
         rewardAmount = _rewardAmount;
+        Tenderizer._initialize(_steak, _node, _controller);
     }
 
-    function setRewardAmount(uint256 _rewardAmount) public onlyOwner {
+    function setRewardAmount(uint256 _rewardAmount) public {
         rewardAmount = _rewardAmount;
     }
 

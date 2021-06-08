@@ -8,7 +8,7 @@ async function main () {
   const network = process.env.NETWORK
   const tenderizer = process.env.TENDERIZER
 
-  const deployments = require(`../deployed/${network}/${tenderizer}.json`)
+  const deployments = require(`../deployments/${network}/${tenderizer}.json`)
   const Controller: Controller = (await hre.ethers.getContractAt('Controller', deployments.contracts.Controller.address)) as Controller
 
   console.log(`Rebasing ${tenderizer} on ${network}`)

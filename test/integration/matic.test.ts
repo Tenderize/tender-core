@@ -3,7 +3,7 @@ import hre, {ethers} from "hardhat"
 import { MockContract, smockit } from '@eth-optimism/smock'
 
 import {
-    SimpleToken, MaticMock, Controller, Tenderizer, ElasticSupplyPool, TenderToken, IMatic, BPool
+    SimpleToken, MaticMock, Controller, Tenderizer, ElasticSupplyPool, TenderToken, IMatic, BPool, EIP173Proxy
   } from "../../typechain/";
 
 import chai from "chai";
@@ -76,6 +76,8 @@ describe('Matic Integration Test', () => {
     const STEAK_AMOUNT = "100000"
 
     before('deploy Matic Tenderizer', async () => {
+        process.env.NAME = "Matic"
+        process.env.SYMBOL = "MATIC"
         process.env.NODE = MaticMock.address
         process.env.TOKEN = MaticToken.address
         process.env.CONTRACT = '0x0000000000000000000000000000000000000101' //dummy
@@ -283,4 +285,39 @@ describe('Matic Integration Test', () => {
 
     })
 
+    describe('upgrade', () => {
+        let proxy: EIP173Proxy
+        let newTenderizer:any
+        let beforeBalance: BigNumber
+        before(async () => {
+            proxy = (await ethers.getContractAt('EIP173Proxy', Matic['Matic_Proxy'].address)) as EIP173Proxy
+            beforeBalance = await Tenderizer.currentPrincipal()
+            const newFac = await ethers.getContractFactory('Matic', signers[0])
+            newTenderizer = await newFac.deploy()
+        })
+
+        it('upgrade tenderizer', async () => {
+            await hre.network.provider.request({
+                method: "hardhat_impersonateAccount",
+                params: [Controller.address]}
+            )
+
+            const signer = await ethers.provider.getSigner(Controller.address)
+
+            expect(await proxy.connect(signer).upgradeTo(newTenderizer.address, {gasLimit: 400000, gasPrice: 0})).to.emit(
+                proxy,
+                'ProxyImplementationUpdated'
+            ).withArgs(Matic['Matic_Implementation'].address, newTenderizer.address)
+
+            await hre.network.provider.request({
+                method: "hardhat_stopImpersonatingAccount",
+                params: [Controller.address]}
+            )
+        })
+
+        it("current principal still matches", async () => {
+            const newPrincipal = await Tenderizer.currentPrincipal()
+            expect(newPrincipal).to.equal(beforeBalance)
+        })
+    })
 })

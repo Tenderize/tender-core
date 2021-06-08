@@ -28,9 +28,10 @@ contract Livepeer is Tenderizer {
     mapping (address => unbondingLock) unbondingLocks;
     uint256 private nextUnbondingLockID;
 
-    uint256 ethFees_threshold = 1**17;
+    uint256 constant private ethFees_threshold = 1**17;
 
-    constructor(IERC20 _steak, ILivepeer _livepeer, address _node) Tenderizer(_steak, _node) {
+    function initialize(IERC20 _steak, ILivepeer _livepeer, address _node) public {
+        Tenderizer._initialize(_steak, _node, msg.sender);
         livepeer = _livepeer;
     }
 
@@ -69,7 +70,7 @@ contract Livepeer is Tenderizer {
 
         uint256 amount = _amount;
         // Sanity check. Controller already checks user deposits and withdrawals > 0
-        if (_account != owner()) require(amount > 0, "ZERO_AMOUNT");
+        if (_account != controller) require(amount > 0, "ZERO_AMOUNT");
         if (amount == 0) {
             amount = livepeer.pendingStake(address(this), MAX_ROUND);
             require(amount > 0, "ZERO_STAKE");
