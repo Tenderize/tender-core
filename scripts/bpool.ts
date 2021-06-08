@@ -1,7 +1,7 @@
 const hre = require("hardhat")
  
 import {
-  ElasticSupplyPool
+  ElasticSupplyPool, BPool
 } from "../typechain";
 
 async function main () {
@@ -11,6 +11,7 @@ async function main () {
     const deployments = require(`../deployments/${network}/${tenderizer}.json`)
 
     const Esp: ElasticSupplyPool = (await hre.ethers.getContractAt('ElasticSupplyPool', deployments.contracts.ElasticSupplyPool.address)) as ElasticSupplyPool
+    const Bpool: BPool = (await hre.ethers.getContractAt('BPool', await Esp.bPool()))
 
     console.log(`Balancer Pool Address for ${tenderizer} on ${network}: ${await Esp.bPool()}`)
 }

@@ -14,7 +14,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { Deployment } from "hardhat-deploy/dist/types";
 import { BigNumber } from "@ethersproject/bignumber";
 
-import {sharesToTokens, tokensToShares} from '../util/helpers'
+import {sharesToTokens, tokensToShares, percOf2} from '../util/helpers'
 
 
 chai.use(solidity);
@@ -134,7 +134,7 @@ describe('Matic Integration Test', () => {
             const newStake = deposit.add(initialStake).add(increase)
             const percDiv = ethers.utils.parseEther("1")
             let protocolFee: BigNumber = ethers.utils.parseEther("0.025") 
-            const expFee = increase.mul(protocolFee).div(percDiv)
+            const expFee = percOf2(increase, protocolFee)
             let totalShares: BigNumber = ethers.utils.parseEther("1")
 
             before(async () => {

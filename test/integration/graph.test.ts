@@ -6,7 +6,7 @@ import {
     SimpleToken, GraphMock, Controller, Tenderizer, ElasticSupplyPool, TenderToken, IGraph, BPool, EIP173Proxy
   } from "../../typechain/";
 
-import {sharesToTokens, tokensToShares} from '../util/helpers'
+import {sharesToTokens, tokensToShares, percOf2} from '../util/helpers'
 
 import chai from "chai";
 import {
@@ -135,7 +135,7 @@ describe('Graph Integration Test', () => {
             const newStake = deposit.add(initialStake).add(increase)
             const percDiv = ethers.utils.parseEther("1")
             let protocolFee: BigNumber = ethers.utils.parseEther("0.025") 
-            const expFee = increase.mul(protocolFee).div(percDiv)
+            const expFee = percOf2(increase, protocolFee)
             let totalShares: BigNumber = ethers.utils.parseEther("1")
 
             before(async () => {
