@@ -7,6 +7,8 @@ import "hardhat-typechain"
 import 'hardhat-deploy';
 import 'hardhat-deploy-ethers';
 
+import "hardhat-gas-reporter"
+
 import { HardhatUserConfig } from "hardhat/types"
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY || '182f9c4b5181c9bbf54cb7c142e13157353b62e4be815632a846ba351f3f78b0'
@@ -57,6 +59,9 @@ const config: HardhatUserConfig = {
     localhost: {
       url: "http://127.0.0.1:8545"
     }
+  },
+  gasReporter: {
+    enabled: (process.env.REPORT_GAS) ? true : false
   }
 }
 
