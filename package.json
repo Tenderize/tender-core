@@ -1,5 +1,12 @@
 {
   "name": "hardhat-project",
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test",
+    "test:gas": "REPORT_GAS=true npx hardhat test",
+    "start:rpc": "npx hardhat node --no-deploy",
+    "deploy": "npx hardhat deploy"
+  },
   "devDependencies": {
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@types/mocha": "^8.2.2",
