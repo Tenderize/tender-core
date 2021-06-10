@@ -96,6 +96,10 @@ contract Graph is Tenderizer {
         super._unstake(_account, node_, amount);
     }
 
+    function _unstakeFromProtocol() internal override {
+        // TODO
+    }
+
     function _withdraw(address _account, uint256 /*_amount*/) internal override {
         // Check that a withdrawal is pending
         uint256 amount = graph.withdrawDelegated(node, ZERO_ADDRESS);
@@ -104,6 +108,10 @@ contract Graph is Tenderizer {
         steak.transfer(_account, amount);
 
         super._withdraw(_account, amount);
+    }
+
+    function _withdrawFromProtocol() internal override {
+        // TODO
     }
 
     function _claimRewards() internal override {
