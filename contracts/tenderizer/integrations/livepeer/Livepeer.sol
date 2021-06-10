@@ -97,6 +97,10 @@ contract Livepeer is Tenderizer {
         });
     }
 
+    function _unstakeFromProtocol() internal override {
+        // Not needed for livepeer as unstakes are handled per user
+    }
+
     function _withdraw(address _account, uint256 /*_amount*/) internal override {
         // Check that a withdrawal is pending
         require(unbondingLocks[_account].amount > 0, "NO_PENDING_WITHDRAWAL");
@@ -112,6 +116,10 @@ contract Livepeer is Tenderizer {
 
         // Transfer amount from unbondingLock to _account
         steak.transfer(_account, _unbondingLock.amount);
+    }
+
+    function _withdrawFromProtocol() internal override {
+        // Not needed for livepeer as withdrawals are handled per user
     }
 
     function _claimRewards() internal override {

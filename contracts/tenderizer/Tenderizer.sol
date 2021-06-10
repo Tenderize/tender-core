@@ -78,6 +78,15 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         _unstake(_account, address(0), _amount);
     }
 
+
+    /**
+     * @notice Actually unstakes the aggregated unstakes from protocol
+     * @dev Only callable by controller
+     */
+    function unstakeFromProtocol() external override onlyController {
+        _unstakeFromProtocol();
+    }
+
     /**
      * @notice Withdraw '_amount' of tokens previously unstaked by '_account'
      * @param _account account requesting the withdrawam
@@ -90,6 +99,14 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         // Execute state updates to pending withdrawals
         // Transfer tokens to _account
         _withdraw(_account, _amount);
+    }
+
+    /**
+     * @notice  Actually withdraws the unlocked tokens from protocol
+     * @dev Only callable by controller
+     */
+    function withdrawFromProtocol() external override onlyController {
+        _withdrawFromProtocol();
     }
 
     /**
@@ -151,4 +168,8 @@ abstract contract Tenderizer is Initializable, ITenderizer {
 
     // Internal governance functions 
     function _setStakingContract(address _stakingContract) internal virtual; 
+
+    function _unstakeFromProtocol() internal virtual;
+
+    function _withdrawFromProtocol() internal virtual;
 }

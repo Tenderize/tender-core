@@ -25,6 +25,10 @@ interface ITenderizer {
 
     // Governance
 
+    function unstakeFromProtocol() external;
+
+    function withdrawFromProtocol() external;
+
     function setController(address _controller) external;
 
     function setNode(address _node) external;

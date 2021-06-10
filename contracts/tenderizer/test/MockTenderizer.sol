@@ -34,9 +34,15 @@ contract MockTenderizer is Tenderizer {
         currentPrincipal -= _amount;
     }
 
+    function _unstakeFromProtocol() internal override {
+    }
+
     function _withdraw(address _account, uint256 _amount) internal override {
         // Transfer amount from unbondingLock to _account
         steak.transfer(_account, _amount);
+    }
+
+    function _withdrawFromProtocol() internal override {
     }
 
     function _claimRewards() internal override {

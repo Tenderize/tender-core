@@ -91,12 +91,20 @@ contract Graph is Tenderizer {
         graph.undelegate(node_, shares);
     }
 
+    function _unstakeFromProtocol() internal override {
+        // TODO
+    }
+
     function _withdraw(address _account, uint256 /*_amount*/) internal override {
         // Check that a withdrawal is pending
         uint256 amount = graph.withdrawDelegated(node, ZERO_ADDRESS);
 
         // Transfer amount from unbondingLock to _account
         steak.transfer(_account, amount);
+    }
+
+    function _withdrawFromProtocol() internal override {
+        // TODO
     }
 
     function _claimRewards() internal override {

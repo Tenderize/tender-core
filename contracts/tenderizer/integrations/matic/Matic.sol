@@ -92,6 +92,10 @@ contract Matic is Tenderizer {
         // // undelegate shares
         // node_.sellVoucher(0);
     }
+    
+    function _unstakeFromProtocol() internal override {
+        
+    }
 
     function _withdraw(address _account, uint256 /*_amount*/) internal override {
         // // Check that a withdrawal is pending
@@ -99,6 +103,10 @@ contract Matic is Tenderizer {
 
         // // Transfer amount from unbondingLock to _account
         // steak.transfer(_account, amount);
+    }
+
+    function _withdrawFromProtocol() internal override {
+        
     }
 
     function _claimRewards() internal override {
