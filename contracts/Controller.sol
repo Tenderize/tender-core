@@ -32,6 +32,14 @@ contract Controller is Ownable {
         esp = _esp;
     }
 
+    /**
+     * @notice Deposit tokens in Tenderizer
+     * @notice Mints tender tokens for msg.sender
+     * @param _amount amount deposited
+     * @dev doesn't actually stakes the tokens but aggregates the balance in the tenderizer
+        awaiting to be staked
+     * @dev requires '_amount' to be approved by '_from'
+     */
     function deposit(uint256 _amount) public {
         require(_amount > 0, "ZERO_AMOUNT");
 
@@ -52,6 +60,13 @@ contract Controller is Ownable {
         );
     }
 
+    /**
+     * @notice Request to unlock tokens from Tenderizer
+     * @notice Burns tender tokens from sender
+     * @param _amount amount deposited
+     * @dev doesn't actually unstake the tokens but aggregates the amount in the tenderizer
+        awaiting to be unstaked
+     */
     function unlock(uint256 _amount) public {
         require(_amount > 0, "ZERO_AMOUNT");
         // Burn tenderTokens
@@ -67,6 +82,11 @@ contract Controller is Ownable {
         tenderizer.unstake(msg.sender, _amount);
     }
 
+    /**
+     * @notice Withraws tokens from Tenderizer
+     * @notice Tokens need to be unlocked and ready to withdraw
+     * @param _amount amount deposited
+     */
     function withdraw(uint256 _amount) public {
         require(_amount > 0, "ZERO_AMOUNT");
         // Execute pending withdrawal
@@ -74,6 +94,10 @@ contract Controller is Ownable {
         tenderizer.withdraw(msg.sender, _amount);
     }
 
+    /**
+     * @notice Claims rewards from protocol, and rebases supply
+     * @dev if rewards are not automatically compounded gulp() restakes
+     */
     function rebase() public onlyOwner {
         // stake tokens
         gulp();
@@ -93,11 +117,20 @@ contract Controller is Ownable {
 
     }
 
+
+    /**
+     * @notice Stakes the balance in Tenderizer into protocol
+     * @dev if 0 values are passed the default node is used 
+     *  and entire balance is staked
+     */
     function gulp() public {
-        // gulp steak balance of Tenderizer and stake it
         tenderizer.stake(address(0), 0);
     }
 
+    /**
+     * @notice Collect protocol fees from tenderizer
+     * @dev Only callable by owner
+     */
     function collectFees() public onlyOwner {
         // collect fees and get amount
         uint256 amount = tenderizer.collectFees();
@@ -106,15 +139,30 @@ contract Controller is Ownable {
         tenderToken.mint(owner(), amount);
     }
 
+    /**
+     * @notice Update to new elastic supply pool
+     * @param _esp address of new pool
+     * @dev Only callable by owner
+     */
     function setEsp(IElasticSupplyPool _esp) public onlyOwner {
         require(address(_esp) != address(0), "ZERO_ADDRESS");
         esp = _esp;
     }
 
+    /**
+     * @notice Update to new tenderizerr
+     * @param _tenderizer address of tenderizer
+     * @dev Only callable by owner
+     */
     function migrateToNewTenderizer(ITenderizer _tenderizer) public onlyOwner {
-        
+        tenderizer = _tenderizer;
     }
 
+    /**
+     * @notice Update to new staking contract
+     * @param _stakingContract address of tenderizer
+     * @dev Only callable by owner
+     */
     function updateStakingContract(address _stakingContract) public onlyOwner {
         tenderizer.setStakingContract(_stakingContract);
     }
@@ -135,6 +183,9 @@ contract Controller is Ownable {
         require(success, string(returnData));
     }
 
+    /**
+     * @notice Updates supply of tender token
+     */
     function _updateTotalPooledTokens() internal {
         // get total staked tokens
         uint256 stakedTokens = tenderizer.totalStakedTokens();
