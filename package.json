@@ -4,6 +4,7 @@
     "compile": "npx hardhat compile",
     "test": "npx hardhat test",
     "test:gas": "REPORT_GAS=true npx hardhat test",
+    "test:coverage": "npx hardhat coverage",
     "start:rpc": "npx hardhat node --no-deploy",
     "deploy": "npx hardhat deploy"
   },
@@ -14,6 +15,7 @@
     "ethereum-waffle": "^3.3.0",
     "ethers": "^5.1.0",
     "hardhat": "^2.1.2",
+    "solidity-coverage": "^0.7.16",
     "ts-node": "^9.1.1",
     "typescript": "^4.2.3"
   },

@@ -3,3 +3,5 @@ artifacts
 cache
 typechain
 deployments
+coverage
+coverage.json
