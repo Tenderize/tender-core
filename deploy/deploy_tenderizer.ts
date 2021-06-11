@@ -139,7 +139,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   console.log("Creating Elastic Supply Pool")
 
-  await Esp.createPool(pcTokenSupply, minimumWeightChangeBlockPeriod, addTokenTimeLockInBlocks, {gasLimit: 8000000})
+  await Esp.createPool(pcTokenSupply, minimumWeightChangeBlockPeriod, addTokenTimeLockInBlocks, {gasLimit: 12000000})
   bpoolAddr = await Esp.bPool()
 
   console.log("Transferring ownership for Elastic Supply Pool to Controller")

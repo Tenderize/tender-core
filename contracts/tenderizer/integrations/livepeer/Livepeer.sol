@@ -10,7 +10,7 @@ import "../../../libs/MathUtils.sol";
 
 import "../../Tenderizer.sol";
 import "./ILivepeer.sol";
-import "../../../IOneInch.sol";
+import "../../../liquidity/IOneInch.sol";
 
 contract Livepeer is Tenderizer {
 
