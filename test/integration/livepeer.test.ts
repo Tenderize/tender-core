@@ -42,6 +42,8 @@ describe('Livepeer Integration Test', () => {
     let account2: string
     let account3: string
 
+    let withdrawAmount: BigNumber
+
     before('get signers', async () => {
         const namedAccs = await hre.getNamedAccounts()
         signers = await ethers.getSigners()
@@ -274,12 +276,55 @@ describe('Livepeer Integration Test', () => {
         })
     })
 
-    describe('unlock', () => {
+    describe('unlock', async () => {   
+        it('reverts if unbond() reverts', async () => {
+            LivepeerMock.smocked.unbond.will.revert()
+            await expect(Controller.unlock(withdrawAmount)).to.be.reverted
+        })
 
+        it('reverts if requested amount exceeds balance', async () => {
+            LivepeerMock.smocked.unbond.will.return()
+            withdrawAmount = await TenderToken.balanceOf(deployer)
+            await expect(Controller.unlock(withdrawAmount.add(1))).to.be.reverted
+        })
+
+        it('unbond() succeeds', async () => {
+            await Controller.unlock(withdrawAmount)
+            expect(LivepeerMock.smocked.unbond.calls.length).to.eq(1)
+            expect(LivepeerMock.smocked.unbond.calls[0]._amount).to.eq(withdrawAmount)
+        })
+
+        it('reduces TenderToken Balance', async () => {
+            expect(await TenderToken.balanceOf(deployer)).to.eq(0)
+        })
     })
 
-    describe('withdraw', () => {
+    describe('withdraw', async () => {
+        let lptBalBefore : BigNumber
+        it('reverts if wihtdraw reverts', async () => {
+            LivepeerMock.smocked.withdrawStake.will.revert()
+            await expect(Controller.withdraw(withdrawAmount)).to.be.reverted
+        })
+        
+        it('reverts if withraw amount exceeds amount in unbonding lock', async () => {
+            LivepeerMock.smocked.withdrawStake.will.return()
+            await expect(Controller.withdraw(withdrawAmount.add(1))).to.be.reverted
+        })
+        
+        it('withdraw() succeeds', async () => {
+            // Smocked doesn't actually execute transactions, so balance of Controller is not updated
+            // hence manually transferring some tokens to simlaute withdrawal
+            await LivepeerToken.transfer(Controller.address, withdrawAmount.mul(2))
+            
+            lptBalBefore = await LivepeerToken.balanceOf(deployer)
 
+            await Controller.withdraw(withdrawAmount)
+            expect(LivepeerMock.smocked.withdrawStake.calls.length).to.eq(1)
+        })
+        
+        it('increases LPT balance', async () => {
+            expect(await LivepeerToken.balanceOf(deployer)).to.eq(lptBalBefore.add(withdrawAmount))
+        })
     })
 
     describe('upgrade', () => {
