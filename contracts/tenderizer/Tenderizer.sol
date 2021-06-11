@@ -24,6 +24,17 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     uint256 public pendingFees; // pending protocol fees since last distribution
     uint256 public currentPrincipal; // Principal since last claiming earnings
 
+    // Events
+    event Deposit(address indexed from, uint256 amount);
+    event Stake(address indexed node, uint256 amount);
+    event Unstake(address indexed from, address indexed node, uint256 amount);
+    event Withdraw(address indexed from, uint256 amount);
+    event RewardsClaimed(uint256 rewards, uint256 feesCollected);
+    event FeeCollected(uint256 amount);
+    event GovernanceUpdate(string _param);
+
+    //TODO: Add Governance exit events
+
     modifier onlyController() {
         require(msg.sender == controller);
         _;
@@ -107,41 +118,56 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     function setController(address _controller) external override onlyController {
         require(_controller != address(0), "ZERO_ADDRESS");
         controller = _controller;
+        emit GovernanceUpdate("CONTROLLER_UPDATED");
     }
 
     function setNode(address _node) external virtual override onlyController {
         require(_node != address(0), "ZERO_ADDRESS");
         node = _node;
+        emit GovernanceUpdate("NODE_UPDATED");
     }
 
     function setSteak(IERC20 _steak) external virtual override  onlyController {
         require(address(_steak) != address(0), "ZERO_ADDRESS");
         steak = _steak;
+        emit GovernanceUpdate("STEAK_UPDATED");
     }
 
     function setProtocolFee(uint256 _protocolFee) external virtual override onlyController {
         protocolFee = _protocolFee;
+        emit GovernanceUpdate("FEE_UPDATED");
     }
 
     function setStakingContract(address _stakingContract) external override onlyController {
         _setStakingContract(_stakingContract);
+        emit GovernanceUpdate("STAKING_CONTRACT_UPDATED");
     }
 
     function collectFees() external override onlyController returns (uint256) {
-        return _collectFees();
+        uint256 fee =  _collectFees();
+        emit FeeCollected(fee);
+        return fee;
     }
 
     function totalStakedTokens() external override view returns (uint256) {
         return _totalStakedTokens();
     }
 
-    function _deposit(address _account, uint256 _amount) internal virtual;
+    function _deposit(address _account, uint256 _amount) internal virtual{
+        emit Deposit(_account, _amount);
+    }
 
-    function _stake(address _account, uint256 _amount) internal virtual;
+    function _stake(address _account, uint256 _amount) internal virtual{
+        emit Stake(_account, _amount);
+    }
 
-    function _unstake(address _account, address _node, uint256 _amount) internal virtual;
+    function _unstake(address _account, address _node, uint256 _amount) internal virtual{
+        emit Unstake(_account, _node, _amount);
+    }
 
-    function _withdraw(address _account, uint256 _amount) internal virtual;
+    function _withdraw(address _account, uint256 _amount) internal virtual{
+        emit Withdraw(_account, _amount);
+    }
 
     function _claimRewards() internal virtual;
 
@@ -150,5 +176,5 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     function _totalStakedTokens() internal virtual view returns (uint256);
 
     // Internal governance functions 
-    function _setStakingContract(address _stakingContract) internal virtual; 
+    function _setStakingContract(address _stakingContract) internal virtual;
 }

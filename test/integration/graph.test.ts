@@ -15,6 +15,7 @@ import {
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { Deployment } from "hardhat-deploy/dist/types";
 import { BigNumber } from "@ethersproject/bignumber";
+import { ContractTransaction } from "@ethersproject/contracts";
 
 chai.use(solidity);
 const {
@@ -41,6 +42,8 @@ describe('Graph Integration Test', () => {
     let account2: string
     let account3: string
 
+    let withdrawAmount: BigNumber
+
     before('get signers', async () => {
         const namedAccs = await hre.getNamedAccounts()
         signers = await ethers.getSigners()
@@ -58,7 +61,7 @@ describe('Graph Integration Test', () => {
             signers[0]
         )
 
-        GraphToken = (await SimpleTokenFactory.deploy('Graph Token', 'LPT', ethers.utils.parseEther("1000000"))) as SimpleToken
+        GraphToken = (await SimpleTokenFactory.deploy('Graph Token', 'GRT', ethers.utils.parseEther("1000000"))) as SimpleToken
     })
 
     before('deploy Graph', async () => {
@@ -97,15 +100,31 @@ describe('Graph Integration Test', () => {
     describe('deposit', () => {
 
         it('reverts because transfer amount exceeds allowance', async () => {
-            await expect(Controller.connect(signers[0]).deposit(deposit)).to.be.revertedWith('ERC20: transfer amount exceeds allowance')
+            await expect(Controller.deposit(deposit)).to.be.revertedWith('ERC20: transfer amount exceeds allowance')
 
         })
-        it('deposits funds', async () => {
-            await GraphToken.connect(signers[0]).approve(Controller.address, deposit)
-            await Controller.connect(signers[0]).deposit(deposit)
-            expect(await TenderToken.totalSupply()).to.eq(deposit.add(initialStake))
-            expect(await Tenderizer.currentPrincipal()).to.eq(deposit.add(initialStake))
-            expect(await TenderToken.balanceOf(deployer)).to.eq(deposit)
+        describe('deposits funds succesfully', async () => {
+            let tx: ContractTransaction
+            before(async () => {
+                await GraphToken.approve(Controller.address, deposit)
+                tx = await Controller.deposit(deposit)
+            })
+
+            it('increases TenderToken supply', async () => {
+                expect(await TenderToken.totalSupply()).to.eq(deposit.add(initialStake))
+            })
+
+            it('increases Tenderizer principle', async () => {
+                expect(await Tenderizer.currentPrincipal()).to.eq(deposit.add(initialStake))
+            })
+
+            it('increases TenderToken balance of depositor', async () => {
+                expect(await TenderToken.balanceOf(deployer)).to.eq(deposit)
+            })
+
+            it('emits Deposit event from tenderizer', async () => {
+                expect(tx).to.emit(Tenderizer, 'Deposit').withArgs(deployer, deposit)
+            })
         })
     })
 
@@ -115,16 +134,23 @@ describe('Graph Integration Test', () => {
             await expect(Controller.gulp()).to.be.reverted
         })
 
-        it('bond succeeds', async () => {
-            GraphMock.smocked.delegate.will.return()
-            await Controller.gulp()
-            expect(GraphMock.smocked.delegate.calls.length).to.eq(1)
-            expect(GraphMock.smocked.delegate.calls[0]._indexer).to.eq(NODE)
-            // A smocked contract doesn't execute its true code
-            // So Graph.bond() never calls ERC20.transferFrom() under the hood
-            // Therefore when we call gulp() it will be for the deposit and bootstrapped supply on deployment
-            // Smock doesn't support executing code 
-            expect(GraphMock.smocked.delegate.calls[0]._tokens).to.eq(deposit.add(initialStake))
+        describe('stakes succeessfully', async () => {
+            let tx: ContractTransaction
+            it('bond succeeds', async () => {
+                GraphMock.smocked.delegate.will.return()
+                tx = await Controller.gulp()
+                expect(GraphMock.smocked.delegate.calls.length).to.eq(1)
+                expect(GraphMock.smocked.delegate.calls[0]._indexer).to.eq(NODE)
+                // A smocked contract doesn't execute its true code
+                // So livepeer.bond() never calls ERC20.transferFrom() under the hood
+                // Therefore when we call gulp() it will be for the deposit and bootstrapped supply on deployment
+                // Smock doesn't support executing code 
+                expect(GraphMock.smocked.delegate.calls[0]._tokens).to.eq(deposit.add(initialStake)) 
+            })
+
+            it('emits Stake event from tenderizer', async () => {
+                expect(tx).to.emit(Tenderizer, 'Stake').withArgs(NODE, deposit.add(initialStake))
+            })
         })
     })
 
@@ -137,6 +163,7 @@ describe('Graph Integration Test', () => {
             let protocolFee: BigNumber = ethers.utils.parseEther("0.025") 
             const expFee = increase.mul(protocolFee).div(percDiv)
             let totalShares: BigNumber = ethers.utils.parseEther("1")
+            let tx: ContractTransaction
 
             before(async () => {
                 protocolFee = await Tenderizer.protocolFee()
@@ -156,7 +183,7 @@ describe('Graph Integration Test', () => {
                     queryFeeCut: 0,
                     updatedAtBlock: 0
                 })
-                await Controller.rebase()
+                tx = await Controller.rebase()
             })
 
             it("updates currentPrincipal", async () => {
@@ -188,6 +215,10 @@ describe('Graph Integration Test', () => {
                 const actual = await BPool.getNormalizedWeight(TenderToken.address)
                 expect(actual.sub(expected).abs()).to.be.lte(acceptableDelta)
             })
+
+            it("should emit RewardsClaimed event from Tenderizer", async () => {
+                expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs(increase, expFee)
+            })
         })
 
         describe('stake decrease', () => {
@@ -197,6 +228,7 @@ describe('Graph Integration Test', () => {
             let totalShares: BigNumber = ethers.utils.parseEther("1")
 
             let feesBefore: BigNumber = ethers.constants.Zero
+            let tx: ContractTransaction
 
             before(async () => {
                 totalShares = await TenderToken.getTotalShares()
@@ -216,7 +248,7 @@ describe('Graph Integration Test', () => {
                     queryFeeCut: 0,
                     updatedAtBlock: 0
                 })
-                await Controller.rebase()
+                tx = await Controller.rebase()
             })
 
             it("updates currentPrincipal", async () => {
@@ -247,16 +279,22 @@ describe('Graph Integration Test', () => {
                 const actual = await BPool.getNormalizedWeight(TenderToken.address)
                 expect(actual.sub(expected).abs()).to.be.lte(acceptableDelta)
             })
+
+            it("should emit RewardsClaimed event from Tenderizer with 0 rewards/fees", async () => {
+                expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs('0', '0')
+            })
         })
     })
 
     describe('collect fees', () => {
         let fees: BigNumber
         let ownerBalBefore: BigNumber
+        let tx: ContractTransaction
+        
         before(async () => {
             fees = await Tenderizer.pendingFees()
             ownerBalBefore = await TenderToken.balanceOf(deployer)
-            await Controller.collectFees()
+            tx = await Controller.collectFees()
         })
 
         it("should reset pendingFees", async () => {
@@ -265,6 +303,10 @@ describe('Graph Integration Test', () => {
 
         it('should increase tenderToken balance of owner', async () => {
             expect(await TenderToken.balanceOf(deployer)).to.eq(ownerBalBefore.add(fees))
+        })
+
+        it('should emit FeeCollected event from Tenderizer', async () => {
+            expect(tx).to.emit(Tenderizer, 'FeeCollected').withArgs(fees)
         })
     })
 

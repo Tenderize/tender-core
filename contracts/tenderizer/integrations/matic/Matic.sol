@@ -37,8 +37,9 @@ contract Matic is Tenderizer {
         matic = IMatic(_node);
     }
 
-    function _deposit(address /*_from*/, uint256 _amount) internal override {
+    function _deposit(address _from, uint256 _amount) internal override {
         currentPrincipal += _amount;
+        super._deposit(_from, _amount);
     }
 
     function _stake(address _node, uint256 _amount) internal override {
@@ -67,6 +68,8 @@ contract Matic is Tenderizer {
         if (fxRate == 0) fxRate = 1;
         uint256 min = MathUtils.percOf(amount, EXCHANGE_RATE_PRECISION, fxRate);
         matic_.buyVoucher(amount, min);
+
+        super._stake(address(matic_), amount);
     }
 
     function _unstake(address _account, address _node, uint256 _amount) internal override {
@@ -137,6 +140,8 @@ contract Matic is Tenderizer {
         
         // update principle and pendignFees
         currentPrincipal = stake - fee;
+
+        emit RewardsClaimed(rewards, fee);
     }
 
     function _collectFees() internal override returns (uint256) {

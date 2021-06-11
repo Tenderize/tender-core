@@ -26,8 +26,9 @@ contract Graph is Tenderizer {
         graph = _graph;
     }
 
-    function _deposit(address /*_from*/, uint256 _amount) internal override {
+    function _deposit(address _from, uint256 _amount) internal override {
         currentPrincipal += _amount;
+        super._deposit(_from, _amount);
     }
 
     function _stake(address _node, uint256 _amount) internal override {
@@ -53,6 +54,8 @@ contract Graph is Tenderizer {
 
         // stake tokens
         graph.delegate(node_, amount);
+
+        super._stake(node_, amount);
     }
 
     function _unstake(address _account, address _node, uint256 _amount) internal override {
@@ -72,7 +75,7 @@ contract Graph is Tenderizer {
             node_ = node;
         }
 
-        currentPrincipal -= _amount;
+        currentPrincipal -= amount;
 
         // Calculate the amount of shares to undelegate
         IGraph.Delegation memory delegation = graph.getDelegation(node, address(this));
@@ -89,6 +92,8 @@ contract Graph is Tenderizer {
 
         // undelegate shares
         graph.undelegate(node_, shares);
+
+        super._unstake(_account, node_, amount);
     }
 
     function _withdraw(address _account, uint256 /*_amount*/) internal override {
@@ -97,6 +102,8 @@ contract Graph is Tenderizer {
 
         // Transfer amount from unbondingLock to _account
         steak.transfer(_account, amount);
+
+        super._withdraw(_account, amount);
     }
 
     function _claimRewards() internal override {
@@ -132,6 +139,8 @@ contract Graph is Tenderizer {
 
         // Add current pending stake minus fees and set it as current principal
         currentPrincipal = stake - fee;
+
+        emit RewardsClaimed(rewards, fee);
     }
 
     function _collectFees() internal override returns (uint256) {

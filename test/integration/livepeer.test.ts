@@ -15,6 +15,7 @@ import { Deployment } from "hardhat-deploy/dist/types";
 import { BigNumber } from "@ethersproject/bignumber";
 
 import {sharesToTokens, tokensToShares} from '../util/helpers'
+import { ContractTransaction } from "@ethersproject/contracts";
 
 
 chai.use(solidity);
@@ -100,15 +101,31 @@ describe('Livepeer Integration Test', () => {
     describe('deposit', () => {
 
         it('reverts because transfer amount exceeds allowance', async () => {
-            await expect(Controller.connect(signers[0]).deposit(deposit)).to.be.revertedWith('ERC20: transfer amount exceeds allowance')
+            await expect(Controller.deposit(deposit)).to.be.revertedWith('ERC20: transfer amount exceeds allowance')
 
         })
-        it('deposits funds', async () => {
-            await LivepeerToken.connect(signers[0]).approve(Controller.address, deposit)
-            await Controller.connect(signers[0]).deposit(deposit)
-            expect(await TenderToken.totalSupply()).to.eq(deposit.add(initialStake))
-            expect(await Tenderizer.currentPrincipal()).to.eq(deposit.add(initialStake))
-            expect(await TenderToken.balanceOf(deployer)).to.eq(deposit)
+        describe('deposits funds succesfully', async () => {
+            let tx: ContractTransaction
+            before(async () => {
+                await LivepeerToken.approve(Controller.address, deposit)
+                tx = await Controller.deposit(deposit)
+            })
+
+            it('increases TenderToken supply', async () => {
+                expect(await TenderToken.totalSupply()).to.eq(deposit.add(initialStake))
+            })
+
+            it('increases Tenderizer principle', async () => {
+                expect(await Tenderizer.currentPrincipal()).to.eq(deposit.add(initialStake))
+            })
+
+            it('increases TenderToken balance of depositor', async () => {
+                expect(await TenderToken.balanceOf(deployer)).to.eq(deposit)
+            })
+
+            it('emits Deposit event from tenderizer', async () => {
+                expect(tx).to.emit(Tenderizer, 'Deposit').withArgs(deployer, deposit)
+            })
         })
     })
 
@@ -118,16 +135,23 @@ describe('Livepeer Integration Test', () => {
             await expect(Controller.gulp()).to.be.reverted
         })
 
-        it('bond succeeds', async () => {
-            LivepeerMock.smocked.bond.will.return()
-            await Controller.gulp()
-            expect(LivepeerMock.smocked.bond.calls.length).to.eq(1)
-            expect(LivepeerMock.smocked.bond.calls[0]._to).to.eq(NODE)
-            // A smocked contract doesn't execute its true code
-            // So livepeer.bond() never calls ERC20.transferFrom() under the hood
-            // Therefore when we call gulp() it will be for the deposit and bootstrapped supply on deployment
-            // Smock doesn't support executing code 
-            expect(LivepeerMock.smocked.bond.calls[0]._amount).to.eq(deposit.add(initialStake))
+        describe('stakes succeessfully', async () => {
+            let tx: ContractTransaction
+            it('bond succeeds', async () => {
+                LivepeerMock.smocked.bond.will.return()
+                tx = await Controller.gulp()
+                expect(LivepeerMock.smocked.bond.calls.length).to.eq(1)
+                expect(LivepeerMock.smocked.bond.calls[0]._to).to.eq(NODE)
+                // A smocked contract doesn't execute its true code
+                // So livepeer.bond() never calls ERC20.transferFrom() under the hood
+                // Therefore when we call gulp() it will be for the deposit and bootstrapped supply on deployment
+                // Smock doesn't support executing code 
+                expect(LivepeerMock.smocked.bond.calls[0]._amount).to.eq(deposit.add(initialStake))  
+            })
+
+            it('emits Stake event from tenderizer', async () => {
+                expect(tx).to.emit(Tenderizer, 'Stake').withArgs(NODE, deposit.add(initialStake))
+            })
         })
     })
 
@@ -140,12 +164,13 @@ describe('Livepeer Integration Test', () => {
             let protocolFee: BigNumber = ethers.utils.parseEther("0.025") 
             const expFee = increase.mul(protocolFee).div(percDiv)
             let totalShares: BigNumber = ethers.utils.parseEther("1")
+            let tx: ContractTransaction
 
             before(async () => {
                 protocolFee = await Tenderizer.protocolFee()
                 totalShares = await TenderToken.getTotalShares()
                 LivepeerMock.smocked.pendingStake.will.return.with(newStake)
-                await Controller.rebase()
+                tx = await Controller.rebase()
             })
 
             it("updates currentPrincipal", async () => {
@@ -177,6 +202,10 @@ describe('Livepeer Integration Test', () => {
                 const actual = await BPool.getNormalizedWeight(TenderToken.address)
                 expect(actual.sub(expected).abs()).to.be.lte(acceptableDelta)
             })
+
+            it("should emit RewardsClaimed event from Tenderizer", async () => {
+                expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs(increase, expFee)
+            })
         })
 
         describe('stake decrease', () => {
@@ -186,12 +215,13 @@ describe('Livepeer Integration Test', () => {
             let totalShares: BigNumber = ethers.utils.parseEther("1")
 
             let feesBefore: BigNumber = ethers.constants.Zero
+            let tx: ContractTransaction
 
             before(async () => {
                 totalShares = await TenderToken.getTotalShares()
                 feesBefore = await Tenderizer.pendingFees()
                 LivepeerMock.smocked.pendingStake.will.return.with(newStake)
-                await Controller.rebase()
+                tx = await Controller.rebase()
             })
 
             it("updates currentPrincipal", async () => {
@@ -222,16 +252,22 @@ describe('Livepeer Integration Test', () => {
                 const actual = await BPool.getNormalizedWeight(TenderToken.address)
                 expect(actual.sub(expected).abs()).to.be.lte(acceptableDelta)
             })
+
+            it("should emit RewardsClaimed event from Tenderizer with 0 rewards/fees", async () => {
+                expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs('0', '0')
+            })
         })
     })
 
     describe('collect fees', () => {
         let fees: BigNumber
         let ownerBalBefore: BigNumber
+        let tx: ContractTransaction
+
         before(async () => {
             fees = await Tenderizer.pendingFees()
             ownerBalBefore = await TenderToken.balanceOf(deployer)
-            await Controller.collectFees()
+            tx = await Controller.collectFees()
         })
 
         it("should reset pendingFees", async () => {
@@ -240,6 +276,10 @@ describe('Livepeer Integration Test', () => {
 
         it('should increase tenderToken balance of owner', async () => {
             expect(await TenderToken.balanceOf(deployer)).to.eq(ownerBalBefore.add(fees))
+        })
+
+        it('should emit FeeCollected event from Tenderizer', async () => {
+            expect(tx).to.emit(Tenderizer, 'FeeCollected').withArgs(fees)
         })
     })
 
@@ -277,6 +317,7 @@ describe('Livepeer Integration Test', () => {
     })
 
     describe('unlock', async () => {   
+        let tx: ContractTransaction
         it('reverts if unbond() reverts', async () => {
             LivepeerMock.smocked.unbond.will.revert()
             await expect(Controller.unlock(withdrawAmount)).to.be.reverted
@@ -289,7 +330,7 @@ describe('Livepeer Integration Test', () => {
         })
 
         it('unbond() succeeds', async () => {
-            await Controller.unlock(withdrawAmount)
+            tx = await Controller.unlock(withdrawAmount)
             expect(LivepeerMock.smocked.unbond.calls.length).to.eq(1)
             expect(LivepeerMock.smocked.unbond.calls[0]._amount).to.eq(withdrawAmount)
         })
@@ -297,33 +338,38 @@ describe('Livepeer Integration Test', () => {
         it('reduces TenderToken Balance', async () => {
             expect(await TenderToken.balanceOf(deployer)).to.eq(0)
         })
+
+        it('should emit Unstake event from Tenderizer', async () => {
+            expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(deployer, NODE, withdrawAmount)
+        })
     })
 
     describe('withdraw', async () => {
         let lptBalBefore : BigNumber
+        let tx: ContractTransaction
         it('reverts if wihtdraw reverts', async () => {
             LivepeerMock.smocked.withdrawStake.will.revert()
             await expect(Controller.withdraw(withdrawAmount)).to.be.reverted
         })
         
-        it('reverts if withraw amount exceeds amount in unbonding lock', async () => {
-            LivepeerMock.smocked.withdrawStake.will.return()
-            await expect(Controller.withdraw(withdrawAmount.add(1))).to.be.reverted
-        })
-        
         it('withdraw() succeeds', async () => {
+            LivepeerMock.smocked.withdrawStake.will.return()
             // Smocked doesn't actually execute transactions, so balance of Controller is not updated
             // hence manually transferring some tokens to simlaute withdrawal
             await LivepeerToken.transfer(Controller.address, withdrawAmount.mul(2))
             
             lptBalBefore = await LivepeerToken.balanceOf(deployer)
 
-            await Controller.withdraw(withdrawAmount)
+            tx = await Controller.withdraw(withdrawAmount)
             expect(LivepeerMock.smocked.withdrawStake.calls.length).to.eq(1)
         })
         
         it('increases LPT balance', async () => {
             expect(await LivepeerToken.balanceOf(deployer)).to.eq(lptBalBefore.add(withdrawAmount))
+        })
+
+        it('should emit Withdraw event from Tenderizer', async () => {
+            expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(deployer, withdrawAmount)
         })
     })
 
