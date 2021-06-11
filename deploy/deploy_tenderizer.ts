@@ -153,6 +153,30 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   console.log("Balancer pool address", bpoolAddr)
 
   console.log("Succesfully Deployed ! ")
+
+  // Deploy faucet if not mainnet
+  if (hre.network.name != 'mainnet') {
+    const tokenAddress = process.env.TOKEN // Address of token
+    const requestAmount = process.env.FAUCET_REQUEST_AMOUNT // Amount to dispense per request
+    const requestWait = process.env.FAUCET_REQUEST_WAIT // Hours requester has to wait before requesting again
+    const seedAmount = process.env.FAUCET_SEED_AMOUNT // Seed amount of tokens to be added to the faucet
+    
+    if (!tokenAddress || !requestAmount || !requestWait || !seedAmount){
+      console.log('Faucet ENVs are not set, skipping Faucet deployment')
+      return
+    }
+
+    console.log(`Deploying ${SYMBOL} Faucet`)
+    const Faucet = await deploy('TokenFaucet', {
+      from: deployer,
+      log: true,
+      args: [tokenAddress, ethers.utils.parseEther(requestAmount), +requestWait]
+    })
+  
+    // Add seed funds
+    const Token: ERC20 = (await ethers.getContractAt('ERC20', tokenAddress)) as ERC20
+    Token.transfer(Faucet.address, ethers.utils.parseEther(seedAmount))
+  }
 }
 
 func.tags = [NAME, "Deploy"] // this setup a tag so you can execute the script on its own (and its dependencies)
