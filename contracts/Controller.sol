@@ -125,6 +125,22 @@ contract Controller is Ownable {
         tenderizer.setStakingContract(_stakingContract);
     }
 
+    function execute (address _target, uint256 _value, bytes calldata _data) public onlyOwner {
+        _execute(_target, _value, _data);
+    }
+
+    function batchExecute(address[] calldata _targets, uint256[] calldata _values, bytes[] calldata _datas) public onlyOwner {
+        require(_targets.length == _values.length && _targets.length == _datas.length, "INVALID_ARGUMENTS");
+        for (uint256 i = 0; i < _targets.length; i++) {
+            _execute(_targets[i], _values[i], _datas[i]);
+        }
+    }
+
+    function _execute(address _target, uint256 _value, bytes calldata _data) internal {
+        (bool success, bytes memory returnData) = _target.call{value: _value}(_data);
+        require(success, string(returnData));
+    }
+
     function _updateTotalPooledTokens() internal {
         // get total staked tokens
         uint256 stakedTokens = tenderizer.totalStakedTokens();
@@ -133,6 +149,5 @@ contract Controller is Ownable {
         tenderToken.setTotalPooledTokens(stakedTokens);
     }
     // TODO:
-    // - Migrate to new tenderizer
     // Add rescuefunds to tenderizer:
 }
