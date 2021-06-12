@@ -2,6 +2,7 @@ module.exports = {
     skipFiles: [
         'libs',
         'test',
+        'Faucet.sol',
         'tenderizer/test',
         'tenderizer/ITenderizer.sol',
         'tenderizer/integrations/livepeer/ILivepeer.sol',
