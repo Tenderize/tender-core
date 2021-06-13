@@ -107,7 +107,7 @@ contract Livepeer is Tenderizer {
         require(unbondingLocks[_account].amount > 0, "NO_PENDING_WITHDRAWAL");
 
         // Init storage pointer
-        unbondingLock storage _unbondingLock = unbondingLocks[_account];
+        unbondingLock memory _unbondingLock = unbondingLocks[_account];
 
         // Remove it from the locks
         delete unbondingLocks[_account];
