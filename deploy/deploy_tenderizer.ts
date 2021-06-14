@@ -164,7 +164,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   })
   const TenderFarm: TenderFarm = (await ethers.getContractAt('TenderFarm', tenderFarm.address)) as TenderFarm 
   await TenderFarm.transferOwnership(controller.address)
-
+  await Controller.setTenderFarm(TenderFarm.address)
   console.log("Deployed TenderFarm")
 
   // Deploy faucet if not mainnet

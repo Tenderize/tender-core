@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./token/ITenderToken.sol";
 import "./tenderizer/ITenderizer.sol";
 import "./liquidity/IElasticSupplyPool.sol";
+import "./liquidity/ITenderFarm.sol";
 
 /**
  * @title Controller contract for a Tenderizer
@@ -22,6 +23,7 @@ contract Controller is Ownable {
     ITenderizer public tenderizer;
     ITenderToken public tenderToken;
     IElasticSupplyPool public esp;
+    ITenderFarm public tenderFarm;
 
     constructor(IERC20 _steak, ITenderizer _tenderizer, ITenderToken _tenderToken, IElasticSupplyPool _esp) {
         steak = _steak;
@@ -90,13 +92,17 @@ contract Controller is Ownable {
         // update total pooled tokens
         _updateTotalPooledTokens();
 
+        // Collect governance fees
+        _collectFees();
+        // Collect LP fees
+        _collectLiquidityFees();
+
         // Resync weight for tenderToken
         try esp.resyncWeight(address(tenderToken)) {
 
         } catch {
             // No-op
         }
-
     }
 
     function gulp() public {
@@ -105,11 +111,7 @@ contract Controller is Ownable {
     }
 
     function collectFees() public onlyOwner {
-        // collect fees and get amount
-        uint256 amount = tenderizer.collectFees();
-
-        // mint tenderToken to fee distributor (governance)
-        tenderToken.mint(owner(), amount);
+        _collectFees();
     }
 
     function setEsp(IElasticSupplyPool _esp) public onlyOwner {
@@ -125,7 +127,11 @@ contract Controller is Ownable {
         tenderizer.setStakingContract(_stakingContract);
     }
 
-    function execute (address _target, uint256 _value, bytes calldata _data) public onlyOwner {
+    function setTenderFarm(ITenderFarm _tenderFarm) public onlyOwner {
+        tenderFarm = _tenderFarm;
+    }
+
+    function execute(address _target, uint256 _value, bytes calldata _data) public onlyOwner {
         _execute(_target, _value, _data);
     }
 
@@ -147,6 +153,25 @@ contract Controller is Ownable {
 
         // Set total pooled tokens, rebases tenderToken supply
         tenderToken.setTotalPooledTokens(stakedTokens);
+    }
+
+    function _collectFees() internal {
+        // collect fees and get amount
+        uint256 amount = tenderizer.collectFees();
+
+        // mint tenderToken to fee distributor (governance)
+        tenderToken.mint(owner(), amount);
+    }
+
+    function _collectLiquidityFees() internal {
+        if (tenderFarm.totalStake() == 0) return;
+        // collect fees and get amount
+        uint256 amount = tenderizer.collectLiquidityFees();
+
+        // mint tenderToken to fee distributor (governance)
+        tenderToken.mint(address(this), amount);
+        tenderToken.approve(address(tenderFarm), amount);
+        tenderFarm.addRewards(amount);
     }
     // TODO:
     // Add rescuefunds to tenderizer:
