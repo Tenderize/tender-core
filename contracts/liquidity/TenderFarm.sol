@@ -89,7 +89,7 @@ contract TenderFarm is Ownable {
         require(_nextStake > 0, "NO_STAKE");
         totalStake = _nextStake;
         uint256 shares = rewardToken.tokensToShares(_amount);
-        CRF += MathUtils.percOf(MathUtils.PERC_DIVISOR, shares, _nextStake);
+        CRF += MathUtils.percPoints(shares, _nextStake);
         require(rewardToken.transferFrom(msg.sender, address(this), _amount), "TRANSFER_FAILED");
         emit RewardsAdded(_amount);
     }
@@ -147,7 +147,7 @@ contract TenderFarm is Ownable {
 
         if (CRF == 0) return 0;
 
-        return MathUtils.percOf(_stake.stake, CRF - _stake.lastCRF, MathUtils.PERC_DIVISOR);
+        return MathUtils.percOf(_stake.stake, CRF - _stake.lastCRF);
     }
 
     function _stakeOf(address _of) internal view returns (uint256) {
