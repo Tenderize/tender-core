@@ -127,19 +127,12 @@ contract Graph is Tenderizer {
         }
 
         // Substract protocol fee amount and add it to pendingFees
-        uint256 fee = MathUtils.percOf(rewards, protocolFee);
-        pendingFees += fee;
-
+        uint256 _pendingFees = pendingFees + MathUtils.percOf(rewards, protocolFee);
+        pendingFees = _pendingFees;
+        uint256 _liquidityFees = pendingLiquidityFees + MathUtils.percOf(rewards, liquidityFee);
+        pendingLiquidityFees = _liquidityFees;
         // Add current pending stake minus fees and set it as current principal
-        currentPrincipal = stake - fee;
-    }
-
-    function _collectFees() internal override returns (uint256) {
-        // set pendingFees to 0
-        // Controller will mint tenderToken and distribute it
-        uint256 before = pendingFees;
-        pendingFees = 0;
-        return before;
+        currentPrincipal = stake - _pendingFees - _liquidityFees;
     }
 
     function _totalStakedTokens() internal override view returns (uint256) {

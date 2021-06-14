@@ -21,6 +21,8 @@ interface ITenderizer {
 
     function collectFees() external returns (uint256);
 
+    function collectLiquidityFees() external returns (uint256);
+
     function totalStakedTokens() external view returns (uint256);
 
     // Governance
@@ -32,6 +34,8 @@ interface ITenderizer {
     function setSteak(IERC20 _steak) external;
 
     function setProtocolFee(uint256 _protocolFee) external;
+
+    function setLiquidityFee(uint256 _liquidityFee) external;
 
     function setStakingContract(address _stakingContract) external;
 }

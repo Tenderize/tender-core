@@ -88,6 +88,11 @@ describe('Matic Integration Test', () => {
         TenderToken = (await ethers.getContractAt('TenderToken', Matic['TenderToken'].address)) as TenderToken
         Esp = (await ethers.getContractAt('ElasticSupplyPool', Matic['ElasticSupplyPool'].address)) as ElasticSupplyPool
         BPool = (await ethers.getContractAt('BPool', await Esp.bPool())) as BPool
+        await Controller.execute(
+            Tenderizer.address,
+            0,
+            Tenderizer.interface.encodeFunctionData('setProtocolFee', [0])
+        )
     })
 
     let initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div("2")
@@ -134,7 +139,6 @@ describe('Matic Integration Test', () => {
             const newStake = deposit.add(initialStake).add(increase)
             const percDiv = ethers.utils.parseEther("1")
             let protocolFee: BigNumber = ethers.utils.parseEther("0.025") 
-            const expFee = percOf2(increase, protocolFee)
             let totalShares: BigNumber = ethers.utils.parseEther("1")
 
             before(async () => {
@@ -146,17 +150,13 @@ describe('Matic Integration Test', () => {
             })
 
             it("updates currentPrincipal", async () => {
-                expect(await Tenderizer.currentPrincipal()).to.eq(newStake.sub(expFee))
+                expect(await Tenderizer.currentPrincipal()).to.eq(newStake)
             })
 
             it("increases tendertoken balances when rewards are added", async () => {
                 // account 0
                 let shares = await TenderToken.sharesOf(deployer)
                 expect(await TenderToken.balanceOf(deployer)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
-            })
-
-            it("increases pending fees", async () => {
-                expect(await Tenderizer.pendingFees()).to.eq(expFee)
             })
 
             it("increases the tenderToken balance of the AMM", async () => {

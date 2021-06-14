@@ -20,8 +20,9 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     address public controller;
 
     uint256 public protocolFee;
-
+    uint256 public liquidityFee; 
     uint256 public pendingFees; // pending protocol fees since last distribution
+    uint256 public pendingLiquidityFees;
     uint256 public currentPrincipal; // Principal since last claiming earnings
 
     modifier onlyController() {
@@ -123,12 +124,20 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         protocolFee = _protocolFee;
     }
 
+    function setLiquidityFee(uint256 _liquidityFee) external virtual override onlyController {
+        liquidityFee = _liquidityFee;
+    }
+
     function setStakingContract(address _stakingContract) external override onlyController {
         _setStakingContract(_stakingContract);
     }
 
     function collectFees() external override onlyController returns (uint256) {
         return _collectFees();
+    }
+
+    function collectLiquidityFees() external override onlyController returns (uint256) {
+        return _collectLiquidityFees();
     }
 
     function totalStakedTokens() external override view returns (uint256) {
@@ -145,7 +154,21 @@ abstract contract Tenderizer is Initializable, ITenderizer {
 
     function _claimRewards() internal virtual;
 
-    function _collectFees() internal virtual returns (uint256);
+    function _collectFees() internal virtual returns (uint256) {
+        // set pendingFees to 0
+        // Controller will mint tenderToken and distribute it
+        uint256 before = pendingFees;
+        pendingFees = 0;
+        return before;
+    }
+
+    function _collectLiquidityFees() internal virtual returns (uint256) {
+        // set pendingFees to 0
+        // Controller will mint tenderToken and distribute it
+        uint256 before = pendingLiquidityFees;
+        pendingLiquidityFees = 0;
+        return before;
+    }
 
     function _totalStakedTokens() internal virtual view returns (uint256);
 

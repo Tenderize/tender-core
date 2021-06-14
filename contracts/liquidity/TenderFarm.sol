@@ -86,6 +86,7 @@ contract TenderFarm is Ownable {
      */
     function addRewards(uint256 _amount) public onlyOwner {
         uint256 _nextStake = nextTotalStake;
+        require(_nextStake > 0, "NO_STAKE");
         totalStake = _nextStake;
         uint256 shares = rewardToken.tokensToShares(_amount);
         CRF += MathUtils.percOf(MathUtils.PERC_DIVISOR, shares, _nextStake);
