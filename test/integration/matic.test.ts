@@ -16,6 +16,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { ContractTransaction } from "@ethersproject/contracts";
 
 import {sharesToTokens, tokensToShares} from '../util/helpers'
+import { BytesLike } from "@ethersproject/bytes";
 
 
 chai.use(solidity);
@@ -319,12 +320,65 @@ describe('Matic Integration Test', () => {
         })
     })
 
-    describe('unlock', () => {
+    describe('unlock', async () => {   
+        it('reverts if requested amount exceeds balance', async () => {
+            withdrawAmount = await TenderToken.balanceOf(deployer)
+            await expect(Controller.unlock(withdrawAmount.add(1))).to.be.reverted
+        })
 
+        it('reduces TenderToken Balance', async () => {
+            await Controller.unlock(withdrawAmount)
+            expect(await TenderToken.balanceOf(deployer)).to.eq(0)
+        })
     })
 
-    describe('withdraw', () => {
+    describe('governance unlock', async () => {
+        let txData: BytesLike;
+        
+        before(async () => {
+            txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData("unstakeFromProtocol"))
+        })
+       
+        it('reverts if pendingWithdrawals() reverts', async () => {
+            MaticMock.smocked.sellVoucher.will.revert()
+            await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.reverted
+        })
 
+        it('sellVoucher() succeeds', async () => {
+            MaticMock.smocked.sellVoucher.will.return()
+            await Controller.execute(Tenderizer.address, 0, txData)
+            expect(MaticMock.smocked.sellVoucher.calls.length).to.eq(1)
+        })
+    })
+
+    describe('governance withdraw', async () => {
+        let txData: BytesLike;
+        
+        before(async () => {
+            txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData("withdrawFromProtocol"))
+        })
+
+        it('reverts if unstakeClaimTokens() reverts', async () => {
+            MaticMock.smocked.unstakeClaimTokens.will.revert()
+            await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.reverted
+        })
+
+        it('unstakeClaimTokens() succeeds', async () => {
+            MaticMock.smocked.unstakeClaimTokens.will.return()
+            await Controller.execute(Tenderizer.address, 0, txData)
+            expect(MaticMock.smocked.unstakeClaimTokens.calls.length).to.eq(1)
+            // Smocked doesn't actually execute transactions, so balance of Controller is not updated
+            // hence manually transferring some tokens to simlaute withdrawal
+            await MaticToken.transfer(Tenderizer.address, withdrawAmount.mul(2))
+        })
+    })
+
+    describe('withdraw', async () => {                    
+        it('increases MATIC balance', async () => {
+            const balBefore = await MaticToken.balanceOf(deployer)
+            await Controller.withdraw(withdrawAmount) // Value doesn't matter, entire amount unlocked is withdrawn 
+            expect(await MaticToken.balanceOf(deployer)).to.eq(balBefore.add(withdrawAmount))
+        })
     })
 
     describe('upgrade', () => {
