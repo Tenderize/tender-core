@@ -307,12 +307,8 @@ describe('Livepeer Integration Test', () => {
             await expect(Controller.withdraw(withdrawAmount)).to.be.reverted
         })
         
-        it('reverts if withraw amount exceeds amount in unbonding lock', async () => {
-            LivepeerMock.smocked.withdrawStake.will.return()
-            await expect(Controller.withdraw(withdrawAmount.add(1))).to.be.reverted
-        })
-        
         it('withdraw() succeeds', async () => {
+            LivepeerMock.smocked.withdrawStake.will.return()
             // Smocked doesn't actually execute transactions, so balance of Controller is not updated
             // hence manually transferring some tokens to simlaute withdrawal
             await LivepeerToken.transfer(Controller.address, withdrawAmount.mul(2))

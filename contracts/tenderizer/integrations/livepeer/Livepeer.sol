@@ -82,10 +82,10 @@ contract Livepeer is Tenderizer {
             node_ = node;
         }
 
-        currentPrincipal -= _amount;
+        currentPrincipal -= amount;
 
         // Unbond tokens
-        livepeer.unbond(_amount);
+        livepeer.unbond(amount);
 
         // Manage Livepeer unbonding locks
         uint256 unbondingLockID = nextUnbondingLockID;
@@ -93,7 +93,7 @@ contract Livepeer is Tenderizer {
 
         unbondingLocks[_account] = unbondingLock({
             id: unbondingLockID,
-            amount: _amount
+            amount: amount
         });
     }
 
@@ -102,7 +102,7 @@ contract Livepeer is Tenderizer {
         require(unbondingLocks[_account].amount > 0, "NO_PENDING_WITHDRAWAL");
 
         // Init storage pointer
-        unbondingLock storage _unbondingLock = unbondingLocks[_account];
+        unbondingLock memory _unbondingLock = unbondingLocks[_account];
 
         // Remove it from the locks
         delete unbondingLocks[_account];
