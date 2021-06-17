@@ -16,7 +16,7 @@ contract Livepeer is Tenderizer {
 
     uint256 constant private MAX_ROUND = 2**256 - 1;
 
-    IOneInch constant private oneInch = IOneInch(address(0));
+    IOneInch private oneInch = IOneInch(address(0));
 
     ILivepeer livepeer;
 
@@ -165,4 +165,7 @@ contract Livepeer is Tenderizer {
         livepeer = ILivepeer(_stakingContract);
     }
 
+    function setOneInchContract(address _oneInch) external onlyController {
+        oneInch = IOneInch(_oneInch);
+    }
 }
