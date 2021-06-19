@@ -64,7 +64,7 @@ contract Livepeer is Tenderizer {
         livepeer.bond(amount, node_);
     }
 
-    function _unstake(address _account, address _node, uint256 _amount) internal override {
+    function _unstake(address _account, address /*_node*/, uint256 _amount) internal override {
         // Check that no withdrawal is pending
         require(unbondingLocks[_account].amount == 0, "PENDING_WITHDRAWAL");
 
@@ -74,12 +74,6 @@ contract Livepeer is Tenderizer {
         if (amount == 0) {
             amount = livepeer.pendingStake(address(this), MAX_ROUND);
             require(amount > 0, "ZERO_STAKE");
-        }
-
-        // if no _node is specified, stake towards the default node
-        address node_ = _node;
-        if (node_ == address(0)) {
-            node_ = node;
         }
 
         currentPrincipal -= amount;
