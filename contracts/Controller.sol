@@ -55,7 +55,11 @@ contract Controller is Ownable {
     }
 
     function unlock(uint256 _amount) public {
-        require(_amount > 0, "ZERO_AMOUNT");
+        // Allow zero _amount for controller
+        // If zero amount totalWithdrawalPending is used 
+        if(msg.sender != address(this)) {
+            require(_amount > 0, "ZERO_AMOUNT");
+        }
         // Burn tenderTokens
         require(
             tenderToken.burn(msg.sender, _amount),
@@ -70,7 +74,11 @@ contract Controller is Ownable {
     }
 
     function withdraw(uint256 _amount) public {
-        require(_amount > 0, "ZERO_AMOUNT");
+        // Allow zero _amount for controller
+        // If zero amount totalWithdrawalPending is used 
+        if(msg.sender != address(this)) {
+            require(_amount > 0, "ZERO_AMOUNT");
+        }
         // Execute pending withdrawal
         // Reverts if unthawing period hasn't ended
         tenderizer.withdraw(msg.sender, _amount);

@@ -3,7 +3,7 @@ import hre, {ethers} from "hardhat"
 import { MockContract, smockit } from '@eth-optimism/smock'
 
 import {
-    SimpleToken, LivepeerMock, Controller, Tenderizer, ElasticSupplyPool, TenderToken, ILivepeer, BPool, EIP173Proxy, Livepeer, Proxy
+    SimpleToken, LivepeerMock, Controller, Tenderizer, ElasticSupplyPool, TenderToken, ILivepeer, BPool, EIP173Proxy, Livepeer, Proxy, IOneInch
   } from "../../typechain/";
 
 import chai from "chai";
@@ -28,8 +28,9 @@ describe('Livepeer Integration Test', () => {
     let LivepeerNoMock: ILivepeer
     let LivepeerMock: MockContract
     let LivepeerToken: SimpleToken
+    let OneInchMock: MockContract
     let Controller: Controller
-    let Tenderizer: Tenderizer
+    let Tenderizer: Livepeer
     let TenderToken: TenderToken
     let Esp: ElasticSupplyPool
     let BPool: BPool
@@ -75,6 +76,17 @@ describe('Livepeer Integration Test', () => {
         LivepeerMock = await smockit(LivepeerNoMock)
     })
 
+    before('deploy OneInch Mock', async () => {
+        const OneInchFac = await ethers.getContractFactory(
+            'OneInchMock',
+            signers[0]
+        )
+
+        const OneInchNoMock = (await OneInchFac.deploy()) as IOneInch
+
+        OneInchMock = await smockit(OneInchNoMock)
+    })
+
     const STEAK_AMOUNT = "100000"
     const NODE  = "0xf4e8Ef0763BCB2B1aF693F5970a00050a6aC7E1B"
 
@@ -87,7 +99,7 @@ describe('Livepeer Integration Test', () => {
         process.env.STEAK_AMOUNT = STEAK_AMOUNT
         Livepeer = await hre.deployments.fixture(['Livepeer'])
         Controller = (await ethers.getContractAt('Controller', Livepeer['Controller'].address)) as Controller
-        Tenderizer = (await ethers.getContractAt('Tenderizer', Livepeer['Livepeer'].address)) as Tenderizer
+        Tenderizer = (await ethers.getContractAt('Livepeer', Livepeer['Livepeer'].address)) as Livepeer
         TenderToken = (await ethers.getContractAt('TenderToken', Livepeer['TenderToken'].address)) as TenderToken
         Esp = (await ethers.getContractAt('ElasticSupplyPool', Livepeer['ElasticSupplyPool'].address)) as ElasticSupplyPool
         BPool = (await ethers.getContractAt('BPool', await Esp.bPool())) as BPool
@@ -96,6 +108,11 @@ describe('Livepeer Integration Test', () => {
             0,
             Tenderizer.interface.encodeFunctionData('setProtocolFee', [0])
         )
+        await Controller.execute(
+            Tenderizer.address,
+            0,
+            Tenderizer.interface.encodeFunctionData('setOneInchContract', [OneInchMock.address]) // dummy address, using mock
+        )
     })
 
     let initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div("2")
@@ -103,17 +120,27 @@ describe('Livepeer Integration Test', () => {
     let deposit = ethers.utils.parseEther("100")
 
     describe('deposit', () => {
-
         it('reverts because transfer amount exceeds allowance', async () => {
-            await expect(Controller.connect(signers[0]).deposit(deposit)).to.be.revertedWith('ERC20: transfer amount exceeds allowance')
-
+            await expect(Controller.deposit(deposit)).to.be.revertedWith('ERC20: transfer amount exceeds allowance')
         })
-        it('deposits funds', async () => {
-            await LivepeerToken.connect(signers[0]).approve(Controller.address, deposit)
-            await Controller.connect(signers[0]).deposit(deposit)
-            expect(await TenderToken.totalSupply()).to.eq(deposit.add(initialStake))
-            expect(await Tenderizer.currentPrincipal()).to.eq(deposit.add(initialStake))
-            expect(await TenderToken.balanceOf(deployer)).to.eq(deposit)
+
+        describe('deposits funds succesfully', async () => {
+            before(async () => {
+                await LivepeerToken.approve(Controller.address, deposit)
+                await Controller.deposit(deposit)
+            })
+
+            it('increases TenderToken supply', async () => {
+                expect(await TenderToken.totalSupply()).to.eq(deposit.add(initialStake))
+            })
+
+            it('increases Tenderizer principle', async () => {
+                expect(await Tenderizer.currentPrincipal()).to.eq(deposit.add(initialStake))
+            })
+
+            it('increases TenderToken balance of depositor', async () => {
+                expect(await TenderToken.balanceOf(deployer)).to.eq(deposit)
+            })
         })
     })
 
@@ -134,6 +161,37 @@ describe('Livepeer Integration Test', () => {
             // Smock doesn't support executing code 
             expect(LivepeerMock.smocked.bond.calls[0]._amount).to.eq(deposit.add(initialStake))
         })
+
+        
+        it('uses specified node if passed, not default', async () => {
+            const newNodeAddress = "0xd944a0F8C64D292a94C34e85d9038395e3762751"
+            const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData("stake", [newNodeAddress, ethers.utils.parseEther('0')]))
+            await Controller.execute(Tenderizer.address, 0, txData)
+            expect(LivepeerMock.smocked.bond.calls[0]._to).to.eq(newNodeAddress)
+        })
+        
+        it('uses specified amount if passed, not contract token balance', async () => {
+            const amount = ethers.utils.parseEther('0.1')
+            const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData("stake", [ethers.constants.AddressZero, amount]))
+            await Controller.execute(Tenderizer.address, 0, txData)
+            expect(LivepeerMock.smocked.bond.calls[0]._amount).to.eq(amount)
+        })
+
+        it('returns without calling bond() if no balance', async () => {
+            await hre.network.provider.request({
+                method: "hardhat_impersonateAccount",
+                params: [Tenderizer.address]}
+            )
+            const signer = await ethers.provider.getSigner(Tenderizer.address)
+            await LivepeerToken.connect(signer).transfer(NODE, deposit.add(initialStake), {gasLimit: 400000, gasPrice: 0})
+            await hre.network.provider.request({
+                method: "hardhat_stopImpersonatingAccount",
+                params: [Tenderizer.address]}
+            )
+            
+            await Controller.gulp()
+            expect(LivepeerMock.smocked.bond.calls.length).to.eq(0)
+        })
     })
 
     describe('rebase', () => {
@@ -149,6 +207,7 @@ describe('Livepeer Integration Test', () => {
                 protocolFee = await Tenderizer.protocolFee()
                 totalShares = await TenderToken.getTotalShares()
                 LivepeerMock.smocked.pendingStake.will.return.with(newStake)
+                LivepeerMock.smocked.pendingFees.will.return.with(ethers.utils.parseEther("0.1"))
                 await Controller.rebase()
             })
 
@@ -177,6 +236,12 @@ describe('Livepeer Integration Test', () => {
                 const expected = tBal.mul(percDiv).div(tBal.add(bal))
                 const actual = await BPool.getNormalizedWeight(TenderToken.address)
                 expect(actual.sub(expected).abs()).to.be.lte(acceptableDelta)
+            })
+
+            it ('does not withdraw fees is less than threshold', async () => {
+                LivepeerMock.smocked.pendingFees.will.return.with(ethers.constants.Zero)
+                await Controller.rebase()
+                expect(LivepeerMock.smocked.withdrawFees.calls.length).to.eq(0)
             })
         })
 
@@ -289,14 +354,43 @@ describe('Livepeer Integration Test', () => {
             await expect(Controller.unlock(withdrawAmount.add(1))).to.be.reverted
         })
 
+        it('reverts if requested amount is 0', async () => {
+            withdrawAmount = await TenderToken.balanceOf(deployer)
+            await expect(Controller.unlock(ethers.constants.Zero)).to.be.reverted
+        })
+
         it('unbond() succeeds', async () => {
             await Controller.unlock(withdrawAmount)
             expect(LivepeerMock.smocked.unbond.calls.length).to.eq(1)
             expect(LivepeerMock.smocked.unbond.calls[0]._amount).to.eq(withdrawAmount)
         })
 
+        it('Gov unbond() reverts if no pending stake', async () => {
+            const txData = ethers.utils.arrayify(Controller.interface.encodeFunctionData("unlock", [ethers.utils.parseEther('0')]))
+            LivepeerMock.smocked.pendingStake.will.return.with(ethers.constants.Zero)
+            await expect(Controller.execute(Controller.address, 0, txData)).to.be.reverted
+        })
+
+        it('Gov unbond() succeeds', async () => {
+            const txData = ethers.utils.arrayify(Controller.interface.encodeFunctionData("unlock", [ethers.utils.parseEther('0')]))
+            LivepeerMock.smocked.pendingStake.will.return.with(withdrawAmount)
+            await Controller.execute(Controller.address, 0, txData)
+            expect(LivepeerMock.smocked.unbond.calls.length).to.eq(1)
+            expect(LivepeerMock.smocked.unbond.calls[0]._amount).to.eq(withdrawAmount)
+        })
+
         it('reduces TenderToken Balance', async () => {
             expect(await TenderToken.balanceOf(deployer)).to.eq(0)
+        })
+
+        it('reverts if withdrawal already pending', async () => {
+            // Mint one tender token to test
+            let txData = ethers.utils.arrayify(TenderToken.interface.encodeFunctionData("mint", [deployer, ethers.utils.parseEther('1')]))
+            await Controller.execute(TenderToken.address, 0, txData)
+            await expect(Controller.unlock(ethers.utils.parseEther('1'))).to.be.revertedWith('PENDING_WITHDRAWAL')
+            // Burn it after test
+            txData = ethers.utils.arrayify(TenderToken.interface.encodeFunctionData("burn", [deployer, ethers.utils.parseEther('1')]))
+            await Controller.execute(TenderToken.address, 0, txData)
         })
     })
 
@@ -311,7 +405,7 @@ describe('Livepeer Integration Test', () => {
             LivepeerMock.smocked.withdrawStake.will.return()
             // Smocked doesn't actually execute transactions, so balance of Controller is not updated
             // hence manually transferring some tokens to simlaute withdrawal
-            await LivepeerToken.transfer(Controller.address, withdrawAmount.mul(2))
+            await LivepeerToken.transfer(Tenderizer.address, withdrawAmount.mul(2))
             
             lptBalBefore = await LivepeerToken.balanceOf(deployer)
 
@@ -321,6 +415,10 @@ describe('Livepeer Integration Test', () => {
         
         it('increases LPT balance', async () => {
             expect(await LivepeerToken.balanceOf(deployer)).to.eq(lptBalBefore.add(withdrawAmount))
+        })
+
+        it('reverts if no pending withdrawal', async () => {
+            await expect(Controller.withdraw(withdrawAmount)).to.be.reverted
         })
     })
 
@@ -360,4 +458,76 @@ describe('Livepeer Integration Test', () => {
         })
     })
 
+    describe('Setting contract variables', async () => {
+        it('sets staking contract', async () => {
+            const newStakingContract = await smockit(LivepeerNoMock)
+            await Controller.updateStakingContract(newStakingContract.address)
+
+            // assert that bond() call is made to new staking contract on gulp()
+            await Controller.gulp()
+            expect(LivepeerMock.smocked.bond.calls.length).to.eq(0)
+            expect(newStakingContract.smocked.bond.calls.length).to.eq(1)
+        })
+
+        // TODO: Split into common file since these will be the same on all integrations?
+        describe ('setting node', async () => {
+            it('reverts if Zero address is set', async () => {
+                const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData("setNode", [ethers.constants.AddressZero]))
+                await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_ADDRESS')
+            })
+
+            it('reverts if not called by controller', async () =>{
+                await expect(Tenderizer.setNode(ethers.constants.AddressZero)).to.be.reverted
+            })
+
+            it('sets node successfully', async () => {
+                const newNodeAddress = "0xd944a0F8C64D292a94C34e85d9038395e3762751"
+                const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData("setNode", [newNodeAddress]))
+                await Controller.execute(Tenderizer.address, 0, txData)
+                expect(await Tenderizer.node()).to.equal(newNodeAddress)
+            })
+        })
+
+        describe ('setting steak', async () => {
+            it('reverts if Zero address is set', async () => {
+                const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData("setSteak", [ethers.constants.AddressZero]))
+                await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_ADDRESS')
+            })
+
+            it('sets steak successfully', async () => {
+                const newSteakAddress = "0xd944a0F8C64D292a94C34e85d9038395e3762751"
+                const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData("setSteak", [newSteakAddress]))
+                await Controller.execute(Tenderizer.address, 0, txData)
+                expect(await Tenderizer.steak()).to.equal(newSteakAddress)
+            })
+        })
+
+        it('sets protocol fee', async () => {
+            const newFee = ethers.utils.parseEther("0.05") //5%
+            const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData("setProtocolFee", [newFee]))
+            await Controller.execute(Tenderizer.address, 0, txData)
+            expect(await Tenderizer.protocolFee()).to.equal(newFee)
+        })
+
+        it('sets liquidity fee', async () => {
+            const newFee = ethers.utils.parseEther("0.05") //5%
+            const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData("setLiquidityFee", [newFee]))
+            await Controller.execute(Tenderizer.address, 0, txData)
+            expect(await Tenderizer.liquidityFee()).to.equal(newFee)
+        })
+
+        describe ('setting controller', async () => {
+            it('reverts if Zero address is set', async () => {
+                const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData("setController", [ethers.constants.AddressZero]))
+                await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_ADDRESS')
+            })
+
+            it('sets controller successfully', async () => {
+                const newControllerAddress = "0xd944a0F8C64D292a94C34e85d9038395e3762751"
+                const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData("setController", [newControllerAddress]))
+                await Controller.execute(Tenderizer.address, 0, txData)
+                expect(await Tenderizer.controller()).to.equal(newControllerAddress)
+            })
+        })
+    })
 })
