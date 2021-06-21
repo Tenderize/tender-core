@@ -6,7 +6,6 @@
 pragma solidity ^0.8.0;
 
 contract NamedToken {
-
     string _name;
     string _symbol;
 
@@ -15,6 +14,11 @@ contract NamedToken {
         _symbol = symbol_;
     }
 
-    function name() external view returns (string memory) { return _name; }
-    function symbol() external view returns (string memory) { return _symbol; }
+    function name() external view returns (string memory) {
+        return _name;
+    }
+
+    function symbol() external view returns (string memory) {
+        return _symbol;
+    }
 }

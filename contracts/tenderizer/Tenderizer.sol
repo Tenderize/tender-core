@@ -15,12 +15,12 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     address constant ZERO_ADDRESS = address(0);
 
     IERC20 public steak;
-    address public node; 
+    address public node;
 
     address public controller;
 
     uint256 public protocolFee;
-    uint256 public liquidityFee; 
+    uint256 public liquidityFee;
     uint256 public pendingFees; // pending protocol fees since last distribution
     uint256 public pendingLiquidityFees;
     uint256 public currentPrincipal; // Principal since last claiming earnings
@@ -30,7 +30,11 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         _;
     }
 
-    function _initialize(IERC20 _steak, address _node, address _controller) internal initializer {
+    function _initialize(
+        IERC20 _steak,
+        address _node,
+        address _controller
+    ) internal initializer {
         steak = _steak;
         node = _node;
         protocolFee = 25 * 1e15; // 2.5%
@@ -115,7 +119,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         node = _node;
     }
 
-    function setSteak(IERC20 _steak) external virtual override  onlyController {
+    function setSteak(IERC20 _steak) external virtual override onlyController {
         require(address(_steak) != address(0), "ZERO_ADDRESS");
         steak = _steak;
     }
@@ -140,7 +144,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         return _collectLiquidityFees();
     }
 
-    function totalStakedTokens() external override view returns (uint256) {
+    function totalStakedTokens() external view override returns (uint256) {
         return _totalStakedTokens();
     }
 
@@ -148,7 +152,11 @@ abstract contract Tenderizer is Initializable, ITenderizer {
 
     function _stake(address _account, uint256 _amount) internal virtual;
 
-    function _unstake(address _account, address _node, uint256 _amount) internal virtual;
+    function _unstake(
+        address _account,
+        address _node,
+        uint256 _amount
+    ) internal virtual;
 
     function _withdraw(address _account, uint256 _amount) internal virtual;
 
@@ -170,8 +178,8 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         return before;
     }
 
-    function _totalStakedTokens() internal virtual view returns (uint256);
+    function _totalStakedTokens() internal view virtual returns (uint256);
 
-    // Internal governance functions 
-    function _setStakingContract(address _stakingContract) internal virtual; 
+    // Internal governance functions
+    function _setStakingContract(address _stakingContract) internal virtual;
 }

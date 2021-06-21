@@ -12,21 +12,27 @@ import "../../Tenderizer.sol";
 import "./IGraph.sol";
 
 contract Graph is Tenderizer {
-
     // 100% in parts per million
     uint32 private constant MAX_PPM = 1000000;
 
     IGraph graph;
 
-    mapping (address => uint256) pendingWithdrawals;
+    mapping(address => uint256) pendingWithdrawals;
     uint256 totalPendingWithdrawals;
 
-    function initialize(IERC20 _steak, IGraph _graph, address _node) public {
+    function initialize(
+        IERC20 _steak,
+        IGraph _graph,
+        address _node
+    ) public {
         Tenderizer._initialize(_steak, _node, msg.sender);
         graph = _graph;
     }
 
-    function _deposit(address /*_from*/, uint256 _amount) internal override {
+    function _deposit(
+        address, /*_from*/
+        uint256 _amount
+    ) internal override {
         currentPrincipal += _amount;
     }
 
@@ -55,8 +61,12 @@ contract Graph is Tenderizer {
         graph.delegate(node_, amount);
     }
 
-    function _unstake(address _account, address _node, uint256 _amount) internal override {
-         // Check that no withdrawal is pending
+    function _unstake(
+        address _account,
+        address _node,
+        uint256 _amount
+    ) internal override {
+        // Check that no withdrawal is pending
         require(pendingWithdrawals[_account] == 0, "PENDING_WITHDRAWAL");
         uint256 amount = _amount;
 
@@ -83,7 +93,7 @@ contract Graph is Tenderizer {
         uint256 totalTokens = delPool.tokens;
 
         uint256 stake = MathUtils.percOf(delShares, totalTokens, totalShares);
-        uint shares = MathUtils.percOf(delShares, amount, stake);
+        uint256 shares = MathUtils.percOf(delShares, amount, stake);
 
         pendingWithdrawals[_account] = amount;
 
@@ -91,7 +101,10 @@ contract Graph is Tenderizer {
         graph.undelegate(node_, shares);
     }
 
-    function _withdraw(address _account, uint256 /*_amount*/) internal override {
+    function _withdraw(
+        address _account,
+        uint256 /*_amount*/
+    ) internal override {
         // Check that a withdrawal is pending
         uint256 amount = graph.withdrawDelegated(node, ZERO_ADDRESS);
 
@@ -135,12 +148,11 @@ contract Graph is Tenderizer {
         currentPrincipal = stake - _pendingFees - _liquidityFees;
     }
 
-    function _totalStakedTokens() internal override view returns (uint256) {
+    function _totalStakedTokens() internal view override returns (uint256) {
         return currentPrincipal;
     }
 
     function _setStakingContract(address _stakingContract) internal override {
         graph = IGraph(_stakingContract);
     }
-
 }

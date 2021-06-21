@@ -5,7 +5,6 @@
 // /* See contracts/COMPILERS.md */
 pragma solidity ^0.8.0;
 
-
 // note this contract interface is only for stakeManager use
 interface IMatic {
     function unstakeClaimTokens() external;

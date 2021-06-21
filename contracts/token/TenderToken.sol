@@ -21,7 +21,6 @@ import "../libs/MathUtils.sol";
     shares[account] * _getTotalPooledTokens() / _getTotalShares()
  */
 contract TenderToken is NamedToken, Ownable, IERC20 {
-
     uint8 internal constant DECIMALS = 18;
 
     /**
@@ -37,17 +36,16 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
     /**
      * @dev Nominal amount of shares held by each account
      */
-    mapping (address => uint256) private shares;
+    mapping(address => uint256) private shares;
 
     /**
      * @dev Allowances nominated in tokens, not token shares.
      */
-    mapping (address => mapping (address => uint256)) private allowances;
+    mapping(address => mapping(address => uint256)) private allowances;
 
-    constructor(string memory _name, string memory _symbol) NamedToken(
-            string(abi.encodePacked("tender ", _name)),
-            string(abi.encodePacked("t", _symbol))
-    ) {}
+    constructor(string memory _name, string memory _symbol)
+        NamedToken(string(abi.encodePacked("tender ", _name)), string(abi.encodePacked("t", _symbol)))
+    {}
 
     /**
      * @notice The number of decimals the TenderToken uses
@@ -63,7 +61,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
         is pegged to the total amount of Tokens controlled by the protocol.
      * @return total supply
      */
-    function totalSupply() external override view returns (uint256) {
+    function totalSupply() external view override returns (uint256) {
         return _getTotalPooledTokens();
     }
 
@@ -92,7 +90,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
         total Tokens controlled by the protocol. See `sharesOf`.
      * @param _account address of the account to check the balance for
      */
-    function balanceOf(address _account) external override view returns (uint256) {
+    function balanceOf(address _account) external view override returns (uint256) {
         return sharesToTokens(_sharesOf(_account));
     }
 
@@ -113,7 +111,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
      * @param _spender address that is allowed to spend the allowance
      * @return amount '_spender' is allowed to spend from '_owner'
      */
-    function allowance(address _owner, address _spender) external override view returns (uint256) {
+    function allowance(address _owner, address _spender) external view override returns (uint256) {
         return allowances[_owner][_spender];
     }
 
@@ -193,7 +191,11 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
         - the caller must have allowance for `_sender`'s tokens of at least `_amount`.
      * @dev The `_amount` argument is the amount of tokens, not shares.
      */
-    function transferFrom(address _sender, address _recipient, uint256 _amount) external override returns (bool) {
+    function transferFrom(
+        address _sender,
+        address _recipient,
+        uint256 _amount
+    ) external override returns (bool) {
         uint256 currentAllowance = allowances[_sender][msg.sender];
         require(currentAllowance >= _amount, "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE");
 
@@ -241,8 +243,10 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
      * @param _amount amount to mint
      * @return a boolean value indicating whether the operation succeeded.
      * @dev Only callable by contract owner
-     * @dev Calculates the amount of shares to create based on the specified '_amount' and creates new shares rather than minting actual tokens
-     * @dev '_recipient' should also deposit into Tenderizer atomically to prevent diluation of existing particpants
+     * @dev Calculates the amount of shares to create based on the specified '_amount'
+        and creates new shares rather than minting actual tokens
+     * @dev '_recipient' should also deposit into Tenderizer
+        atomically to prevent diluation of existing particpants
      */
     function mint(address _recipient, uint256 _amount) public onlyOwner returns (bool) {
         uint256 _totalPooledTokens = _getTotalPooledTokens();
@@ -262,7 +266,8 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
      * @param _amount amount to burn
      * @return a boolean value indicating whether the operation succeeded.
      * @dev Only callable by contract owner
-     * @dev Calculates the amount of shares to destroy based on the specified '_amount' and destroy shares rather than burning tokens
+     * @dev Calculates the amount of shares to destroy based on the specified '_amount'
+        and destroy shares rather than burning tokens
      * @dev '_recipient' should also withdraw from Tenderizer atomically
      */
     function burn(address _account, uint256 _amount) public onlyOwner returns (bool) {
@@ -291,8 +296,8 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
     }
 
     /**
-    * @dev update the total amount (in 10e18) of Tokens controlled by the protocol.
-    */
+     * @dev update the total amount (in 10e18) of Tokens controlled by the protocol.
+     */
     function _setTotalPooledTokens(uint256 _newTotalPooledTokens) internal {
         totalPooledTokens = _newTotalPooledTokens;
     }
@@ -301,7 +306,11 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
      * @dev Moves `_amount` tokens from `_sender` to `_recipient`.
      * @dev Emits a `Transfer` event.
      */
-    function _transfer(address _sender, address _recipient, uint256 _amount) internal {
+    function _transfer(
+        address _sender,
+        address _recipient,
+        uint256 _amount
+    ) internal {
         uint256 _sharesToTransfer = tokensToShares(_amount);
         _transferShares(_sender, _recipient, _sharesToTransfer);
         emit Transfer(_sender, _recipient, _amount);
@@ -311,7 +320,11 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
      * @dev Sets `_amount` as the allowance of `_spender` over the `_owner` s tokens.
      * @dev Emits an `Approval` event.
      */
-    function _approve(address _owner, address _spender, uint256 _amount) internal {
+    function _approve(
+        address _owner,
+        address _spender,
+        uint256 _amount
+    ) internal {
         require(_owner != address(0), "APPROVE_FROM_ZERO_ADDRESS");
         require(_spender != address(0), "APPROVE_TO_ZERO_ADDRESS");
 
@@ -340,7 +353,11 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
         - `_recipient` cannot be the zero address.
         - `_sender` must hold at least `_shares` shares.
      */
-    function _transferShares(address _sender, address _recipient, uint256 _shares) internal {
+    function _transferShares(
+        address _sender,
+        address _recipient,
+        uint256 _shares
+    ) internal {
         require(_sender != address(0), "TRANSFER_FROM_THE_ZERO_ADDRESS");
         require(_recipient != address(0), "TRANSFER_TO_THE_ZERO_ADDRESS");
 
@@ -360,7 +377,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
     function _mintShares(address _recipient, uint256 _shares) internal returns (uint256 newTotalShares) {
         require(_recipient != address(0), "MINT_TO_THE_ZERO_ADDRESS");
 
-        newTotalShares = totalShares+ _shares;
+        newTotalShares = totalShares + _shares;
 
         shares[_recipient] += _shares;
 

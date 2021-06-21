@@ -18,14 +18,18 @@ import "./liquidity/ITenderFarm.sol";
  */
 
 contract Controller is Ownable {
-
     IERC20 public steak;
     ITenderizer public tenderizer;
     ITenderToken public tenderToken;
     IElasticSupplyPool public esp;
     ITenderFarm public tenderFarm;
 
-    constructor(IERC20 _steak, ITenderizer _tenderizer, ITenderToken _tenderToken, IElasticSupplyPool _esp) {
+    constructor(
+        IERC20 _steak,
+        ITenderizer _tenderizer,
+        ITenderToken _tenderToken,
+        IElasticSupplyPool _esp
+    ) {
         steak = _steak;
         tenderizer = _tenderizer;
         // TODO: consider deploying these contracts using factories and proxies
@@ -38,29 +42,20 @@ contract Controller is Ownable {
         require(_amount > 0, "ZERO_AMOUNT");
 
         // mint tenderTokens
-        require(
-            tenderToken.mint(msg.sender, _amount),
-            "TENDER_MINT_FAILED"
-        );
+        require(tenderToken.mint(msg.sender, _amount), "TENDER_MINT_FAILED");
 
         tenderizer.deposit(msg.sender, _amount);
 
         _updateTotalPooledTokens();
 
         // Transfer tokens to tenderizer
-        require(
-            steak.transferFrom(msg.sender, address(tenderizer), _amount),
-            "STEAK_TRANSFERFROM_FAILED"
-        );
+        require(steak.transferFrom(msg.sender, address(tenderizer), _amount), "STEAK_TRANSFERFROM_FAILED");
     }
 
     function unlock(uint256 _amount) public {
         require(_amount > 0, "ZERO_AMOUNT");
         // Burn tenderTokens
-        require(
-            tenderToken.burn(msg.sender, _amount),
-            "TENDER_BURN_FAILED"
-        );
+        require(tenderToken.burn(msg.sender, _amount), "TENDER_BURN_FAILED");
 
         // update total pooled tokens
         _updateTotalPooledTokens();
@@ -76,10 +71,7 @@ contract Controller is Ownable {
         tenderizer.withdraw(msg.sender, _amount);
 
         // Transfer tokens after withdrawing from the tenderizer
-        require(
-            steak.transfer(msg.sender, _amount),
-            "TRANSFER_FAILED"
-        );
+        require(steak.transfer(msg.sender, _amount), "TRANSFER_FAILED");
     }
 
     function rebase() public onlyOwner {
@@ -98,9 +90,7 @@ contract Controller is Ownable {
         _collectLiquidityFees();
 
         // Resync weight for tenderToken
-        try esp.resyncWeight(address(tenderToken)) {
-
-        } catch {
+        try esp.resyncWeight(address(tenderToken)) {} catch {
             // No-op
         }
     }
@@ -119,9 +109,7 @@ contract Controller is Ownable {
         esp = _esp;
     }
 
-    function migrateToNewTenderizer(ITenderizer _tenderizer) public onlyOwner {
-        
-    }
+    function migrateToNewTenderizer(ITenderizer _tenderizer) public onlyOwner {}
 
     function updateStakingContract(address _stakingContract) public onlyOwner {
         tenderizer.setStakingContract(_stakingContract);
@@ -131,19 +119,31 @@ contract Controller is Ownable {
         tenderFarm = _tenderFarm;
     }
 
-    function execute(address _target, uint256 _value, bytes calldata _data) public onlyOwner {
+    function execute(
+        address _target,
+        uint256 _value,
+        bytes calldata _data
+    ) public onlyOwner {
         _execute(_target, _value, _data);
     }
 
-    function batchExecute(address[] calldata _targets, uint256[] calldata _values, bytes[] calldata _datas) public onlyOwner {
+    function batchExecute(
+        address[] calldata _targets,
+        uint256[] calldata _values,
+        bytes[] calldata _datas
+    ) public onlyOwner {
         require(_targets.length == _values.length && _targets.length == _datas.length, "INVALID_ARGUMENTS");
         for (uint256 i = 0; i < _targets.length; i++) {
             _execute(_targets[i], _values[i], _datas[i]);
         }
     }
 
-    function _execute(address _target, uint256 _value, bytes calldata _data) internal {
-        (bool success, bytes memory returnData) = _target.call{value: _value}(_data);
+    function _execute(
+        address _target,
+        uint256 _value,
+        bytes calldata _data
+    ) internal {
+        (bool success, bytes memory returnData) = _target.call{ value: _value }(_data);
         require(success, string(returnData));
     }
 

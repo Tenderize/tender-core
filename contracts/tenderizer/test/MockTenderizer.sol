@@ -11,10 +11,14 @@ import "../../libs/MathUtils.sol";
 import "../Tenderizer.sol";
 
 contract MockTenderizer is Tenderizer {
-
     uint256 public rewardAmount;
 
-    function initialize(IERC20 _steak, address _node, address _controller, uint256 _rewardAmount) public {
+    function initialize(
+        IERC20 _steak,
+        address _node,
+        address _controller,
+        uint256 _rewardAmount
+    ) public {
         rewardAmount = _rewardAmount;
         Tenderizer._initialize(_steak, _node, _controller);
     }
@@ -23,14 +27,23 @@ contract MockTenderizer is Tenderizer {
         rewardAmount = _rewardAmount;
     }
 
-    function _deposit(address /*_from*/, uint256 _amount) internal override {
+    function _deposit(
+        address, /*_from*/
+        uint256 _amount
+    ) internal override {
         currentPrincipal += _amount;
     }
 
-    function _stake(address /*_node*/, uint256 _amount) internal override {
-    }
+    function _stake(
+        address, /*_node*/
+        uint256 _amount
+    ) internal override {}
 
-    function _unstake(address /*_account*/, address /*_node*/, uint256 _amount) internal override {
+    function _unstake(
+        address, /*_account*/
+        address, /*_node*/
+        uint256 _amount
+    ) internal override {
         currentPrincipal -= _amount;
     }
 
@@ -58,12 +71,9 @@ contract MockTenderizer is Tenderizer {
         return before;
     }
 
-    function _totalStakedTokens() internal override view returns (uint256) {
+    function _totalStakedTokens() internal view override returns (uint256) {
         return IERC20(steak).balanceOf(address(this));
     }
 
-    function _setStakingContract(address _stakingContract) internal override {
-
-    }
-
+    function _setStakingContract(address _stakingContract) internal override {}
 }
