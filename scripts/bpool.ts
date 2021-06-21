@@ -1,24 +1,24 @@
-const hre = require("hardhat")
- 
 import {
-  ElasticSupplyPool, BPool
-} from "../typechain";
+  ElasticSupplyPool
+} from '../typechain'
+
+import hre from 'hardhat'
 
 async function main () {
-    const network = process.env.NETWORK
-    const tenderizer = process.env.TENDERIZER
+  const network = process.env.NETWORK
+  const tenderizer = process.env.TENDERIZER
 
-    const deployments = require(`../deployments/${network}/${tenderizer}.json`)
+  const deployments = require(`../deployments/${network}/${tenderizer}.json`)
 
-    const Esp: ElasticSupplyPool = (await hre.ethers.getContractAt('ElasticSupplyPool', deployments.contracts.ElasticSupplyPool.address)) as ElasticSupplyPool
-    const Bpool: BPool = (await hre.ethers.getContractAt('BPool', await Esp.bPool()))
+  const Esp: ElasticSupplyPool = (await hre.ethers.getContractAt('ElasticSupplyPool', deployments.contracts.ElasticSupplyPool.address)) as ElasticSupplyPool
+  // const Bpool: BPool = (await hre.ethers.getContractAt('BPool', await Esp.bPool()))
 
-    console.log(`Balancer Pool Address for ${tenderizer} on ${network}: ${await Esp.bPool()}`)
+  console.log(`Balancer Pool Address for ${tenderizer} on ${network}: ${await Esp.bPool()}`)
 }
 
 main()
   .then(() => process.exit(0))
   .catch(error => {
-    console.error(error);
-    process.exit(1);
-  });
+    console.error(error)
+    process.exit(1)
+  })
