@@ -5,9 +5,7 @@
 // /* See contracts/COMPILERS.md */
 pragma solidity ^0.8.0;
 
-
 library MathUtils {
-
     // Divisor used for representing percentages
     uint256 public constant PERC_DIVISOR = 10**21;
 
@@ -25,7 +23,11 @@ library MathUtils {
      * @param _fracNum Numerator of fraction representing the percentage
      * @param _fracDenom Denominator of fraction representing the percentage
      */
-    function percOf(uint256 _amount, uint256 _fracNum, uint256 _fracDenom) internal pure returns (uint256) {
+    function percOf(
+        uint256 _amount,
+        uint256 _fracNum,
+        uint256 _fracDenom
+    ) internal pure returns (uint256) {
         return (_amount * percPoints(_fracNum, _fracDenom)) / PERC_DIVISOR;
     }
 
@@ -35,7 +37,7 @@ library MathUtils {
      * @param _fracNum Numerator of fraction representing the percentage with PERC_DIVISOR as the denominator
      */
     function percOf(uint256 _amount, uint256 _fracNum) internal pure returns (uint256) {
-        return _amount * _fracNum / PERC_DIVISOR;
+        return (_amount * _fracNum) / PERC_DIVISOR;
     }
 
     /**
@@ -44,6 +46,6 @@ library MathUtils {
      * @param _fracDenom Denominator of fraction represeting the percentage
      */
     function percPoints(uint256 _fracNum, uint256 _fracDenom) internal pure returns (uint256) {
-        return _fracNum * PERC_DIVISOR / _fracDenom;
+        return (_fracNum * PERC_DIVISOR) / _fracDenom;
     }
 }

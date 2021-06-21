@@ -3,7 +3,7 @@
 // // SPDX-License-Identifier: GPL-3.0
 
 // /* See contracts/COMPILERS.md */
-pragma solidity ^0.8.0; 
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -12,7 +12,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * @title Faucet for the Tokens
  */
 contract TokenFaucet is Ownable {
-    
     // Token
     ERC20 public token;
 
@@ -23,10 +22,10 @@ contract TokenFaucet is Ownable {
     uint256 public requestWait;
 
     // sender => timestamp at which sender can make another request
-    mapping (address => uint256) public nextValidRequest;
+    mapping(address => uint256) public nextValidRequest;
 
     // Whitelist addresses that can bypass faucet request rate limit
-    mapping (address => bool) public isWhitelisted;
+    mapping(address => bool) public isWhitelisted;
 
     // Checks if a request is valid (sender is whitelisted or has waited the rate limit time)
     modifier validRequest() {
@@ -42,7 +41,11 @@ contract TokenFaucet is Ownable {
      * @param _requestAmount Amount of token sent to sender for a request
      * @param _requestWait Amount of time a sender must wait between request (denominated in hours)
      */
-    constructor(address _token, uint256 _requestAmount, uint256 _requestWait) public {
+    constructor(
+        address _token,
+        uint256 _requestAmount,
+        uint256 _requestWait
+    ) public {
         token = ERC20(_token);
         requestAmount = _requestAmount;
         requestWait = _requestWait;

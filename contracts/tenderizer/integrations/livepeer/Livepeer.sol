@@ -13,10 +13,9 @@ import "./ILivepeer.sol";
 import "../../../liquidity/IOneInch.sol";
 
 contract Livepeer is Tenderizer {
+    uint256 private constant MAX_ROUND = 2**256 - 1;
 
-    uint256 constant private MAX_ROUND = 2**256 - 1;
-
-    IOneInch constant private oneInch = IOneInch(address(0));
+    IOneInch private constant oneInch = IOneInch(address(0));
 
     ILivepeer livepeer;
 
@@ -25,17 +24,24 @@ contract Livepeer is Tenderizer {
         uint256 amount;
     }
 
-    mapping (address => unbondingLock) unbondingLocks;
+    mapping(address => unbondingLock) unbondingLocks;
     uint256 private nextUnbondingLockID;
 
-    uint256 constant private ethFees_threshold = 1**17;
+    uint256 private constant ethFees_threshold = 1**17;
 
-    function initialize(IERC20 _steak, ILivepeer _livepeer, address _node) public {
+    function initialize(
+        IERC20 _steak,
+        ILivepeer _livepeer,
+        address _node
+    ) public {
         Tenderizer._initialize(_steak, _node, msg.sender);
         livepeer = _livepeer;
     }
 
-    function _deposit(address /*_from*/, uint256 _amount) internal override {
+    function _deposit(
+        address, /*_from*/
+        uint256 _amount
+    ) internal override {
         currentPrincipal += _amount;
     }
 
@@ -64,7 +70,11 @@ contract Livepeer is Tenderizer {
         livepeer.bond(amount, node_);
     }
 
-    function _unstake(address _account, address _node, uint256 _amount) internal override {
+    function _unstake(
+        address _account,
+        address _node,
+        uint256 _amount
+    ) internal override {
         // Check that no withdrawal is pending
         require(unbondingLocks[_account].amount == 0, "PENDING_WITHDRAWAL");
 
@@ -91,13 +101,13 @@ contract Livepeer is Tenderizer {
         uint256 unbondingLockID = nextUnbondingLockID;
         nextUnbondingLockID += 1;
 
-        unbondingLocks[_account] = unbondingLock({
-            id: unbondingLockID,
-            amount: _amount
-        });
+        unbondingLocks[_account] = unbondingLock({ id: unbondingLockID, amount: _amount });
     }
 
-    function _withdraw(address _account, uint256 /*_amount*/) internal override {
+    function _withdraw(
+        address _account,
+        uint256 /*_amount*/
+    ) internal override {
         // Check that a withdrawal is pending
         require(unbondingLocks[_account].amount > 0, "NO_PENDING_WITHDRAWAL");
 
@@ -141,7 +151,13 @@ contract Livepeer is Tenderizer {
             // swap ETH fees for LPT
             if (address(oneInch) != address(0)) {
                 uint256 swapAmount = address(this).balance;
-                (uint256 returnAmount, uint256[] memory distribution) = oneInch.getExpectedReturn(IERC20(address(0)), steak, swapAmount, 1, 0);
+                (uint256 returnAmount, uint256[] memory distribution) = oneInch.getExpectedReturn(
+                    IERC20(address(0)),
+                    steak,
+                    swapAmount,
+                    1,
+                    0
+                );
                 uint256 swappedLPT = oneInch.swap(IERC20(address(0)), steak, swapAmount, returnAmount, distribution, 0);
                 // Add swapped LPT to rewards
                 rewards += swappedLPT;
@@ -157,12 +173,11 @@ contract Livepeer is Tenderizer {
         currentPrincipal = stake - _pendingFees - _liquidityFees;
     }
 
-    function _totalStakedTokens() internal override view returns (uint256) {
+    function _totalStakedTokens() internal view override returns (uint256) {
         return currentPrincipal;
     }
 
     function _setStakingContract(address _stakingContract) internal override {
         livepeer = ILivepeer(_stakingContract);
     }
-
 }

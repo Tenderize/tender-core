@@ -7,11 +7,16 @@ pragma solidity ^0.8.0;
 
 interface ITenderFarm {
     function farm(uint256 _amount) external;
+
     function farmFor(address _for, uint256 _amount) external;
+
     function unfarm(uint256 _amount) external;
+
     function harvest() external;
+
     function addRewards(uint256 _amount) external;
 
     function stakeOf(address _of) external view returns (uint256);
+
     function totalStake() external view returns (uint256);
 }

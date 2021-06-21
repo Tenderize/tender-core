@@ -45,15 +45,11 @@ contract ElasticSupplyPool is ConfigurableRightsPool {
         address factoryAddress,
         PoolParams memory poolParams,
         RightsManager.Rights memory rightsStruct
-    )
-    public
-    ConfigurableRightsPool(factoryAddress, poolParams, rightsStruct) {
-
+    ) public ConfigurableRightsPool(factoryAddress, poolParams, rightsStruct) {
         require(rights.canChangeWeights, "ERR_NOT_CONFIGURABLE_WEIGHTS");
-
     }
 
-        /**
+    /**
      * @notice Create a new Smart Pool - and set the block period time parameters
      * @dev Initialize the swap fee to the value provided in the CRP constructor
      *      Can be changed if the canChangeSwapFee permission is enabled
@@ -68,16 +64,10 @@ contract ElasticSupplyPool is ConfigurableRightsPool {
      *                                   This is also the wait time between committing and applying a new token
      */
     function createPool(
-        uint initialSupply,
-        uint minimumWeightChangeBlockPeriodParam,
-        uint addTokenTimeLockInBlocksParam
-    )
-        external
-        override
-        onlyOwner
-        logs
-        lock
-    {
+        uint256 initialSupply,
+        uint256 minimumWeightChangeBlockPeriodParam,
+        uint256 addTokenTimeLockInBlocksParam
+    ) external override onlyOwner logs lock {
         require(
             minimumWeightChangeBlockPeriodParam >= addTokenTimeLockInBlocksParam,
             "ERR_INCONSISTENT_TOKEN_TIME_LOCK"
@@ -89,36 +79,19 @@ contract ElasticSupplyPool is ConfigurableRightsPool {
         createPoolInternal(initialSupply);
     }
 
-    function updateWeight(address token, uint newWeight)
-        external
-        logs
-        onlyOwner
-        needsBPool
-        override
-    {
+    function updateWeight(address token, uint256 newWeight) external override logs onlyOwner needsBPool {
         revert("ERR_UNSUPPORTED_OPERATION");
     }
 
     function updateWeightsGradually(
-        uint[] calldata newWeights,
-        uint startBlock,
-        uint endBlock
-    )
-        external
-        logs
-        onlyOwner
-        needsBPool
-        override
-    {
+        uint256[] calldata newWeights,
+        uint256 startBlock,
+        uint256 endBlock
+    ) external override logs onlyOwner needsBPool {
         revert("ERR_UNSUPPORTED_OPERATION");
     }
 
-    function pokeWeights()
-        external
-        logs
-        needsBPool
-        override
-    {
+    function pokeWeights() external override logs needsBPool {
         revert("ERR_UNSUPPORTED_OPERATION");
     }
 
@@ -129,69 +102,54 @@ contract ElasticSupplyPool is ConfigurableRightsPool {
      *      The underlying BPool enforces bounds on MIN_WEIGHTS=1e18, MAX_WEIGHT=50e18 and TOTAL_WEIGHT=50e18.
      *      NOTE: The BPool.rebind function CAN REVERT if the updated weights go beyond the enforced bounds.
      */
-    function resyncWeight(address token)
-        external
-        logs
-        lock
-        needsBPool
-    {
-
+    function resyncWeight(address token) external logs lock needsBPool {
         // NOTE: Skipping gradual update check
         // Pool will never go into gradual update state as `updateWeightsGradually` is disabled
         // require(
         //     ConfigurableRightsPool.gradualUpdate.startBlock == 0,
         //     "ERR_NO_UPDATE_DURING_GRADUAL");
 
-        require(
-            IBPool(address(bPool)).isBound(token),
-            "ERR_NOT_BOUND");
+        require(IBPool(address(bPool)).isBound(token), "ERR_NOT_BOUND");
 
         // get cached balance
-        uint tokenBalanceBefore = IBPool(address(bPool)).getBalance(token);
+        uint256 tokenBalanceBefore = IBPool(address(bPool)).getBalance(token);
 
         // sync balance
         IBPool(address(bPool)).gulp(token);
 
         // get new balance
-        uint tokenBalanceAfter = IBPool(address(bPool)).getBalance(token);
+        uint256 tokenBalanceAfter = IBPool(address(bPool)).getBalance(token);
 
         // No-Op
-        if(tokenBalanceBefore == tokenBalanceAfter) {
+        if (tokenBalanceBefore == tokenBalanceAfter) {
             return;
         }
 
         // current token weight
-        uint tokenWeightBefore = IBPool(address(bPool)).getDenormalizedWeight(token);
+        uint256 tokenWeightBefore = IBPool(address(bPool)).getDenormalizedWeight(token);
 
         // target token weight = RebaseRatio * previous token weight
-        uint tokenWeightTarget = BalancerSafeMath.bdiv(
+        uint256 tokenWeightTarget = BalancerSafeMath.bdiv(
             BalancerSafeMath.bmul(tokenWeightBefore, tokenBalanceAfter),
             tokenBalanceBefore
         );
 
         // new token weight = sqrt(current token weight * target token weight)
-        uint tokenWeightAfter = BalancerSafeMath.sqrt(
-            BalancerSafeMath.bdiv(
-                BalancerSafeMath.bmul(tokenWeightBefore, tokenWeightTarget),
-                1
-            )
+        uint256 tokenWeightAfter = BalancerSafeMath.sqrt(
+            BalancerSafeMath.bdiv(BalancerSafeMath.bmul(tokenWeightBefore, tokenWeightTarget), 1)
         );
 
-
         address[] memory tokens = IBPool(address(bPool)).getCurrentTokens();
-        for(uint i=0; i<tokens.length; i++){
-            if(tokens[i] == token) {
-
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (tokens[i] == token) {
                 // adjust weight
                 IBPool(address(bPool)).rebind(token, tokenBalanceAfter, tokenWeightAfter);
-
             } else {
-
-                uint otherWeightBefore = IBPool(address(bPool)).getDenormalizedWeight(tokens[i]);
-                uint otherBalance = bPool.getBalance(tokens[i]);
+                uint256 otherWeightBefore = IBPool(address(bPool)).getDenormalizedWeight(tokens[i]);
+                uint256 otherBalance = bPool.getBalance(tokens[i]);
 
                 // other token weight = (new token weight * other token weight before) / target token weight
-                uint otherWeightAfter = BalancerSafeMath.bdiv(
+                uint256 otherWeightAfter = BalancerSafeMath.bdiv(
                     BalancerSafeMath.bmul(tokenWeightAfter, otherWeightBefore),
                     tokenWeightTarget
                 );

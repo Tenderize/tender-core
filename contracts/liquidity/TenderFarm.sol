@@ -12,7 +12,6 @@ import "../libs/MathUtils.sol";
 import "../token/ITenderToken.sol";
 
 contract TenderFarm is Ownable {
-
     event Farm(address indexed account, uint256 amount);
     event Unfarm(address indexed account, uint256 amount);
     event Harvest(address indexed account, uint256 amount);
@@ -122,7 +121,7 @@ contract TenderFarm is Ownable {
         _stake.stake -= _amount;
         nextTotalStake -= _amount;
 
-        require(token.transfer(_for,_amount), "TRANSFER_FAIL");
+        require(token.transfer(_for, _amount), "TRANSFER_FAIL");
         emit Unfarm(_for, _amount);
     }
 
@@ -153,5 +152,4 @@ contract TenderFarm is Ownable {
     function _stakeOf(address _of) internal view returns (uint256) {
         return stakes[_of].stake;
     }
-
 }
