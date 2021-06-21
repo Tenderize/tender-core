@@ -1,8 +1,8 @@
-const hre = require("hardhat")
- 
 import {
   Controller
-} from "../typechain";
+} from '../typechain'
+
+const hre = require('hardhat')
 
 async function main () {
   const network = process.env.NETWORK
@@ -12,15 +12,14 @@ async function main () {
   const Controller: Controller = (await hre.ethers.getContractAt('Controller', deployments.contracts.Controller.address)) as Controller
 
   console.log(`Rebasing ${tenderizer} on ${network}`)
-  const tx = await Controller.rebase({gasLimit: 5000000})
+  const tx = await Controller.rebase({ gasLimit: 5000000 })
   await tx.wait()
-  console.log("Rebase succeeded")
-
+  console.log('Rebase succeeded')
 }
 
 main()
   .then(() => process.exit(0))
   .catch(error => {
-    console.error(error);
-    process.exit(1);
-  });
+    console.error(error)
+    process.exit(1)
+  })

@@ -1,94 +1,88 @@
 import {
-    ethers
-} from "hardhat";
-import ethersTypes from "ethers"
-import chai from "chai";
+  ethers
+} from 'hardhat'
+import ethersTypes from 'ethers'
+import chai from 'chai'
 import {
-    solidity
-} from "ethereum-waffle";
+  solidity
+} from 'ethereum-waffle'
 import {
-    Controller
-} from "../../typechain/";
-import hre from "hardhat"
-chai.use(solidity);
-const {
-    expect
-} = chai;
+  Controller
+} from '../../typechain/'
 
-import * as rpc from "../util/snapshot"
+import * as rpc from '../util/snapshot'
+chai.use(solidity)
+const {
+  expect
+} = chai
 
 describe('Controller', () => {
-    let snapshotId: any
-    
-    let controller: Controller
-    let signers: ethersTypes.Signer[]
+  let snapshotId: any
 
-    let account0: string
-    let account1: string
-    let account2: string
+  let controller: Controller
+  let signers: ethersTypes.Signer[]
 
-    const steak = "0x0000000000000000000000000000000000000001"
-    const tenderizer = "0x0000000000000000000000000000000000000002"
-    const tenderToken = "0x0000000000000000000000000000000000000003"
-    const esp = "0x0000000000000000000000000000000000000004"
+  let account0: string
 
-    beforeEach(async () => {
-        snapshotId = await rpc.snapshot()
-    })
-    
-    afterEach(async () => {
-        await rpc.revert(snapshotId)
-    })
+  const steak = '0x0000000000000000000000000000000000000001'
+  const tenderizer = '0x0000000000000000000000000000000000000002'
+  const tenderToken = '0x0000000000000000000000000000000000000003'
+  const esp = '0x0000000000000000000000000000000000000004'
 
-    beforeEach('Deploy Controller', async () => {
-        signers = await ethers.getSigners();
-        const ControllerFactory = await ethers.getContractFactory(
-            "Controller",
-            signers[0]
-        );
+  beforeEach(async () => {
+    snapshotId = await rpc.snapshot()
+  })
 
-        account0 = await signers[0].getAddress()
-        account1 = await signers[1].getAddress()
-        account2 = await signers[2].getAddress()
+  afterEach(async () => {
+    await rpc.revert(snapshotId)
+  })
 
-        controller = (await ControllerFactory.deploy(steak, tenderizer, tenderToken, esp)) as Controller;
-        await controller.deployed();
-    })
+  beforeEach('Deploy Controller', async () => {
+    signers = await ethers.getSigners()
+    const ControllerFactory = await ethers.getContractFactory(
+      'Controller',
+      signers[0]
+    )
 
-    describe("Constructor", () => {
-        it("Owner is deployer", async () => {
-            expect(await controller.owner()).to.eq(account0)
-        })
+    account0 = await signers[0].getAddress()
 
-        it("Sets steak token", async () => {
-            expect(await controller.steak()).to.eq(steak)
-        })
+    controller = (await ControllerFactory.deploy(steak, tenderizer, tenderToken, esp)) as Controller
+    await controller.deployed()
+  })
 
-        it("Sets tenderizer", async () => {
-            expect(await controller.tenderizer()).to.eq(tenderizer)
-        })
-
-        it("Sets tenderToken", async () => {
-            expect(await controller.tenderToken()).to.eq(tenderToken)
-        })
-
-        it("Sets ESP", async () => {
-            expect(await controller.esp()).to.eq(esp)
-        })
+  describe('Constructor', () => {
+    it('Owner is deployer', async () => {
+      expect(await controller.owner()).to.eq(account0)
     })
 
-    describe("Deposit", () => {
-        it("revert if amount is 0", async () => {
-            await expect(controller.deposit(ethers.constants.Zero)).to.be.revertedWith("ZERO_AMOUNT")
-        })
-
-        it("revert if transferFrom fails", async () => {
-
-        })
-
-        it("revert if mint fails", async () => {
-            
-        })
+    it('Sets steak token', async () => {
+      expect(await controller.steak()).to.eq(steak)
     })
 
+    it('Sets tenderizer', async () => {
+      expect(await controller.tenderizer()).to.eq(tenderizer)
+    })
+
+    it('Sets tenderToken', async () => {
+      expect(await controller.tenderToken()).to.eq(tenderToken)
+    })
+
+    it('Sets ESP', async () => {
+      expect(await controller.esp()).to.eq(esp)
+    })
+  })
+
+  describe('Deposit', () => {
+    it('revert if amount is 0', async () => {
+      await expect(controller.deposit(ethers.constants.Zero)).to.be.revertedWith('ZERO_AMOUNT')
+    })
+
+    it('revert if transferFrom fails', async () => {
+
+    })
+
+    it('revert if mint fails', async () => {
+
+    })
+  })
 })

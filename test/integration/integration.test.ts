@@ -19,7 +19,7 @@
 
 // describe('Integration test', () => {
 //     let snapshotId: any
-    
+
 //     let controller: Controller
 //     let steak: SimpleToken
 //     let tenderizer: MockTenderizer
@@ -30,7 +30,7 @@
 //     let signers: ethersTypes.Signer[]
 
 //     const initialSupply = ethers.utils.parseEther("5000000")
-    
+
 //     let deployer: string
 //     let account0: string
 //     let account1: string
@@ -50,7 +50,7 @@
 //             'SimpleToken',
 //             signers[0]
 //         )
-        
+
 //         steak = (await SimpleTokenFactory.deploy('SimpleToken', 'SIM', ethers.utils.parseEther("5000"))) as SimpleToken
 
 //         const TenderizerFactory = await ethers.getContractFactory(
@@ -104,7 +104,7 @@
 //             balancerFixture['BFactory'].address,
 //             poolParams,
 //             permissions
-//         )) as ElasticSupplyPool  
+//         )) as ElasticSupplyPool
 
 //         const ControllerFactory = await ethers.getContractFactory(
 //             "Controller",
@@ -124,7 +124,7 @@
 //         const pcTokenSupply = '1000000000000000000000' // 1000e18
 //         const minimumWeightChangeBlockPeriod = 10;
 //         const addTokenTimeLockInBlocks = 10;
-        
+
 //         await steak.approve(controller.address, bootstrapSupply)
 //         await controller.deposit(bootstrapSupply)
 
@@ -140,7 +140,7 @@
 //     // beforeEach(async () => {
 //     //     snapshotId = await rpc.snapshot()
 //     // })
-    
+
 //     // afterEach(async () => {
 //     //     await rpc.revert(snapshotId)
 //     // })
@@ -160,7 +160,7 @@
 //             it("increases total supply of tender token", async () => {
 //                 expect(await tenderToken.totalSupply()).to.eq(bootstrapSupply)
 //             })
-    
+
 //             it("increases total shares", async () => {
 //                 expect(await tenderToken.getTotalShares()).to.eq(bootstrapSupply)
 //             })
@@ -222,7 +222,7 @@
 //             it("mints a correct amount of shares", async () => {
 //                 expect(await tenderToken.sharesOf(account1)).to.eq(acc1Deposit)
 //             })
-    
+
 //             it("increases total shares", async () => {
 //                 expect(await tenderToken.getTotalShares()).to.eq(totalSharesBefore.add(acc1Deposit))
 //             })
@@ -263,7 +263,7 @@
 //             it("mints a correct amount of shares", async () => {
 //                 expect(await tenderToken.sharesOf(account2)).to.eq(acc2Deposit)
 //             })
-    
+
 //             it("increases total shares", async () => {
 //                 expect(await tenderToken.getTotalShares()).to.eq(totalSharesBefore.add(acc2Deposit))
 //             })
@@ -274,6 +274,5 @@
 //         })
 
 //     })
-    
 
 // })
