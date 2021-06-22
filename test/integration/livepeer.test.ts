@@ -111,7 +111,7 @@ describe('Livepeer Integration Test', () => {
         await Controller.execute(
             Tenderizer.address,
             0,
-            Tenderizer.interface.encodeFunctionData('setOneInchContract', [OneInchMock.address]) // dummy address, using mock
+            Tenderizer.interface.encodeFunctionData('setOneInchContract', [OneInchMock.address])
         )
     })
 
@@ -351,12 +351,12 @@ describe('Livepeer Integration Test', () => {
         it('reverts if requested amount exceeds balance', async () => {
             LivepeerMock.smocked.unbond.will.return()
             withdrawAmount = await TenderToken.balanceOf(deployer)
-            await expect(Controller.unlock(withdrawAmount.add(1))).to.be.reverted
+            await expect(Controller.unlock(withdrawAmount.add(1))).to.be.revertedWith('BURN_AMOUNT_EXCEEDS_BALANCE')
         })
 
         it('reverts if requested amount is 0', async () => {
             withdrawAmount = await TenderToken.balanceOf(deployer)
-            await expect(Controller.unlock(ethers.constants.Zero)).to.be.reverted
+            await expect(Controller.unlock(ethers.constants.Zero)).to.be.revertedWith('ZERO_AMOUNT')
         })
 
         it('unbond() succeeds', async () => {
@@ -366,15 +366,15 @@ describe('Livepeer Integration Test', () => {
         })
 
         it('Gov unbond() reverts if no pending stake', async () => {
-            const txData = ethers.utils.arrayify(Controller.interface.encodeFunctionData("unlock", [ethers.utils.parseEther('0')]))
+            const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData("unstake", [Controller.address, ethers.utils.parseEther('0')]))
             LivepeerMock.smocked.pendingStake.will.return.with(ethers.constants.Zero)
-            await expect(Controller.execute(Controller.address, 0, txData)).to.be.reverted
+            await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_STAKE')
         })
 
         it('Gov unbond() succeeds', async () => {
-            const txData = ethers.utils.arrayify(Controller.interface.encodeFunctionData("unlock", [ethers.utils.parseEther('0')]))
+            const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('unstake', [Controller.address, ethers.utils.parseEther('0')]))
             LivepeerMock.smocked.pendingStake.will.return.with(withdrawAmount)
-            await Controller.execute(Controller.address, 0, txData)
+            await Controller.execute(Tenderizer.address, 0, txData)
             expect(LivepeerMock.smocked.unbond.calls.length).to.eq(1)
             expect(LivepeerMock.smocked.unbond.calls[0]._amount).to.eq(withdrawAmount)
         })
@@ -396,7 +396,7 @@ describe('Livepeer Integration Test', () => {
 
     describe('withdraw', async () => {
         let lptBalBefore : BigNumber
-        it('reverts if wihtdraw reverts', async () => {
+        it('reverts if wihtdraw() reverts', async () => {
             LivepeerMock.smocked.withdrawStake.will.revert()
             await expect(Controller.withdraw(withdrawAmount)).to.be.reverted
         })
@@ -418,7 +418,7 @@ describe('Livepeer Integration Test', () => {
         })
 
         it('reverts if no pending withdrawal', async () => {
-            await expect(Controller.withdraw(withdrawAmount)).to.be.reverted
+            await expect(Controller.withdraw(withdrawAmount)).to.be.revertedWith('NO_PENDING_WITHDRAWAL')
         })
     })
 
