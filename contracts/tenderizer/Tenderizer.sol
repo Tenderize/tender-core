@@ -25,6 +25,16 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     uint256 public pendingLiquidityFees;
     uint256 public currentPrincipal; // Principal since last claiming earnings
 
+    // Events
+    event Deposit(address indexed from, uint256 amount);
+    event Stake(address indexed node, uint256 amount);
+    event Unstake(address indexed from, address indexed node, uint256 amount);
+    event Withdraw(address indexed from, uint256 amount);
+    event RewardsClaimed(uint256 rewards, uint256 currentPrincipal);
+    event ProtocolFeeCollected(uint256 amount);
+    event LiquidityFeeCollected(uint256 amount);
+    event GovernanceUpdate(string _param);
+
     modifier onlyController() {
         require(msg.sender == controller);
         _;
@@ -112,20 +122,24 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     function setController(address _controller) external override onlyController {
         require(_controller != address(0), "ZERO_ADDRESS");
         controller = _controller;
+        emit GovernanceUpdate("CONTROLLER");
     }
 
     function setNode(address _node) external virtual override onlyController {
         require(_node != address(0), "ZERO_ADDRESS");
         node = _node;
+        emit GovernanceUpdate("NODE");
     }
 
     function setSteak(IERC20 _steak) external virtual override onlyController {
         require(address(_steak) != address(0), "ZERO_ADDRESS");
         steak = _steak;
+        emit GovernanceUpdate("STEAK");
     }
 
     function setProtocolFee(uint256 _protocolFee) external virtual override onlyController {
         protocolFee = _protocolFee;
+        emit GovernanceUpdate("PROTOCOL_FEE");
     }
 
     function setLiquidityFee(uint256 _liquidityFee) external virtual override onlyController {
@@ -167,6 +181,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         // Controller will mint tenderToken and distribute it
         uint256 before = pendingFees;
         pendingFees = 0;
+        emit ProtocolFeeCollected(before);
         return before;
     }
 
@@ -175,6 +190,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         // Controller will mint tenderToken and distribute it
         uint256 before = pendingLiquidityFees;
         pendingLiquidityFees = 0;
+        emit LiquidityFeeCollected(before);
         return before;
     }
 
