@@ -38,11 +38,10 @@ contract Livepeer is Tenderizer {
         livepeer = _livepeer;
     }
 
-    function _deposit(
-        address, /*_from*/
-        uint256 _amount
-    ) internal override {
+    function _deposit(address _from, uint256 _amount) internal override {
         currentPrincipal += _amount;
+
+        emit Deposit(_from, _amount);
     }
 
     function _stake(address _node, uint256 _amount) internal override {
@@ -68,6 +67,8 @@ contract Livepeer is Tenderizer {
 
         // stake tokens
         livepeer.bond(amount, node_);
+
+        emit Stake(node_, amount);
     }
 
     function _unstake(
@@ -102,6 +103,8 @@ contract Livepeer is Tenderizer {
         nextUnbondingLockID += 1;
 
         unbondingLocks[_account] = unbondingLock({ id: unbondingLockID, amount: _amount });
+
+        emit Unstake(_account, node_, amount);
     }
 
     function _withdraw(
@@ -123,6 +126,8 @@ contract Livepeer is Tenderizer {
 
         // Transfer amount from unbondingLock to _account
         steak.transfer(_account, amount);
+
+        emit Withdraw(_account, amount);
     }
 
     function _claimRewards() internal override {
@@ -172,6 +177,8 @@ contract Livepeer is Tenderizer {
         pendingLiquidityFees = _liquidityFees;
         // Add current pending stake minus fees and set it as current principal
         currentPrincipal = stake - _pendingFees - _liquidityFees;
+
+        emit RewardsClaimed(rewards, currentPrincipal);
     }
 
     function _totalStakedTokens() internal view override returns (uint256) {
@@ -180,5 +187,7 @@ contract Livepeer is Tenderizer {
 
     function _setStakingContract(address _stakingContract) internal override {
         livepeer = ILivepeer(_stakingContract);
+
+        emit GovernanceUpdate("STAKING_CONTRACT");
     }
 }
