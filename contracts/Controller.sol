@@ -69,9 +69,6 @@ contract Controller is Ownable {
         // Execute pending withdrawal
         // Reverts if unthawing period hasn't ended
         tenderizer.withdraw(msg.sender, _amount);
-
-        // Transfer tokens after withdrawing from the tenderizer
-        require(steak.transfer(msg.sender, _amount), "TRANSFER_FAILED");
     }
 
     function rebase() public onlyOwner {

@@ -92,10 +92,10 @@ contract Livepeer is Tenderizer {
             node_ = node;
         }
 
-        currentPrincipal -= _amount;
+        currentPrincipal -= amount;
 
         // Unbond tokens
-        livepeer.unbond(_amount);
+        livepeer.unbond(amount);
 
         // Manage Livepeer unbonding locks
         uint256 unbondingLockID = nextUnbondingLockID;
@@ -111,17 +111,18 @@ contract Livepeer is Tenderizer {
         // Check that a withdrawal is pending
         require(unbondingLocks[_account].amount > 0, "NO_PENDING_WITHDRAWAL");
 
-        // Init storage pointer
-        unbondingLock storage _unbondingLock = unbondingLocks[_account];
+        // Store values from lock
+        uint256 unbondingLockId = unbondingLocks[_account].id;
+        uint256 amount = unbondingLocks[_account].amount;
 
         // Remove it from the locks
         delete unbondingLocks[_account];
 
         // Withdraw stake, transfers steak tokens to address(this)
-        livepeer.withdrawStake(_unbondingLock.id);
+        livepeer.withdrawStake(unbondingLockId);
 
         // Transfer amount from unbondingLock to _account
-        steak.transfer(_account, _unbondingLock.amount);
+        steak.transfer(_account, amount);
     }
 
     function _claimRewards() internal override {
