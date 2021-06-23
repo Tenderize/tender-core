@@ -161,7 +161,7 @@ contract Controller is Ownable {
     }
 
     function _collectLiquidityFees() internal {
-        if (tenderFarm.totalStake() == 0) return;
+        if (tenderFarm.nextTotalStake() == 0) return;
         // collect fees and get amount
         uint256 amount = tenderizer.collectLiquidityFees();
 

@@ -19,4 +19,6 @@ interface ITenderFarm {
     function stakeOf(address _of) external view returns (uint256);
 
     function totalStake() external view returns (uint256);
+
+    function nextTotalStake() external view returns (uint256);
 }
