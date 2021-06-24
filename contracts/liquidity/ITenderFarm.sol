@@ -16,6 +16,8 @@ interface ITenderFarm {
 
     function addRewards(uint256 _amount) external;
 
+    function availableRewards(address _for) external view returns (uint256);
+
     function stakeOf(address _of) external view returns (uint256);
 
     function totalStake() external view returns (uint256);
