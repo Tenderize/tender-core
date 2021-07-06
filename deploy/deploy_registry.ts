@@ -7,10 +7,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const { deployer } = await getNamedAccounts()
 
-  await deploy('Registry', {
+  const registry = await deploy('Registry', {
     from: deployer,
     log: true
   })
+
+  await deployments.save('Registry', registry)
 }
 export default func
 func.tags = ['Registry']

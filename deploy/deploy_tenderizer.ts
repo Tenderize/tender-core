@@ -5,9 +5,10 @@ import {
 } from 'hardhat'
 
 import {
-  TenderToken, Tenderizer, ElasticSupplyPool, ERC20, Controller, EIP173Proxy, TenderFarm
+  TenderToken, Tenderizer, ElasticSupplyPool, ERC20, Controller, EIP173Proxy, TenderFarm, BPool, Registry
 } from '../typechain'
 import { BigNumber } from '@ethersproject/bignumber'
+import { constants, utils } from 'ethers'
 
 const NAME = process.env.NAME || ''
 const SYMBOL = process.env.SYMBOL || ''
@@ -59,6 +60,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
       methodName: 'initialize'
     }
   })
+
+  // const tenderizerContr = (await ethers.getContractAt(NAME, tenderizer.address)) as Tenderizer
+  // await tenderizerContr.initialise(process.env.TOKEN, process.env.CONTRACT, process.env.NODE)
 
   const tenderToken = await deploy('TenderToken', {
     from: deployer,
@@ -136,8 +140,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   console.log('Creating Elastic Supply Pool')
 
-  await Esp.createPool(pcTokenSupply, minimumWeightChangeBlockPeriod, addTokenTimeLockInBlocks, { gasLimit: 12000000 })
+  const cpTx = await Esp.createPool(pcTokenSupply, minimumWeightChangeBlockPeriod, addTokenTimeLockInBlocks, { gasLimit: 8000000 })
+  await cpTx.wait()
+
   const bpoolAddr = await Esp.bPool()
+
+  const BPool: BPool = (await ethers.getContractAt('BPool', bpoolAddr)) as BPool
 
   console.log('Transferring ownership for Elastic Supply Pool to Controller')
 
@@ -152,15 +160,42 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   console.log('Succesfully Deployed ! ')
 
   console.log('Deploy TenderFarm')
+
   const tenderFarm = await deploy('TenderFarm', {
     from: deployer,
     log: true,
-    args: [await Esp.bPool(), tenderToken.address]
+    args: [await Esp.address, tenderToken.address]
   })
+
   const TenderFarm: TenderFarm = (await ethers.getContractAt('TenderFarm', tenderFarm.address)) as TenderFarm
   await TenderFarm.transferOwnership(controller.address)
   await Controller.setTenderFarm(TenderFarm.address)
   console.log('Deployed TenderFarm')
+
+  // Stake tokens in tenderfarm for deployer
+  const lpTokenBal = await Esp.balanceOf(deployer)
+  console.log('Liquidity Pool Tokens Received:', utils.formatEther(lpTokenBal))
+  await Esp.approve(tenderFarm.address, lpTokenBal, { gasLimit: 1000000 })
+  console.log('farming balancer pool tokens')
+  await TenderFarm.farm(lpTokenBal, { gasLimit: 250000 })
+
+  // set liquidity fee
+  const data = Tenderizer.interface.encodeFunctionData('setLiquidityFee', [ethers.utils.parseEther('0.075')])
+  await Controller.execute(Tenderizer.address, 0, data)
+
+  // register protocol
+  const registryAddr = (await deployments.get('Registry')).address
+  const Registry: Registry = (await ethers.getContractAt('Registry', registryAddr)) as Registry
+  await Registry.addTenderizer({
+    name: NAME,
+    controller: Controller.address,
+    steak: process.env.TOKEN || constants.AddressZero,
+    tenderizer: Tenderizer.address,
+    tenderToken: TenderToken.address,
+    esp: Esp.address,
+    bpool: BPool.address,
+    tenderFarm: TenderFarm.address
+  })
 
   // Deploy faucet if not mainnet
   if (hre.network.name !== 'mainnet') {
