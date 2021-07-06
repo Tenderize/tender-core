@@ -1,7 +1,7 @@
 import hre, {
   ethers
 } from 'hardhat'
-import ethersTypes from 'ethers'
+import ethersTypes, { BigNumber } from 'ethers'
 import chai from 'chai'
 import {
   solidity
@@ -482,6 +482,29 @@ describe('TenderToken', () => {
         expect(await tenderToken.sharesOf(account0)).to.eq(mint0)
         expect(await tenderToken.sharesOf(account1)).to.eq(mint0)
         expect(await tenderToken.sharesOf(account2)).to.eq(ethers.constants.Zero)
+
+        // Mint for someone
+        await tenderToken.mint(account2, mint1)
+        expect(await tenderToken.balanceOf(account2)).to.eq(mint1)
+      })
+
+      it('minting after a rebase still mints correctly', async () => {
+        await tenderToken.mint(account0, acc0Balance)
+        await tenderToken.mint(account2, acc2Balance)
+
+        const multiplier = BigNumber.from(2)
+        await tenderToken.setTotalPooledTokens(totalSupply.mul(multiplier))
+
+        const mint0 = ethers.utils.parseEther('10')
+        const mint1 = ethers.utils.parseEther('20')
+        const mint2 = ethers.utils.parseEther('30')
+        await tenderToken.mint(account0, mint0)
+        await tenderToken.mint(account1, mint1)
+        await tenderToken.mint(account2, mint2)
+
+        expect(await tenderToken.balanceOf(account0)).to.eq(acc0Balance.mul(multiplier).add(mint0))
+        expect(await tenderToken.balanceOf(account1)).to.eq(mint1)
+        expect(await tenderToken.balanceOf(account2)).to.eq(acc2Balance.mul(multiplier).add(mint2))
       })
 
       it('reverts when mint to zero address', async () => {
@@ -544,6 +567,24 @@ describe('TenderToken', () => {
         expect(await tenderToken.sharesOf(account0)).to.eq(acc0Balance)
         expect(await tenderToken.sharesOf(account1)).to.eq(acc1Balance.sub(tokensToBurn))
         expect(await tenderToken.sharesOf(account2)).to.eq(zero)
+      })
+
+      it('burning after a rebase burns the correct amount of shares', async () => {
+        // Burning after rebase yield correct amount of shares burnt
+        const multiplier = ethers.BigNumber.from(2)
+        await tenderToken.setTotalPooledTokens(totalSupply.mul(multiplier))
+
+        expect(await tenderToken.balanceOf(account0)).to.eq(acc0Balance.mul(2))
+
+        // Burning 1/4th the tokens should burn 1/4th of shares
+        // After the rebase account0's balance is acc0Balance*multiplier (so double)
+        const tokensToBurn = acc0Balance.div(multiplier)
+        await tenderToken.burn(account0, tokensToBurn)
+
+        expect(await tenderToken.totalSupply()).to.eq(totalSupply.mul(multiplier).sub(tokensToBurn))
+        expect(await tenderToken.balanceOf(account0)).to.eq(acc0Balance.mul(multiplier).sub(tokensToBurn))
+        expect(await tenderToken.getTotalShares()).to.eq(totalSupply.sub(tokensToBurn.div(2)))
+        expect(await tenderToken.sharesOf(account0)).to.eq(acc0Balance.sub(tokensToBurn.div(2)))
       })
 
       it('allowance behavior is correct after burning', async () => {

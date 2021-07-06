@@ -253,7 +253,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
         if (_totalPooledTokens == 0) {
             _mintShares(_recipient, _amount);
         } else {
-            uint256 _sharesToMint = sharesToTokens(_amount);
+            uint256 _sharesToMint = tokensToShares(_amount);
             _mintShares(_recipient, _sharesToMint);
         }
         _setTotalPooledTokens(totalPooledTokens + _amount);
@@ -271,7 +271,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
      * @dev '_recipient' should also withdraw from Tenderizer atomically
      */
     function burn(address _account, uint256 _amount) public onlyOwner returns (bool) {
-        uint256 _sharesToburn = sharesToTokens(_amount);
+        uint256 _sharesToburn = tokensToShares(_amount);
         _burnShares(_account, _sharesToburn);
         _setTotalPooledTokens(totalPooledTokens - _amount);
         return true;
