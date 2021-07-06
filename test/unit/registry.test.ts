@@ -34,6 +34,7 @@ describe('Tenderizer Registry', () => {
   describe('add tenderizer', () => {
     const config = {
       name: 'livepeer',
+      controller: ethers.utils.getAddress('0x777f415324d56e1d54fa832902d8797dB7A4c57C'),
       steak: ethers.utils.getAddress('0xf247196f2f2e5419733bd7a78b44dd319b3ee763'),
       tenderizer: ethers.utils.getAddress('0x09eab21c40743b2364b94345419138ef80f39e30'),
       tenderToken: ethers.utils.getAddress('0x0a130B8564E7a20708679dA1163C3344584C10D0'),
@@ -45,7 +46,7 @@ describe('Tenderizer Registry', () => {
       await expect(registry.connect(signers[1]).addTenderizer(config)).to.be.reverted.revertedWith('caller is not the owner')
     })
     it('emits a TenderizerCreated event', async () => {
-      const arr = [config.name, config.steak, config.tenderizer, config.tenderToken, config.esp, config.bpool, config.tenderFarm]
+      const arr = [config.name, config.controller, config.steak, config.tenderizer, config.tenderToken, config.esp, config.bpool, config.tenderFarm]
       await expect(registry.addTenderizer(config)).to.emit(registry, 'TenderizerCreated').withArgs(arr)
     })
   })

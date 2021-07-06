@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract Registry is Ownable {
     struct TenderizerConfig {
         string name;
+        address controller;
         address steak;
         address tenderizer;
         address tenderToken;
