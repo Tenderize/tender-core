@@ -94,11 +94,15 @@ contract Controller is Ownable {
 
     function gulp() public {
         // gulp steak balance of Tenderizer and stake it
-        tenderizer.stake(address(0), 0);
+        try tenderizer.stake(address(0), 0) {} catch {}
     }
 
     function collectFees() public onlyOwner {
         _collectFees();
+    }
+
+    function collectLiquidityFees() public onlyOwner {
+        _collectLiquidityFees();
     }
 
     function setEsp(IElasticSupplyPool _esp) public onlyOwner {
