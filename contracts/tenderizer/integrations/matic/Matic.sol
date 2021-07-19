@@ -101,7 +101,8 @@ contract Matic is Tenderizer {
 
     function _withdraw(
         address _account,
-        uint256 /*_amount*/
+        uint256 /*_amount*/,
+        uint256 /*unstakeLockID*/
     ) internal override {
         // // Check that a withdrawal is pending
         // uint256 amount = graph.withdrawDelegated(node, ZERO_ADDRESS);

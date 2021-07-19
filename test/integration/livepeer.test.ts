@@ -298,6 +298,7 @@ describe('Livepeer Integration Test', () => {
 
   describe('unlock', async () => {
     let tx: ContractTransaction
+    let principleBefore: BigNumber
     it('reverts if unbond() reverts', async () => {
       LivepeerMock.smocked.unbond.will.revert()
       await expect(Controller.unlock(withdrawAmount)).to.be.reverted
@@ -310,9 +311,14 @@ describe('Livepeer Integration Test', () => {
     })
 
     it('unbond() succeeds', async () => {
+      principleBefore = await Tenderizer.currentPrincipal()
       tx = await Controller.unlock(withdrawAmount)
       expect(LivepeerMock.smocked.unbond.calls.length).to.eq(1)
       expect(LivepeerMock.smocked.unbond.calls[0]._amount).to.eq(withdrawAmount)
+    })
+
+    it('on success - updates current pricinple', async () => {
+      expect(await Tenderizer.currentPrincipal()).to.eq(principleBefore.sub(withdrawAmount))
     })
 
     it('reduces TenderToken Balance', async () => {
@@ -320,7 +326,7 @@ describe('Livepeer Integration Test', () => {
     })
 
     it('should emit Unstake event from Tenderizer', async () => {
-      expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(deployer, NODE, withdrawAmount)
+      expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(deployer, NODE, withdrawAmount, 0)
     })
   })
 
@@ -330,7 +336,7 @@ describe('Livepeer Integration Test', () => {
 
     it('reverts if wihtdraw reverts', async () => {
       LivepeerMock.smocked.withdrawStake.will.revert()
-      await expect(Controller.withdraw(withdrawAmount)).to.be.reverted
+      await expect(Controller.withdraw(withdrawAmount, 0)).to.be.reverted
     })
 
     it('withdraw() succeeds', async () => {
@@ -341,7 +347,7 @@ describe('Livepeer Integration Test', () => {
 
       lptBalBefore = await LivepeerToken.balanceOf(deployer)
 
-      tx = await Controller.withdraw(withdrawAmount)
+      tx = await Controller.withdraw(withdrawAmount, 0)
       expect(LivepeerMock.smocked.withdrawStake.calls.length).to.eq(1)
       expect(LivepeerMock.smocked.withdrawStake.calls[0]._unbondingLockId).to.eq(0)
     })

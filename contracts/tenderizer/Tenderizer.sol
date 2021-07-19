@@ -28,7 +28,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     // Events
     event Deposit(address indexed from, uint256 amount);
     event Stake(address indexed node, uint256 amount);
-    event Unstake(address indexed from, address indexed node, uint256 amount);
+    event Unstake(address indexed from, address indexed node, uint256 amount, uint256 indexed unstakeLockID);
     event Withdraw(address indexed from, uint256 amount);
     event RewardsClaimed(uint256 rewards, uint256 currentPrincipal);
     event ProtocolFeeCollected(uint256 amount);
@@ -85,6 +85,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
      * @param _amount amount to unstake
      * @dev If '_account' is not specified, stake towards the default address
      * @dev If '_amount' is 0, unstake the entire amount staked towards _account
+     * @dev _account to be passed as controller address in order to execute gov functions
      * @dev Only callable by controller
      */
     function unstake(address _account, uint256 _amount) external override onlyController {
@@ -97,14 +98,17 @@ abstract contract Tenderizer is Initializable, ITenderizer {
      * @notice Withdraw '_amount' of tokens previously unstaked by '_account'
      * @param _account account requesting the withdrawam
      * @param _amount amount to withdraw (optional)
+     * @param _lockID lockID of the unstake (optional)
      * @dev If '_amount' isn't specified all unstake tokens by '_account' will be withdrawn
      * @dev Requires '_account' to have unstaked prior to calling withdraw
+     * @dev _lockID to be pulled from subgraph and added here
+     * @dev _account to be passed as controller address in order to execute gov functions
      * @dev Only callable by controller
      */
-    function withdraw(address _account, uint256 _amount) external override onlyController {
+    function withdraw(address _account, uint256 _amount, uint256 _lockID) external override onlyController {
         // Execute state updates to pending withdrawals
         // Transfer tokens to _account
-        _withdraw(_account, _amount);
+        _withdraw(_account, _amount, _lockID);
     }
 
     /**
@@ -172,7 +176,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         uint256 _amount
     ) internal virtual;
 
-    function _withdraw(address _account, uint256 _amount) internal virtual;
+    function _withdraw(address _account, uint256 _amount, uint256 _lockID) internal virtual;
 
     function _claimRewards() internal virtual;
 

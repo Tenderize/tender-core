@@ -14,7 +14,7 @@ interface ITenderizer {
 
     function unstake(address _account, uint256 _amount) external;
 
-    function withdraw(address _account, uint256 _amount) external;
+    function withdraw(address _account, uint256 _amount, uint256 _lockID) external;
 
     function claimRewards() external;
 

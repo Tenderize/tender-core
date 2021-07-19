@@ -104,12 +104,13 @@ contract Livepeer is Tenderizer {
 
         unbondingLocks[_account] = unbondingLock({ id: unbondingLockID, amount: _amount });
 
-        emit Unstake(_account, node_, amount);
+        emit Unstake(_account, node_, amount, unbondingLockID);
     }
 
     function _withdraw(
         address _account,
-        uint256 /*_amount*/
+        uint256 /*_amount*/,
+        uint256 /*lockID*/
     ) internal override {
         // Check that a withdrawal is pending
         require(unbondingLocks[_account].amount > 0, "NO_PENDING_WITHDRAWAL");

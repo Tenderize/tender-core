@@ -64,11 +64,11 @@ contract Controller is Ownable {
         tenderizer.unstake(msg.sender, _amount);
     }
 
-    function withdraw(uint256 _amount) public {
+    function withdraw(uint256 _amount, uint256 lockID) public {
         require(_amount > 0, "ZERO_AMOUNT");
         // Execute pending withdrawal
         // Reverts if unthawing period hasn't ended
-        tenderizer.withdraw(msg.sender, _amount);
+        tenderizer.withdraw(msg.sender, _amount, lockID);
     }
 
     function rebase() public onlyOwner {
