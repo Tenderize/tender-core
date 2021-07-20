@@ -377,6 +377,10 @@ describe('Graph Integration Test', () => {
         expect(GraphMock.smocked.undelegate.calls[0]._indexer).to.eq(NODE)
         expect(GraphMock.smocked.undelegate.calls[0]._shares).to.eq(withdrawAmount)
       })
+
+      it('should emit GovernanceUnstake event from Tenderizer', async () => {
+        expect(tx).to.emit(Tenderizer, 'GovernanceUnstake').withArgs(NODE, withdrawAmount, unbondLockID)
+      })
     })
   })
 
@@ -398,10 +402,14 @@ describe('Graph Integration Test', () => {
         GraphMock.smocked.withdrawDelegated.will.return()
         const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('withdraw',
           [Controller.address, ethers.constants.AddressZero, ethers.utils.parseEther('0')]))
-        await Controller.execute(Tenderizer.address, 0, txData)
+        tx = await Controller.execute(Tenderizer.address, 0, txData)
         expect(GraphMock.smocked.withdrawDelegated.calls.length).to.eq(1)
         expect(GraphMock.smocked.withdrawDelegated.calls[0]._indexer).to.eq(NODE)
         expect(GraphMock.smocked.withdrawDelegated.calls[0]._newIndexer).to.eq(ethers.constants.AddressZero)
+      })
+
+      it('should emit GovernanceWithdraw event from Tenderizer', async () => {
+        expect(tx).to.emit(Tenderizer, 'GovernanceWithdraw').withArgs(NODE, 0, unbondLockID)
       })
     })
 

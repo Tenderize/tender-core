@@ -29,7 +29,9 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     event Deposit(address indexed from, uint256 amount);
     event Stake(address indexed node, uint256 amount);
     event Unstake(address indexed from, address indexed node, uint256 amount, uint256 indexed unstakeLockID);
+    event GovernanceUnstake(address indexed node, uint256 amount, uint256 indexed lastUnstakeLockID);
     event Withdraw(address indexed from, uint256 amount);
+    event GovernanceWithdraw(address indexed node, uint256 amount, uint256 indexed lastUnstakeLockID);
     event RewardsClaimed(uint256 rewards, uint256 currentPrincipal);
     event ProtocolFeeCollected(uint256 amount);
     event LiquidityFeeCollected(uint256 amount);

@@ -142,7 +142,7 @@ contract Graph is Tenderizer {
         // undelegate shares
         graph.undelegate(node_, shares);
 
-        // TODO: Add event
+        emit GovernanceUnstake(node_, shares, lastGovUnstakeLockID);
     }
 
     function _withdraw(
