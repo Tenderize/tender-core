@@ -144,6 +144,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
 
     function setLiquidityFee(uint256 _liquidityFee) external virtual override onlyController {
         liquidityFee = _liquidityFee;
+        emit GovernanceUpdate("LIQUIDITY_FEE");
     }
 
     function setStakingContract(address _stakingContract) external override onlyController {
