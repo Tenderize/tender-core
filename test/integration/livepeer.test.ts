@@ -3,7 +3,7 @@ import hre, { ethers } from 'hardhat'
 import { MockContract, smockit } from '@eth-optimism/smock'
 
 import {
-  SimpleToken, Controller, Tenderizer, ElasticSupplyPool, TenderToken, ILivepeer, BPool, EIP173Proxy
+  SimpleToken, Controller, ElasticSupplyPool, TenderToken, ILivepeer, BPool, EIP173Proxy, IOneInch, Livepeer
 } from '../../typechain/'
 
 import chai from 'chai'
@@ -26,8 +26,9 @@ describe('Livepeer Integration Test', () => {
   let LivepeerNoMock: ILivepeer
   let LivepeerMock: MockContract
   let LivepeerToken: SimpleToken
+  let OneInchMock: MockContract
   let Controller: Controller
-  let Tenderizer: Tenderizer
+  let Tenderizer: Livepeer
   let TenderToken: TenderToken
   let Esp: ElasticSupplyPool
   let BPool: BPool
@@ -66,6 +67,17 @@ describe('Livepeer Integration Test', () => {
     LivepeerMock = await smockit(LivepeerNoMock)
   })
 
+  before('deploy OneInch Mock', async () => {
+    const OneInchFac = await ethers.getContractFactory(
+      'OneInchMock',
+      signers[0]
+    )
+
+    const OneInchNoMock = (await OneInchFac.deploy()) as IOneInch
+
+    OneInchMock = await smockit(OneInchNoMock)
+  })
+
   const STEAK_AMOUNT = '100000'
   const NODE = '0xf4e8Ef0763BCB2B1aF693F5970a00050a6aC7E1B'
 
@@ -78,7 +90,7 @@ describe('Livepeer Integration Test', () => {
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
     Livepeer = await hre.deployments.fixture(['Livepeer'])
     Controller = (await ethers.getContractAt('Controller', Livepeer.Controller.address)) as Controller
-    Tenderizer = (await ethers.getContractAt('Tenderizer', Livepeer.Livepeer.address)) as Tenderizer
+    Tenderizer = (await ethers.getContractAt('Livepeer', Livepeer.Livepeer.address)) as Livepeer
     TenderToken = (await ethers.getContractAt('TenderToken', Livepeer.TenderToken.address)) as TenderToken
     Esp = (await ethers.getContractAt('ElasticSupplyPool', Livepeer.ElasticSupplyPool.address)) as ElasticSupplyPool
     BPool = (await ethers.getContractAt('BPool', await Esp.bPool())) as BPool
@@ -91,6 +103,11 @@ describe('Livepeer Integration Test', () => {
       Tenderizer.address,
       0,
       Tenderizer.interface.encodeFunctionData('setLiquidityFee', [0])
+    )
+    await Controller.execute(
+      Tenderizer.address,
+      0,
+      Tenderizer.interface.encodeFunctionData('setOneInchContract', [OneInchMock.address])
     )
   })
 
