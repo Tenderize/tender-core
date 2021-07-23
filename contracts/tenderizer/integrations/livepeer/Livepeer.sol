@@ -15,7 +15,7 @@ import "../../../liquidity/IOneInch.sol";
 contract Livepeer is Tenderizer {
     uint256 private constant MAX_ROUND = 2**256 - 1;
 
-    IOneInch private constant oneInch = IOneInch(address(0));
+    IOneInch private oneInch;
 
     ILivepeer livepeer;
 
@@ -189,5 +189,9 @@ contract Livepeer is Tenderizer {
         livepeer = ILivepeer(_stakingContract);
 
         emit GovernanceUpdate("STAKING_CONTRACT");
+    }
+
+    function setOneInchContract(address _oneInch) external onlyController {
+        oneInch = IOneInch(_oneInch);
     }
 }
