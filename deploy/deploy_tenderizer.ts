@@ -184,18 +184,24 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   await Controller.execute(Tenderizer.address, 0, data)
 
   // register protocol
-  const registryAddr = (await deployments.get('Registry')).address
-  const Registry: Registry = (await ethers.getContractAt('Registry', registryAddr)) as Registry
-  await Registry.addTenderizer({
-    name: NAME,
-    controller: Controller.address,
-    steak: process.env.TOKEN || constants.AddressZero,
-    tenderizer: Tenderizer.address,
-    tenderToken: TenderToken.address,
-    esp: Esp.address,
-    bpool: BPool.address,
-    tenderFarm: TenderFarm.address
-  })
+  const allDeployed = await deployments.all()
+  if (allDeployed.Registry) {
+    const registryAddr = allDeployed.Registry.address
+    const Registry: Registry = (await ethers.getContractAt('Registry', registryAddr)) as Registry
+
+    await Registry.addTenderizer({
+      name: NAME,
+      controller: Controller.address,
+      steak: process.env.TOKEN || constants.AddressZero,
+      tenderizer: Tenderizer.address,
+      tenderToken: TenderToken.address,
+      esp: Esp.address,
+      bpool: BPool.address,
+      tenderFarm: TenderFarm.address
+    })
+  } else if (hre.network.name === 'mainnet' || hre.network.name === 'rinkeby') {
+    throw new Error('can not register Tenderizer, Registry not deployed')
+  }
 
   // Deploy faucet if not mainnet
   if (hre.network.name !== 'mainnet') {
@@ -222,5 +228,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   }
 }
 
+func.dependencies = ['Registry']
 func.tags = [NAME, 'Deploy'] // this setup a tag so you can execute the script on its own (and its dependencies)
 export default func
