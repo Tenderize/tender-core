@@ -140,7 +140,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   console.log('Creating Elastic Supply Pool')
 
-  const cpTx = await Esp.createPool(pcTokenSupply, minimumWeightChangeBlockPeriod, addTokenTimeLockInBlocks, { gasLimit: 8000000 })
+  const cpTxGas = hre.network.name === 'hardhat' ? 12000000 : 8000000
+  const cpTx = await Esp.createPool(pcTokenSupply, minimumWeightChangeBlockPeriod, addTokenTimeLockInBlocks, { gasLimit: cpTxGas })
   await cpTx.wait()
 
   const bpoolAddr = await Esp.bPool()
