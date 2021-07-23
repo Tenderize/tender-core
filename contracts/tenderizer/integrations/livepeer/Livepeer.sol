@@ -102,7 +102,7 @@ contract Livepeer is Tenderizer {
         uint256 unbondingLockID = nextUnbondingLockID;
         nextUnbondingLockID += 1;
 
-        unbondingLocks[_account] = unbondingLock({ id: unbondingLockID, amount: _amount });
+        unbondingLocks[_account] = unbondingLock({ id: unbondingLockID, amount: amount });
 
         emit Unstake(_account, node_, amount);
     }
