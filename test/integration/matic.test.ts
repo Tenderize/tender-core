@@ -84,6 +84,11 @@ describe('Matic Integration Test', () => {
       0,
       Tenderizer.interface.encodeFunctionData('setProtocolFee', [0])
     )
+    await Controller.execute(
+      Tenderizer.address,
+      0,
+      Tenderizer.interface.encodeFunctionData('setLiquidityFee', [0])
+    )
   })
 
   const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
@@ -121,11 +126,6 @@ describe('Matic Integration Test', () => {
   })
 
   describe('stake', () => {
-    it('bond reverts', async () => {
-      MaticMock.smocked.buyVoucher.will.revert()
-      await expect(Controller.gulp()).to.be.reverted
-    })
-
     describe('stakes succeessfully', async () => {
       let tx: ContractTransaction
       it('bond succeeds', async () => {

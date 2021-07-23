@@ -85,6 +85,11 @@ describe('Graph Integration Test', () => {
       0,
       Tenderizer.interface.encodeFunctionData('setProtocolFee', [0])
     )
+    await Controller.execute(
+      Tenderizer.address,
+      0,
+      Tenderizer.interface.encodeFunctionData('setLiquidityFee', [0])
+    )
   })
 
   const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
@@ -118,11 +123,6 @@ describe('Graph Integration Test', () => {
   })
 
   describe('stake', () => {
-    it('bond reverts', async () => {
-      GraphMock.smocked.delegate.will.revert()
-      await expect(Controller.gulp()).to.be.reverted
-    })
-
     describe('stakes succeessfully', async () => {
       let tx: ContractTransaction
       it('bond succeeds', async () => {
