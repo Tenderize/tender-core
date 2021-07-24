@@ -52,23 +52,23 @@ contract Controller is Ownable {
         require(steak.transferFrom(msg.sender, address(tenderizer), _amount), "STEAK_TRANSFERFROM_FAILED");
     }
 
-    function unlock(uint256 _amount) public {
+    function unlock(uint256 _amount) public returns (uint256 unstakeLockID) {
         require(_amount > 0, "ZERO_AMOUNT");
         // Burn tenderTokens
         require(tenderToken.burn(msg.sender, _amount), "TENDER_BURN_FAILED");
 
+        // Unstake tokens for pending withdrawal
+        unstakeLockID = tenderizer.unstake(msg.sender, _amount);
+
         // update total pooled tokens
         _updateTotalPooledTokens();
-
-        // Unstake tokens for pending withdrawal
-        tenderizer.unstake(msg.sender, _amount);
     }
 
-    function withdraw(uint256 _amount) public {
-        require(_amount > 0, "ZERO_AMOUNT");
+    function withdraw(uint256 _unstakeLockID) public {
+        require(_unstakeLockID > 0, "ZERO_AMOUNT");
         // Execute pending withdrawal
         // Reverts if unthawing period hasn't ended
-        tenderizer.withdraw(msg.sender, _amount);
+        tenderizer.withdraw(msg.sender, _unstakeLockID);
     }
 
     function rebase() public onlyOwner {

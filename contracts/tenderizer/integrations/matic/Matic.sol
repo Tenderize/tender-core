@@ -80,7 +80,7 @@ contract Matic is Tenderizer {
         address _account,
         address _node,
         uint256 _amount
-    ) internal override {
+    ) internal override returns (uint256 unstakeLockID) {
         //  // Check that no withdrawal is pending
         // require(pendingWithdrawals[_account] == 0, "PENDING_WITHDRAWAL");
         // uint256 amount = _amount;
@@ -101,7 +101,7 @@ contract Matic is Tenderizer {
 
     function _withdraw(
         address _account,
-        uint256 /*_amount*/
+        uint256 _unstakeLockID
     ) internal override {
         // // Check that a withdrawal is pending
         // uint256 amount = graph.withdrawDelegated(node, ZERO_ADDRESS);
