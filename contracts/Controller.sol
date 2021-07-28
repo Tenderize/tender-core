@@ -39,6 +39,13 @@ contract Controller is Ownable, ReentrancyGuard {
         esp = _esp;
     }
 
+    /**
+     * @notice Deposit tokens in Tenderizer to earn staking rewards
+     * @param _amount amount deposited
+     * @dev calls Tenderizer to deposit tokens and updates total pooled tokens
+     * @dev equal amount of tenderTokens are minted for the caller
+     * @dev requires '_amount' to be approved by '_from'
+     */
     function deposit(uint256 _amount) public {
         require(_amount > 0, "ZERO_AMOUNT");
 
@@ -53,6 +60,14 @@ contract Controller is Ownable, ReentrancyGuard {
         require(steak.transferFrom(msg.sender, address(tenderizer), _amount), "STEAK_TRANSFERFROM_FAILED");
     }
 
+    /**
+     * @notice Unlock staked tokens
+     * @param _amount amount deposited
+     * @return unstakeLockID 
+     * @dev calls Tenderizer to unstake tokens and updates total pooled tokens
+     * @dev equal amount of tenderTokens are burned from the user
+     * @dev unstaking functionality varies by the protocol, check tenderizer.unstake()
+     */
     function unlock(uint256 _amount) public nonReentrant returns (uint256 unstakeLockID) {
         require(_amount > 0, "ZERO_AMOUNT");
         // Burn tenderTokens
@@ -65,6 +80,12 @@ contract Controller is Ownable, ReentrancyGuard {
         _updateTotalPooledTokens();
     }
 
+    /**
+     * @notice Withdraws unstaked tokens
+     * @param _unstakeLockID lockID of the unstake
+     * @dev tokens need to be unstaked before they can be withdrawn
+     * @dev caller address should match the user address in lock
+     */
     function withdraw(uint256 _unstakeLockID) public nonReentrant {
         require(_unstakeLockID > 0, "ZERO_AMOUNT");
         // Execute pending withdrawal
@@ -72,6 +93,11 @@ contract Controller is Ownable, ReentrancyGuard {
         tenderizer.withdraw(msg.sender, _unstakeLockID);
     }
 
+    /**
+     * @notice Rebase will stake pending deposits, claim rewards, 
+     resync the liquidity pool and collect fees
+     * @dev only callable by owner(gov)
+     */
     function rebase() public nonReentrant {
         // stake tokens
         gulp();
@@ -93,19 +119,40 @@ contract Controller is Ownable, ReentrancyGuard {
         }
     }
 
+    /**
+     * @notice Gulp stakes any unstaked token balance held by the Tenderizer
+     * @dev deposit() only aggregates stake in the tenderizer, while gulp
+     will perform the actual stake call
+     * @dev only callable by owner(gov)
+     */
     function gulp() public {
         // gulp steak balance of Tenderizer and stake it
         try tenderizer.stake(address(0), 0) {} catch {}
     }
 
+    /**
+     * @notice Collect pending protocol fees from Tenderizer
+     * @dev mints equal number of tender tokens to the owner
+     * @dev only callable by owner(gov)
+     */
     function collectFees() public onlyOwner {
         _collectFees();
     }
 
+    /**
+     * @notice Collect pending liquidity provider fees from Tenderizer
+     * @dev mints equal number of tender tokens to the tenderFarm
+     * @dev only callable by owner(gov)
+     */
     function collectLiquidityFees() public onlyOwner {
         _collectLiquidityFees();
     }
 
+    /**
+     * @notice Set Elastic Supply Pool contract
+     * @param _esp Elastic Supply Pool contract address
+     * @dev only callable by owner(gov)
+     */
     function setEsp(IElasticSupplyPool _esp) public onlyOwner {
         require(address(_esp) != address(0), "ZERO_ADDRESS");
         esp = _esp;
@@ -113,14 +160,32 @@ contract Controller is Ownable, ReentrancyGuard {
 
     function migrateToNewTenderizer(ITenderizer _tenderizer) public onlyOwner {}
 
-    function updateStakingContract(address _stakingContract) public onlyOwner {
+    /**
+     * @notice Set staking contract
+     * @param _stakingContract staking contract address
+     * @dev only callable by owner(gov)
+     */
+    // TODO: Remove this now that we have execute()?
+    function updateStakingContract(address _stakingContract) public onlyOwner { 
         tenderizer.setStakingContract(_stakingContract);
     }
 
+    /**
+     * @notice Set TenderFarm contract
+     * @param _tenderFarm TenderFarm contract address
+     * @dev only callable by owner(gov)
+     */
     function setTenderFarm(ITenderFarm _tenderFarm) public onlyOwner {
         tenderFarm = _tenderFarm;
     }
 
+    /**
+     * @notice Exectutes a transaction on behalf of the controller
+     * @param _target target address for the contract call
+     * @param _value ether value to be transeffered with the transaction
+     * @param _data call data - check ethers.interface.encodeFunctionData()
+     * @dev only callable by owner(gov)
+     */
     function execute(
         address _target,
         uint256 _value,
@@ -129,6 +194,14 @@ contract Controller is Ownable, ReentrancyGuard {
         _execute(_target, _value, _data);
     }
 
+    /**
+     * @notice Exectutes a batch of transaction on behalf of the controller
+     * @param _targets array of target addresses for the contract call
+     * @param _values array of ether values to be transeffered with the transactions
+     * @param _datas array of call datas - check ethers.interface.encodeFunctionData()
+     * @dev Every target to its value, data via it's corresponding index
+     * @dev only callable by owner(gov)
+     */
     function batchExecute(
         address[] calldata _targets,
         uint256[] calldata _values,
@@ -175,6 +248,4 @@ contract Controller is Ownable, ReentrancyGuard {
         tenderToken.approve(address(tenderFarm), amount);
         tenderFarm.addRewards(amount);
     }
-    // TODO:
-    // Add rescuefunds to tenderizer:
 }
