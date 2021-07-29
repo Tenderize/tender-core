@@ -41,6 +41,7 @@ describe('Livepeer Integration Test', () => {
   let withdrawAmount: BigNumber
 
   let tx: ContractTransaction
+  const lockID = 1
 
   before('get signers', async () => {
     const namedAccs = await hre.getNamedAccounts()
@@ -116,6 +117,7 @@ describe('Livepeer Integration Test', () => {
   const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
 
   const deposit = ethers.utils.parseEther('100')
+  const secondDeposit = ethers.utils.parseEther('10')
 
   describe('deposit', () => {
     it('reverts because transfer amount exceeds allowance', async () => {
@@ -348,6 +350,12 @@ describe('Livepeer Integration Test', () => {
   })
 
   describe('unlock', async () => {
+    before('stake with another account', async () => {
+      await LivepeerToken.transfer(signers[2].address, secondDeposit)
+      await LivepeerToken.connect(signers[2]).approve(Controller.address, secondDeposit)
+      await Controller.connect(signers[2]).deposit(secondDeposit)
+    })
+
     it('reverts if unbond() reverts', async () => {
       LivepeerMock.smocked.unbond.will.revert()
       await expect(Controller.unlock(withdrawAmount)).to.be.reverted
@@ -388,18 +396,14 @@ describe('Livepeer Integration Test', () => {
       expect(await TenderToken.balanceOf(deployer)).to.eq(0)
     })
 
-    it('should emit Unstake event from Tenderizer', async () => {
-      expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(deployer, NODE, withdrawAmount)
+    it('should create unstakeLock', async () => {
+      const lock = await Tenderizer.unstakeLocks(lockID)
+      expect(lock.account).to.eq(deployer)
+      expect(lock.amount).to.eq(withdrawAmount)
     })
 
-    it('reverts if withdrawal already pending', async () => {
-      // Mint one tender token to test
-      let txData = ethers.utils.arrayify(TenderToken.interface.encodeFunctionData('mint', [deployer, ethers.utils.parseEther('1')]))
-      await Controller.execute(TenderToken.address, 0, txData)
-      await expect(Controller.unlock(ethers.utils.parseEther('1'))).to.be.revertedWith('PENDING_WITHDRAWAL')
-      // Burn it after test
-      txData = ethers.utils.arrayify(TenderToken.interface.encodeFunctionData('burn', [deployer, ethers.utils.parseEther('1')]))
-      await Controller.execute(TenderToken.address, 0, txData)
+    it('should emit Unstake event from Tenderizer', async () => {
+      expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(deployer, NODE, withdrawAmount, lockID)
     })
   })
 
@@ -419,7 +423,7 @@ describe('Livepeer Integration Test', () => {
 
       lptBalBefore = await LivepeerToken.balanceOf(deployer)
 
-      tx = await Controller.withdraw(withdrawAmount)
+      tx = await Controller.withdraw(lockID)
       expect(LivepeerMock.smocked.withdrawStake.calls.length).to.eq(1)
     })
 
@@ -427,12 +431,18 @@ describe('Livepeer Integration Test', () => {
       expect(await LivepeerToken.balanceOf(deployer)).to.eq(lptBalBefore.add(withdrawAmount))
     })
 
-    it('should emit Withdraw event from Tenderizer', async () => {
-      expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(deployer, withdrawAmount)
+    it('TenderToken balance of other account stays the same', async () => {
+      expect(await TenderToken.balanceOf(signers[2].address)).to.eq(secondDeposit)
     })
 
-    it('reverts if no pending withdrawal', async () => {
-      await expect(Controller.withdraw(withdrawAmount)).to.be.revertedWith('NO_PENDING_WITHDRAWAL')
+    it('should delete unstakeLock', async () => {
+      const lock = await Tenderizer.unstakeLocks(lockID)
+      expect(lock.account).to.eq(ethers.constants.AddressZero)
+      expect(lock.amount).to.eq(0)
+    })
+
+    it('should emit Withdraw event from Tenderizer', async () => {
+      expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(deployer, withdrawAmount, lockID)
     })
   })
 

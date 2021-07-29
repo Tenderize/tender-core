@@ -12,9 +12,9 @@ interface ITenderizer {
 
     function stake(address _node, uint256 _amount) external;
 
-    function unstake(address _account, uint256 _amount) external;
+    function unstake(address _account, uint256 _amount) external returns (uint256 unstakeLockID);
 
-    function withdraw(address _account, uint256 _amount) external;
+    function withdraw(address _account, uint256 _unstakeLockID) external;
 
     function claimRewards() external;
 

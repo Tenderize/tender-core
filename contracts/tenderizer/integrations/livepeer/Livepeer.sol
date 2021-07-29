@@ -19,14 +19,6 @@ contract Livepeer is Tenderizer {
 
     ILivepeer livepeer;
 
-    struct unbondingLock {
-        uint256 id;
-        uint256 amount;
-    }
-
-    mapping(address => unbondingLock) unbondingLocks;
-    uint256 private nextUnbondingLockID;
-
     uint256 private constant ethFees_threshold = 1**17;
 
     function initialize(
@@ -75,11 +67,9 @@ contract Livepeer is Tenderizer {
         address _account,
         address _node,
         uint256 _amount
-    ) internal override {
-        // Check that no withdrawal is pending
-        require(unbondingLocks[_account].amount == 0, "PENDING_WITHDRAWAL");
-
+    ) internal override returns (uint256 unstakeLockID) {
         uint256 amount = _amount;
+
         // Sanity check. Controller already checks user deposits and withdrawals > 0
         if (_account != controller) require(amount > 0, "ZERO_AMOUNT");
         if (amount == 0) {
@@ -99,35 +89,34 @@ contract Livepeer is Tenderizer {
         livepeer.unbond(amount);
 
         // Manage Livepeer unbonding locks
-        uint256 unbondingLockID = nextUnbondingLockID;
-        nextUnbondingLockID += 1;
-
-        unbondingLocks[_account] = unbondingLock({ id: unbondingLockID, amount: amount });
-
-        emit Unstake(_account, node_, amount);
+       unstakeLockID = ++lastUnstakeLockID;
+       unstakeLocks[unstakeLockID] = UnstakeLock({ amount: amount, account: _account });
+       
+       emit Unstake(_account, node_, amount, unstakeLockID);
     }
 
     function _withdraw(
         address _account,
-        uint256 /*_amount*/
+        uint256 _unstakeID
     ) internal override {
-        // Check that a withdrawal is pending
-        require(unbondingLocks[_account].amount > 0, "NO_PENDING_WITHDRAWAL");
+        UnstakeLock storage lock = unstakeLocks[_unstakeID];
+        address account = lock.account;
+        uint256 amount = lock.amount;
 
-        // Store values from lock
-        uint256 unbondingLockId = unbondingLocks[_account].id;
-        uint256 amount = unbondingLocks[_account].amount;
+        require(account == _account, "ACCOUNT_MISTMATCH");
+        // Check that a withdrawal is pending
+        require(amount > 0, "ZERO_AMOUNT");
 
         // Remove it from the locks
-        delete unbondingLocks[_account];
+        delete unstakeLocks[_unstakeID];
 
         // Withdraw stake, transfers steak tokens to address(this)
-        livepeer.withdrawStake(unbondingLockId);
+        livepeer.withdrawStake(_unstakeID);
 
         // Transfer amount from unbondingLock to _account
-        steak.transfer(_account, amount);
+        steak.transfer(account, amount);
 
-        emit Withdraw(_account, amount);
+        emit Withdraw(account, amount, _unstakeID);
     }
 
     function _claimRewards() internal override {

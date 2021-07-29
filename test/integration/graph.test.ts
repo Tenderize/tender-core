@@ -37,6 +37,11 @@ describe('Graph Integration Test', () => {
   let signers: SignerWithAddress[]
   let deployer: string
 
+  let withdrawAmount: BigNumber
+  let tx: ContractTransaction
+  const unbondLockID = 1
+  const govUnboundLockID = 2
+
   before('get signers', async () => {
     const namedAccs = await hre.getNamedAccounts()
     signers = await ethers.getSigners()
@@ -95,6 +100,7 @@ describe('Graph Integration Test', () => {
   const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
 
   const deposit = ethers.utils.parseEther('100')
+  const secondDeposit = ethers.utils.parseEther('10')
 
   describe('deposit', () => {
     describe('deposits funds succesfully', async () => {
@@ -319,11 +325,135 @@ describe('Graph Integration Test', () => {
   })
 
   describe('unlock', () => {
+    before('stake with another account', async () => {
+      await GraphToken.transfer(signers[2].address, secondDeposit)
+      await GraphToken.connect(signers[2]).approve(Controller.address, secondDeposit)
+      await Controller.connect(signers[2]).deposit(secondDeposit)
+    })
 
+    describe('user unlock', async () => {
+      it('reverts if user does not have enough tender token balance', async () => {
+        withdrawAmount = await TenderToken.balanceOf(deployer)
+        await expect(Controller.unlock(withdrawAmount.add(1))).to.be.revertedWith('BURN_AMOUNT_EXCEEDS_BALANCE')
+      })
+
+      it('on success - updates current pricinple', async () => {
+        const principleBefore = await Tenderizer.currentPrincipal()
+        tx = await Controller.unlock(withdrawAmount)
+        expect(await Tenderizer.currentPrincipal()).to.eq(principleBefore.sub(withdrawAmount))
+      })
+
+      it('reduces TenderToken Balance', async () => {
+        expect(await TenderToken.balanceOf(deployer)).to.eq(0)
+      })
+
+      it('TenderToken balance of other account stays the same', async () => {
+        expect(await TenderToken.balanceOf(signers[2].address)).to.eq(secondDeposit)
+      })
+
+      it('should create unstakeLock', async () => {
+        const lock = await Tenderizer.unstakeLocks(unbondLockID)
+        expect(lock.account).to.eq(deployer)
+        expect(lock.amount).to.eq(withdrawAmount)
+      })
+
+      it('should emit Unstake event from Tenderizer', async () => {
+        expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(deployer, NODE, withdrawAmount, unbondLockID)
+      })
+    })
+
+    describe('gov unlock', async () => {
+      it('reverts if undelegate() reverts', async () => {
+        GraphMock.smocked.undelegate.will.revert()
+        const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('unstake',
+          [Controller.address, ethers.utils.parseEther('0')]))
+        await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.reverted
+      })
+
+      it('undelegate() suceeds', async () => {
+        GraphMock.smocked.undelegate.will.return()
+        // TODO: Verify calculations
+        GraphMock.smocked.getDelegation.will.return.with(
+          {
+            shares: 100,
+            tokensLocked: 0,
+            tokensLockedUntil: 0
+          }
+        )
+        GraphMock.smocked.delegationPools.will.return.with({
+          tokens: 100,
+          shares: 100,
+          cooldownBlocks: 0,
+          indexingRewardCut: 0,
+          queryFeeCut: 0,
+          updatedAtBlock: 0
+        })
+        const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('unstake',
+          [Controller.address, ethers.utils.parseEther('0')]))
+        tx = await Controller.execute(Tenderizer.address, 0, txData)
+        expect(GraphMock.smocked.undelegate.calls.length).to.eq(1)
+        expect(GraphMock.smocked.undelegate.calls[0]._indexer).to.eq(NODE)
+        expect(GraphMock.smocked.undelegate.calls[0]._shares).to.eq(withdrawAmount)
+      })
+
+      it('should emit Unstake event from Tenderizer', async () => {
+        expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(Controller.address, NODE, withdrawAmount, govUnboundLockID)
+      })
+    })
   })
 
   describe('withdraw', () => {
+    describe('gov withdrawal', async () => {
+      // TODO: restructure
+      it('user withdrawal reverts if gov withdrawal pending', async () => {
+        await expect(Controller.withdraw(unbondLockID)).to.be.revertedWith('GOV_WITHDRAW_PENDING')
+      })
 
+      it('reverts if withdrawDelegated() reverts', async () => {
+        GraphMock.smocked.withdrawDelegated.will.revert()
+        const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('withdraw',
+          [Controller.address, govUnboundLockID]))
+        await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.reverted
+      })
+
+      it('withdrawDelegated() succeeds', async () => {
+        GraphMock.smocked.withdrawDelegated.will.return()
+        const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('withdraw',
+          [Controller.address, govUnboundLockID]))
+        tx = await Controller.execute(Tenderizer.address, 0, txData)
+        expect(GraphMock.smocked.withdrawDelegated.calls.length).to.eq(1)
+        expect(GraphMock.smocked.withdrawDelegated.calls[0]._indexer).to.eq(NODE)
+        expect(GraphMock.smocked.withdrawDelegated.calls[0]._newIndexer).to.eq(ethers.constants.AddressZero)
+      })
+
+      it('should emit Withdraw event from Tenderizer', async () => {
+        expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(Controller.address, withdrawAmount, govUnboundLockID)
+      })
+    })
+
+    describe('user withdrawal', async () => {
+      let grtBalanceBefore : BigNumber
+      it('reverts if account mismatch from unboondigLock', async () => {
+        await expect(Controller.connect(signers[1]).withdraw(unbondLockID))
+          .to.be.revertedWith('ACCOUNT_MISTMATCH')
+      })
+
+      it('success - increases GRT balance', async () => {
+        grtBalanceBefore = await GraphToken.balanceOf(deployer)
+        tx = await Controller.withdraw(unbondLockID)
+        expect(await GraphToken.balanceOf(deployer)).to.eq(grtBalanceBefore.add(withdrawAmount))
+      })
+
+      it('should delete unstakeLock', async () => {
+        const lock = await Tenderizer.unstakeLocks(unbondLockID)
+        expect(lock.account).to.eq(ethers.constants.AddressZero)
+        expect(lock.amount).to.eq(0)
+      })
+
+      it('should emit Withdraw event from Tenderizer', async () => {
+        expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(deployer, withdrawAmount, unbondLockID)
+      })
+    })
   })
 
   describe('upgrade', () => {

@@ -17,8 +17,12 @@ contract Graph is Tenderizer {
 
     IGraph graph;
 
-    mapping(address => uint256) pendingWithdrawals;
-    uint256 totalPendingWithdrawals;
+    // unstake lock ID of governance at the time governance unstakes
+    uint256 governancePendingUnstakeLockID;
+    // Set to governancePendingUnstakeLockID when governance withdrawal for the pending lock happens
+    uint256 governanceLastProcessedUnstakeLockID;
+    // Amount to unstake next by governance to process user withdrawals
+    uint256 pendingUnstakes;
 
     function initialize(
         IERC20 _steak,
@@ -66,16 +70,9 @@ contract Graph is Tenderizer {
         address _account,
         address _node,
         uint256 _amount
-    ) internal override {
-        // Check that no withdrawal is pending
-        require(pendingWithdrawals[_account] == 0, "PENDING_WITHDRAWAL");
+    ) internal override returns (uint256 unstakeLockID) {
         uint256 amount = _amount;
-
-        // Sanity check. Controller already checks user deposits and withdrawals > 0
-        if (_account != controller) require(amount > 0, "ZERO_AMOUNT");
-        if (amount == 0) {
-            amount = IERC20(steak).balanceOf(address(this));
-        }
+        unstakeLockID = ++lastUnstakeLockID;
 
         // if no _node is specified, stake towards the default node
         address node_ = _node;
@@ -83,38 +80,68 @@ contract Graph is Tenderizer {
             node_ = node;
         }
 
-        currentPrincipal -= _amount;
+        // Unstake from governance
+        if (_account == controller) {
+            // Check that no governance unstake is pending
+            require(governancePendingUnstakeLockID == governanceLastProcessedUnstakeLockID, "GOV_WITHDRAW_PENDING");
+            
+            amount = pendingUnstakes;
+            pendingUnstakes = 0;
+            governancePendingUnstakeLockID = unstakeLockID;
 
-        // Calculate the amount of shares to undelegate
-        IGraph.Delegation memory delegation = graph.getDelegation(node, address(this));
-        IGraph.DelegationPool memory delPool = graph.delegationPools(node);
+            // Calculate the amount of shares to undelegate
+            IGraph.Delegation memory delegation = graph.getDelegation(node, address(this));
+            IGraph.DelegationPool memory delPool = graph.delegationPools(node);
 
-        uint256 delShares = delegation.shares;
-        uint256 totalShares = delPool.shares;
-        uint256 totalTokens = delPool.tokens;
+            uint256 delShares = delegation.shares;
+            uint256 totalShares = delPool.shares;
+            uint256 totalTokens = delPool.tokens;
 
-        uint256 stake = MathUtils.percOf(delShares, totalTokens, totalShares);
-        uint256 shares = MathUtils.percOf(delShares, amount, stake);
+            uint256 stake = MathUtils.percOf(delShares, totalTokens, totalShares);
+            uint256 shares = MathUtils.percOf(delShares, amount, stake);
 
-        pendingWithdrawals[_account] = amount;
+            // undelegate shares
+            graph.undelegate(node_, shares);
+        } else {
+            require(amount > 0, "ZERO_AMOUNT");
 
-        // undelegate shares
-        graph.undelegate(node_, shares);
+            currentPrincipal -= amount;
+            pendingUnstakes += amount;
+        }
 
-        emit Unstake(_account, node_, amount);
+        unstakeLocks[unstakeLockID] = UnstakeLock({
+            amount: amount,
+            account: _account
+        });
+
+        emit Unstake(_account, node_, amount, unstakeLockID);
     }
 
     function _withdraw(
         address _account,
-        uint256 /*_amount*/
+        uint256 _unstakeLockID
     ) internal override {
-        // Check that a withdrawal is pending
-        uint256 amount = graph.withdrawDelegated(node, ZERO_ADDRESS);
+        UnstakeLock storage lock = unstakeLocks[_unstakeLockID];
+        address account = lock.account;
+        uint256 amount = lock.amount;
 
-        // Transfer amount from unbondingLock to _account
-        steak.transfer(_account, amount);
+        delete unstakeLocks[_unstakeLockID];
 
-        emit Withdraw(_account, amount);
+        // Check that a withdrawal is pending and valid
+        require(account == _account, "ACCOUNT_MISTMATCH");
+        require(amount > 0, "ZERO_AMOUNT");
+        
+        if (_account == controller) {
+            governanceLastProcessedUnstakeLockID = governancePendingUnstakeLockID;
+            graph.withdrawDelegated(node, ZERO_ADDRESS);
+        } else {
+            // Check that gov withdrawal for that unstake has occured
+            require(_unstakeLockID < governanceLastProcessedUnstakeLockID, "GOV_WITHDRAW_PENDING");
+            // Transfer amount from unbondingLock to _account
+            steak.transfer(_account, amount);
+        } 
+
+        emit Withdraw(account, amount, _unstakeLockID);
     }
 
     function _claimRewards() internal override {
