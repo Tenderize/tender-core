@@ -101,20 +101,12 @@ describe('Livepeer Integration Test', () => {
     TenderToken = (await ethers.getContractAt('TenderToken', Livepeer.TenderToken.address)) as TenderToken
     Esp = (await ethers.getContractAt('ElasticSupplyPool', Livepeer.ElasticSupplyPool.address)) as ElasticSupplyPool
     BPool = (await ethers.getContractAt('BPool', await Esp.bPool())) as BPool
-    await Controller.execute(
-      Tenderizer.address,
-      0,
-      Tenderizer.interface.encodeFunctionData('setProtocolFee', [protocolFeesPercent])
-    )
-    await Controller.execute(
-      Tenderizer.address,
-      0,
-      Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent])
-    )
-    await Controller.execute(
-      Tenderizer.address,
-      0,
-      Tenderizer.interface.encodeFunctionData('setOneInchContract', [OneInchMock.address])
+    await Controller.batchExecute(
+      [Tenderizer.address, Tenderizer.address, Tenderizer.address],
+      [0, 0, 0],
+      [Tenderizer.interface.encodeFunctionData('setProtocolFee', [protocolFeesPercent]),
+        Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent]),
+        Tenderizer.interface.encodeFunctionData('setOneInchContract', [OneInchMock.address])]
     )
   })
 
@@ -425,7 +417,7 @@ describe('Livepeer Integration Test', () => {
 
     it('reverts if wihtdraw() reverts', async () => {
       LivepeerMock.smocked.withdrawStake.will.revert()
-      await expect(Controller.withdraw(withdrawAmount)).to.be.reverted
+      await expect(Controller.withdraw(lockID)).to.be.reverted
     })
 
     it('withdraw() succeeds', async () => {
@@ -598,6 +590,18 @@ describe('Livepeer Integration Test', () => {
 
       it('should emit GovernanceUpdate event', async () => {
         expect(tx).to.emit(Tenderizer, 'GovernanceUpdate').withArgs('CONTROLLER')
+      })
+    })
+
+    describe('setting esp', async () => {
+      it('reverts if Zero address is set', async () => {
+        await expect(Controller.setEsp(ethers.constants.AddressZero)).to.be.revertedWith('ZERO_ADDRESS')
+      })
+
+      it('sets esp successfully', async () => {
+        const newEspAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
+        tx = await Controller.setEsp(newEspAddress)
+        expect(await Controller.esp()).to.equal(newEspAddress)
       })
     })
   })
