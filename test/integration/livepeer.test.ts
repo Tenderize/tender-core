@@ -321,6 +321,31 @@ describe('Livepeer Integration Test', () => {
     })
   })
 
+  describe('collect liquidity fees', () => {
+    let fees: BigNumber
+    let farmBalanceBefore: BigNumber
+    let mockTenderFarm : SignerWithAddress
+
+    before(async () => {
+      mockTenderFarm = signers[3]
+      fees = await Tenderizer.pendingLiquidityFees()
+      farmBalanceBefore = await TenderToken.balanceOf(mockTenderFarm.address)
+      tx = await Controller.collectLiquidityFees()
+    })
+
+    it('should reset pendingFees', async () => {
+      expect(await Tenderizer.pendingLiquidityFees()).to.eq(ethers.constants.Zero)
+    })
+
+    it('should increase tenderToken balance of tenderFarm', async () => {
+      expect(await TenderToken.balanceOf(mockTenderFarm.address)).to.eq(farmBalanceBefore.add(fees))
+    })
+
+    it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
+      expect(tx).to.emit(Tenderizer, 'LiquidityFeeCollected').withArgs(fees)
+    })
+  })
+
   describe('swap against ESP', () => {
     it('swaps tenderToken for Token', async () => {
       const amount = deposit.div(2)
