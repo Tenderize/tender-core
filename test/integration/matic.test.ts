@@ -146,8 +146,8 @@ describe('Matic Integration Test', () => {
   })
 
   describe('rebase', () => {
+    const increase = ethers.BigNumber.from('10000000000')
     describe('stake increased', () => {
-      const increase = ethers.BigNumber.from('10000000000')
       const newStake = deposit.add(initialStake).add(increase)
       const percDiv = ethers.utils.parseEther('1')
       let totalShares: BigNumber = ethers.utils.parseEther('1')
@@ -187,7 +187,7 @@ describe('Matic Integration Test', () => {
       })
 
       it('should emit RewardsClaimed event from Tenderizer', async () => {
-        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs(increase, newStake)
+        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs(increase, newStake, deposit.add(initialStake))
       })
     })
 
@@ -232,7 +232,7 @@ describe('Matic Integration Test', () => {
       })
 
       it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
-        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs('0', newStake)
+        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs('0', newStake, newStake.add(increase))
       })
     })
   })

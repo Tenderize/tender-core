@@ -118,17 +118,16 @@ contract Matic is Tenderizer {
         uint256 rewards;
         uint256 stake;
 
-        {
-            uint256 shares = matic.balanceOf(address(this));
-            uint256 fxRate = matic.exchangeRate();
-            if (fxRate == 0) fxRate = 1;
-            stake = MathUtils.percOf(shares, fxRate, EXCHANGE_RATE_PRECISION);
 
-            uint256 currentPrincipal_ = currentPrincipal;
+        uint256 shares = matic.balanceOf(address(this));
+        uint256 fxRate = matic.exchangeRate();
+        if (fxRate == 0) fxRate = 1;
+        stake = MathUtils.percOf(shares, fxRate, EXCHANGE_RATE_PRECISION);
 
-            if (stake >= currentPrincipal_) {
-                rewards = stake - currentPrincipal_;
-            }
+        uint256 currentPrincipal_ = currentPrincipal;
+
+        if (stake >= currentPrincipal_) {
+            rewards = stake - currentPrincipal_;
         }
 
         // Substract protocol fee amount and add it to pendingFees
@@ -139,7 +138,7 @@ contract Matic is Tenderizer {
         // Add current pending stake minus fees and set it as current principal
         currentPrincipal = stake - _pendingFees - _liquidityFees;
 
-        emit RewardsClaimed(rewards, currentPrincipal);
+        emit RewardsClaimed(rewards, currentPrincipal, currentPrincipal_);
     }
 
     function _totalStakedTokens() internal view override returns (uint256) {
