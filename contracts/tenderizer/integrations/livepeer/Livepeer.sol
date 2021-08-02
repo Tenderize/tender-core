@@ -132,12 +132,8 @@ contract Livepeer is Tenderizer {
         address del = address(this);
         uint256 stake = livepeer.pendingStake(del, MAX_ROUND);
         uint256 ethFees = livepeer.pendingFees(del, MAX_ROUND);
-        uint256 currentPrincipal_ = currentPrincipal;
 
-        uint256 rewards;
-        if (stake >= currentPrincipal_) {
-            rewards = stake - currentPrincipal_;
-        }
+        int256 rewards = int256(stake) - int256(currentPrincipal);
 
         // withdraw fees
         if (ethFees >= ethFees_threshold) {
@@ -153,21 +149,25 @@ contract Livepeer is Tenderizer {
                     1,
                     0
                 );
-                uint256 swappedLPT = oneInch.swap(IERC20(address(0)), steak, swapAmount, returnAmount, distribution, 0);
-                // Add swapped LPT to rewards
-                rewards += swappedLPT;
+                oneInch.swap(IERC20(address(0)), steak, swapAmount, returnAmount, distribution, 0);
             }
         }
 
         // Substract protocol fee amount and add it to pendingFees
-        uint256 _pendingFees = pendingFees + MathUtils.percOf(rewards, protocolFee);
-        pendingFees = _pendingFees;
-        uint256 _liquidityFees = pendingLiquidityFees + MathUtils.percOf(rewards, liquidityFee);
-        pendingLiquidityFees = _liquidityFees;
-        // Add current pending stake minus fees and set it as current principal
-        currentPrincipal = stake - _pendingFees - _liquidityFees;
+        uint256 _rewards = uint256(rewards);
+        if(rewards > 0) {
+            uint256 _pendingFees = MathUtils.percOf(_rewards, protocolFee);
+            pendingFees += _pendingFees;
+            uint256 _liquidityFees = MathUtils.percOf(_rewards, liquidityFee);
+            pendingLiquidityFees += _liquidityFees;
+            // Add current pending stake minus fees and set it as current principal
+            currentPrincipal += _rewards - _pendingFees - _liquidityFees;
+        } else {
+            _rewards = 0;
+            currentPrincipal -= uint256(-rewards);
+        }
 
-        emit RewardsClaimed(rewards, currentPrincipal);
+        emit RewardsClaimed(_rewards, currentPrincipal);
     }
 
     function _totalStakedTokens() internal view override returns (uint256) {
