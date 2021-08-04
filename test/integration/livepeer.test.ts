@@ -171,14 +171,14 @@ describe('Livepeer Integration Test', () => {
 
     it('uses specified node if passed, not default', async () => {
       const newNodeAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
-      const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('stake', [newNodeAddress, ethers.utils.parseEther('0')]))
+      const txData = Tenderizer.interface.encodeFunctionData('stake', [newNodeAddress, ethers.utils.parseEther('0')])
       await Controller.execute(Tenderizer.address, 0, txData)
       expect(LivepeerMock.smocked.bond.calls[0]._to).to.eq(newNodeAddress)
     })
 
     it('uses specified amount if passed, not contract token balance', async () => {
       const amount = ethers.utils.parseEther('0.1')
-      const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('stake', [ethers.constants.AddressZero, amount]))
+      const txData = Tenderizer.interface.encodeFunctionData('stake', [ethers.constants.AddressZero, amount])
       await Controller.execute(Tenderizer.address, 0, txData)
       expect(LivepeerMock.smocked.bond.calls[0]._amount).to.eq(amount)
     })
@@ -391,13 +391,13 @@ describe('Livepeer Integration Test', () => {
     })
 
     it('Gov unbond() reverts if no pending stake', async () => {
-      const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('unstake', [Controller.address, ethers.utils.parseEther('0')]))
+      const txData = Tenderizer.interface.encodeFunctionData('unstake', [Controller.address, ethers.utils.parseEther('0')])
       LivepeerMock.smocked.pendingStake.will.return.with(ethers.constants.Zero)
       await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_STAKE')
     })
 
     it('Gov unbond() succeeds', async () => {
-      const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('unstake', [Controller.address, ethers.utils.parseEther('0')]))
+      const txData = Tenderizer.interface.encodeFunctionData('unstake', [Controller.address, ethers.utils.parseEther('0')])
       LivepeerMock.smocked.pendingStake.will.return.with(withdrawAmount)
       await Controller.execute(Tenderizer.address, 0, txData)
       expect(LivepeerMock.smocked.unbond.calls.length).to.eq(1)
@@ -502,7 +502,8 @@ describe('Livepeer Integration Test', () => {
     describe('setting staking contract', () => {
       it('sets staking contract', async () => {
         const newStakingContract = await smockit(LivepeerNoMock)
-        tx = await Controller.updateStakingContract(newStakingContract.address)
+        const txData = Tenderizer.interface.encodeFunctionData('setStakingContract', [newStakingContract.address])
+        tx = await Controller.execute(Tenderizer.address, 0, txData)
 
         // assert that bond() call is made to new staking contract on gulp()
         await Controller.gulp()
@@ -518,7 +519,7 @@ describe('Livepeer Integration Test', () => {
     // TODO: Split into common file since these will be the same on all integrations?
     describe('setting node', async () => {
       it('reverts if Zero address is set', async () => {
-        const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('setNode', [ethers.constants.AddressZero]))
+        const txData = Tenderizer.interface.encodeFunctionData('setNode', [ethers.constants.AddressZero])
         await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_ADDRESS')
       })
 
@@ -528,7 +529,7 @@ describe('Livepeer Integration Test', () => {
 
       it('sets node successfully', async () => {
         const newNodeAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
-        const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('setNode', [newNodeAddress]))
+        const txData = Tenderizer.interface.encodeFunctionData('setNode', [newNodeAddress])
         tx = await Controller.execute(Tenderizer.address, 0, txData)
         expect(await Tenderizer.node()).to.equal(newNodeAddress)
       })
@@ -540,13 +541,13 @@ describe('Livepeer Integration Test', () => {
 
     describe('setting steak', async () => {
       it('reverts if Zero address is set', async () => {
-        const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('setSteak', [ethers.constants.AddressZero]))
+        const txData = Tenderizer.interface.encodeFunctionData('setSteak', [ethers.constants.AddressZero])
         await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_ADDRESS')
       })
 
       it('sets steak successfully', async () => {
         const newSteakAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
-        const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('setSteak', [newSteakAddress]))
+        const txData = Tenderizer.interface.encodeFunctionData('setSteak', [newSteakAddress])
         tx = await Controller.execute(Tenderizer.address, 0, txData)
         expect(await Tenderizer.steak()).to.equal(newSteakAddress)
       })
@@ -559,7 +560,7 @@ describe('Livepeer Integration Test', () => {
     describe('setting protocol fee', async () => {
       it('sets protocol fee', async () => {
         const newFee = ethers.utils.parseEther('0.05') // 5%
-        const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('setProtocolFee', [newFee]))
+        const txData = Tenderizer.interface.encodeFunctionData('setProtocolFee', [newFee])
         tx = await Controller.execute(Tenderizer.address, 0, txData)
         expect(await Tenderizer.protocolFee()).to.equal(newFee)
       })
@@ -572,7 +573,7 @@ describe('Livepeer Integration Test', () => {
     describe('setting liquidity fee', async () => {
       it('sets liquidity fee', async () => {
         const newFee = ethers.utils.parseEther('0.05') // 5%
-        const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('setLiquidityFee', [newFee]))
+        const txData = Tenderizer.interface.encodeFunctionData('setLiquidityFee', [newFee])
         tx = await Controller.execute(Tenderizer.address, 0, txData)
         expect(await Tenderizer.liquidityFee()).to.equal(newFee)
       })
@@ -584,13 +585,13 @@ describe('Livepeer Integration Test', () => {
 
     describe('setting controller', async () => {
       it('reverts if Zero address is set', async () => {
-        const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('setController', [ethers.constants.AddressZero]))
+        const txData = Tenderizer.interface.encodeFunctionData('setController', [ethers.constants.AddressZero])
         await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_ADDRESS')
       })
 
       it('sets controller successfully', async () => {
         const newControllerAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
-        const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('setController', [newControllerAddress]))
+        const txData = Tenderizer.interface.encodeFunctionData('setController', [newControllerAddress])
         tx = await Controller.execute(Tenderizer.address, 0, txData)
         expect(await Tenderizer.controller()).to.equal(newControllerAddress)
       })
