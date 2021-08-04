@@ -6,7 +6,7 @@ import {
   SimpleToken, Controller, Tenderizer, ElasticSupplyPool, TenderToken, IGraph, BPool, EIP173Proxy
 } from '../../typechain/'
 
-import { sharesToTokens } from '../util/helpers'
+import { sharesToTokens, percOf2 } from '../util/helpers'
 
 import chai from 'chai'
 import {
@@ -41,6 +41,11 @@ describe('Graph Integration Test', () => {
   let tx: ContractTransaction
   const unbondLockID = 1
   const govUnboundLockID = 2
+
+  const protocolFeesPercent = ethers.utils.parseEther('0.025')
+  const liquidityFeesPercent = ethers.utils.parseEther('0.025')
+
+  const acceptableDelta = 2
 
   before('get signers', async () => {
     const namedAccs = await hre.getNamedAccounts()
@@ -88,12 +93,12 @@ describe('Graph Integration Test', () => {
     await Controller.execute(
       Tenderizer.address,
       0,
-      Tenderizer.interface.encodeFunctionData('setProtocolFee', [0])
+      Tenderizer.interface.encodeFunctionData('setProtocolFee', [protocolFeesPercent])
     )
     await Controller.execute(
       Tenderizer.address,
       0,
-      Tenderizer.interface.encodeFunctionData('setLiquidityFee', [0])
+      Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent])
     )
   })
 
@@ -150,9 +155,12 @@ describe('Graph Integration Test', () => {
   })
 
   describe('rebase', () => {
-    const increase = ethers.BigNumber.from('10000000000')
     describe('stake increased', () => {
+      const increase = ethers.BigNumber.from('10000000000')
+      const liquidityFees = percOf2(increase, liquidityFeesPercent)
+      const protocolFees = percOf2(increase, protocolFeesPercent)
       const newStake = deposit.add(initialStake).add(increase)
+      const newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
       const percDiv = ethers.utils.parseEther('1')
       let totalShares: BigNumber = ethers.utils.parseEther('1')
       let tx: ContractTransaction
@@ -178,12 +186,13 @@ describe('Graph Integration Test', () => {
       })
 
       it('updates currentPrincipal', async () => {
-        expect(await Tenderizer.currentPrincipal()).to.eq(newStake)
+        expect(await Tenderizer.currentPrincipal()).to.eq(newStakeMinusFees)
       })
 
       it('increases tendertoken balances when rewards are added', async () => {
         // account 0
         const shares = await TenderToken.sharesOf(deployer)
+        totalShares = await TenderToken.getTotalShares()
         expect(await TenderToken.balanceOf(deployer)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
       })
 
@@ -204,7 +213,7 @@ describe('Graph Integration Test', () => {
       })
 
       it('should emit RewardsClaimed event from Tenderizer', async () => {
-        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs(increase, newStake, deposit.add(initialStake))
+        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs(increase, newStakeMinusFees, deposit.add(initialStake))
       })
     })
 
@@ -212,12 +221,15 @@ describe('Graph Integration Test', () => {
       // The decrease will offset the increase from the previous test
       const newStake = deposit.add(initialStake)
       const percDiv = ethers.utils.parseEther('1')
+      let totalShares: BigNumber
+      let oldPrinciple: BigNumber
 
       let feesBefore: BigNumber = ethers.constants.Zero
       let tx: ContractTransaction
 
       before(async () => {
         feesBefore = await Tenderizer.pendingFees()
+        oldPrinciple = await Tenderizer.currentPrincipal()
         GraphMock.smocked.getDelegation.will.return.with(
           {
             shares: 100,
@@ -240,9 +252,11 @@ describe('Graph Integration Test', () => {
         expect(await Tenderizer.currentPrincipal()).to.eq(newStake)
       })
 
-      it('decreases tendertoken balances when rewards are added', async () => {
+      it('decreases tendertoken balances when slashed', async () => {
         // account 0
-        expect(await TenderToken.balanceOf(deployer)).to.eq(deposit)
+        const shares = await TenderToken.sharesOf(deployer)
+        totalShares = await TenderToken.getTotalShares()
+        expect(await TenderToken.balanceOf(deployer)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
       })
 
       it("doesn't increase pending fees", async () => {
@@ -250,7 +264,8 @@ describe('Graph Integration Test', () => {
       })
 
       it('decreases the tenderToken balance of the AMM', async () => {
-        expect(await TenderToken.balanceOf(BPool.address)).to.eq(initialStake)
+        const shares = await TenderToken.sharesOf(BPool.address)
+        expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
       })
 
       it('changes the weights of the AMM', async () => {
@@ -262,7 +277,7 @@ describe('Graph Integration Test', () => {
       })
 
       it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
-        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs('0', newStake, newStake.add(increase))
+        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs('0', newStake, oldPrinciple)
       })
     })
   })
@@ -334,7 +349,7 @@ describe('Graph Integration Test', () => {
     describe('user unlock', async () => {
       it('reverts if user does not have enough tender token balance', async () => {
         withdrawAmount = await TenderToken.balanceOf(deployer)
-        await expect(Controller.unlock(withdrawAmount.add(1))).to.be.revertedWith('BURN_AMOUNT_EXCEEDS_BALANCE')
+        await expect(Controller.unlock(withdrawAmount.add(ethers.utils.parseEther('1')))).to.be.revertedWith('BURN_AMOUNT_EXCEEDS_BALANCE')
       })
 
       it('on success - updates current pricinple', async () => {
@@ -344,17 +359,19 @@ describe('Graph Integration Test', () => {
       })
 
       it('reduces TenderToken Balance', async () => {
-        expect(await TenderToken.balanceOf(deployer)).to.eq(0)
+        // lte to account for any roundoff error in tokenToShare calcualtion during burn
+        expect(await TenderToken.balanceOf(deployer)).to.lte(acceptableDelta)
       })
 
       it('TenderToken balance of other account stays the same', async () => {
-        expect(await TenderToken.balanceOf(signers[2].address)).to.eq(secondDeposit)
+        const otherAccBal = await TenderToken.balanceOf(signers[2].address)
+        expect(otherAccBal.sub(secondDeposit).abs()).to.lte(acceptableDelta)
       })
 
       it('should create unstakeLock', async () => {
         const lock = await Tenderizer.unstakeLocks(unbondLockID)
         expect(lock.account).to.eq(deployer)
-        expect(lock.amount).to.eq(withdrawAmount)
+        expect(lock.amount.sub(withdrawAmount).abs()).to.lte(acceptableDelta)
       })
 
       it('should emit Unstake event from Tenderizer', async () => {
