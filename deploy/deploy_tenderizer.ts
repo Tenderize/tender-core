@@ -80,8 +80,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   }
 
   const poolParams = {
-    poolTokenSymbol: `BAL-REBASING-SMART-V1-t${SYMBOL}-${SYMBOL}`,
-    poolTokenName: `Balancer Rebasing Smart Pool Token V1 (t${SYMBOL}-${SYMBOL})`,
+    poolTokenSymbol: `t${SYMBOL}-${SYMBOL}-POOL`,
+    poolTokenName: `${SYMBOL}-${SYMBOL} Pool Token V1`,
     constituentTokens: [
       tenderToken.address,
       process.env.TOKEN
