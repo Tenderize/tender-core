@@ -177,9 +177,10 @@ contract Graph is Tenderizer {
         uint256 _liquidityFees = pendingLiquidityFees + MathUtils.percOf(rewards, liquidityFee);
         pendingLiquidityFees = _liquidityFees;
         // Add current pending stake minus fees and set it as current principal
-        currentPrincipal = stake - _pendingFees - _liquidityFees;
+        uint256 newPrincipal = stake - _pendingFees - _liquidityFees;
+        currentPrincipal = newPrincipal;
 
-        emit RewardsClaimed(rewards, currentPrincipal, currentPrincipal_);
+        emit RewardsClaimed(rewards, newPrincipal, currentPrincipal_);
     }
 
     function _totalStakedTokens() internal view override returns (uint256) {
