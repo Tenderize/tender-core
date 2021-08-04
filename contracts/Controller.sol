@@ -7,6 +7,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "./token/ITenderToken.sol";
 import "./tenderizer/ITenderizer.sol";
@@ -17,7 +18,7 @@ import "./liquidity/ITenderFarm.sol";
  * @title Controller contract for a Tenderizer
  */
 
-contract Controller is Ownable {
+contract Controller is Ownable, ReentrancyGuard {
     IERC20 public steak;
     ITenderizer public tenderizer;
     ITenderToken public tenderToken;
@@ -52,7 +53,7 @@ contract Controller is Ownable {
         require(steak.transferFrom(msg.sender, address(tenderizer), _amount), "STEAK_TRANSFERFROM_FAILED");
     }
 
-    function unlock(uint256 _amount) public returns (uint256 unstakeLockID) {
+    function unlock(uint256 _amount) public nonReentrant returns (uint256 unstakeLockID) {
         require(_amount > 0, "ZERO_AMOUNT");
         // Burn tenderTokens
         require(tenderToken.burn(msg.sender, _amount), "TENDER_BURN_FAILED");
@@ -64,14 +65,14 @@ contract Controller is Ownable {
         _updateTotalPooledTokens();
     }
 
-    function withdraw(uint256 _unstakeLockID) public {
+    function withdraw(uint256 _unstakeLockID) public nonReentrant {
         require(_unstakeLockID > 0, "ZERO_AMOUNT");
         // Execute pending withdrawal
         // Reverts if unthawing period hasn't ended
         tenderizer.withdraw(msg.sender, _unstakeLockID);
     }
 
-    function rebase() public onlyOwner {
+    function rebase() public nonReentrant {
         // stake tokens
         gulp();
 
