@@ -161,16 +161,6 @@ contract Controller is Ownable, ReentrancyGuard {
     function migrateToNewTenderizer(ITenderizer _tenderizer) public onlyOwner {}
 
     /**
-     * @notice Set staking contract
-     * @param _stakingContract staking contract address
-     * @dev only callable by owner(gov)
-     */
-    // TODO: Remove this now that we have execute()?
-    function updateStakingContract(address _stakingContract) public onlyOwner { 
-        tenderizer.setStakingContract(_stakingContract);
-    }
-
-    /**
      * @notice Set TenderFarm contract
      * @param _tenderFarm TenderFarm contract address
      * @dev only callable by owner(gov)
