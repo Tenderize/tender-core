@@ -140,6 +140,7 @@ contract Livepeer is Tenderizer {
         }
 
         // withdraw fees
+        uint256  swappedLPT;
         if (ethFees >= ethFees_threshold) {
             livepeer.withdrawFees();
 
@@ -150,10 +151,10 @@ contract Livepeer is Tenderizer {
                     IERC20(address(0)),
                     steak,
                     swapAmount,
-                    1,
+                    20,
                     0
                 );
-                uint256 swappedLPT = oneInch.swap(IERC20(address(0)), steak, swapAmount, returnAmount, distribution, 0);
+                swappedLPT = oneInch.swap(IERC20(address(0)), steak, swapAmount, returnAmount, distribution, 0);
                 // Add swapped LPT to rewards
                 rewards += swappedLPT;
             }
@@ -165,7 +166,7 @@ contract Livepeer is Tenderizer {
         uint256 _liquidityFees = pendingLiquidityFees + MathUtils.percOf(rewards, liquidityFee);
         pendingLiquidityFees = _liquidityFees;
         // Add current pending stake minus fees and set it as current principal
-        uint256 newPrincipal = stake - _pendingFees - _liquidityFees;
+        uint256 newPrincipal = stake + swappedLPT - _pendingFees - _liquidityFees;
         currentPrincipal =  newPrincipal;
 
         emit RewardsClaimed(rewards, newPrincipal, currentPrincipal_);

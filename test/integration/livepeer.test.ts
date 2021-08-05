@@ -205,16 +205,18 @@ describe('Livepeer Integration Test', () => {
   describe('rebase', () => {
     describe('stake increased', () => {
       const increase = ethers.BigNumber.from('10000000000')
-      const liquidityFees = percOf2(increase, liquidityFeesPercent)
-      const protocolFees = percOf2(increase, protocolFeesPercent)
+      const swappedLPTRewards = ethers.BigNumber.from('100000000')
+      const liquidityFees = percOf2(increase.add(swappedLPTRewards), liquidityFeesPercent)
+      const protocolFees = percOf2(increase.add(swappedLPTRewards), protocolFeesPercent)
       const newStake = deposit.add(initialStake).add(increase)
-      const newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
+      const newStakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
       const percDiv = ethers.utils.parseEther('1')
       let totalShares: BigNumber = ethers.utils.parseEther('1')
 
       before(async () => {
         LivepeerMock.smocked.pendingStake.will.return.with(newStake)
         LivepeerMock.smocked.pendingFees.will.return.with(ethers.utils.parseEther('0.1'))
+        OneInchMock.smocked.swap.will.return.with(swappedLPTRewards)
         tx = await Controller.rebase()
       })
 
@@ -252,7 +254,8 @@ describe('Livepeer Integration Test', () => {
       })
 
       it('should emit RewardsClaimed event from Tenderizer', async () => {
-        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs(increase, newStakeMinusFees, deposit.add(initialStake))
+        expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
+          .withArgs(increase.add(swappedLPTRewards), newStakeMinusFees, deposit.add(initialStake))
       })
     })
 
