@@ -69,6 +69,7 @@ describe('TenderToken', () => {
     describe('Test initial state with zero supply', async () => {
       it('initial total supply is correct', async () => {
         expect(await tenderToken.totalSupply()).to.eq(ethers.utils.parseEther('0'))
+        expect(await tenderToken.getTotalPooledTokens()).to.eq(ethers.utils.parseEther('0'))
       })
 
       it('initial balances are correct', async () => {
@@ -155,6 +156,7 @@ describe('TenderToken', () => {
 
       it('total supply is correct', async () => {
         expect(await tenderToken.totalSupply()).to.eq(initialAmount)
+        expect(await tenderToken.getTotalPooledTokens()).to.eq(initialAmount)
       })
 
       it('balances are correct', async () => {
