@@ -225,7 +225,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
     // Add seed funds
     const Token: ERC20 = (await ethers.getContractAt('ERC20', tokenAddress)) as ERC20
-    Token.transfer(Faucet.address, ethers.utils.parseEther(seedAmount))
+    await Token.transfer(Faucet.address, ethers.utils.parseEther(seedAmount))
   }
 }
 

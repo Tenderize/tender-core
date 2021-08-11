@@ -222,7 +222,7 @@ describe('TenderToken', () => {
           expect(await tenderToken.allowance(account1, account0)).to.eq(transferAmount)
         })
 
-        describe('when the spender had no approved amount before', () => {
+        it('when the spender had no approved amount before', () => {
           it('approve requested amount works and emits event', async () => {
             const transferAmount = ethers.utils.parseEther('20')
 
@@ -237,7 +237,7 @@ describe('TenderToken', () => {
             expect(await tenderToken.allowance(account0, account2)).to.eq(transferAmount)
           })
 
-          describe('when the spender had an approved amount', () => {
+          it('when the spender had an approved amount', () => {
             it('replace old allowance and emit event', async () => {
               const transferAmount = ethers.utils.parseEther('50')
 
@@ -290,7 +290,7 @@ describe('TenderToken', () => {
         })
       })
 
-      describe('increase allowance', async () => {
+      describe('increase allowance', () => {
         const transferAmount = ethers.utils.parseEther('50')
 
         it('reverts when spender is zero address', async () => {
@@ -308,7 +308,7 @@ describe('TenderToken', () => {
           expect(await tenderToken.allowance(account2, account1)).to.eq(transferAmount)
         })
 
-        describe('when the spender had no approved amount before', () => {
+        it('when the spender had no approved amount before', () => {
           it('increaseAllowance with requested amount works and emits event', async () => {
             await expect(tenderToken.connect(signers[1]).increaseAllowance(account2, ethers.constants.Zero))
               .to.emit(tenderToken, 'Approval')
@@ -318,12 +318,9 @@ describe('TenderToken', () => {
           })
         })
 
-        describe('when the spender had an approved amount', () => {
-          beforeEach(async () => {
-            await tenderToken.approve(account1, transferAmount)
-          })
-
+        it('when the spender had an approved amount', () => {
           it('increaseAllowance with requested amount adds it to allowance and emits event', async () => {
+            await tenderToken.approve(account1, transferAmount)
             const totalAmount = transferAmount.mul(ethers.constants.Two)
             await expect(tenderToken.increaseAllowance(account1, transferAmount))
               .to.emit(tenderToken, 'Approval')
@@ -334,7 +331,7 @@ describe('TenderToken', () => {
         })
       })
 
-      describe('decrease allowance', async () => {
+      describe('decrease allowance', () => {
         const transferAmount = ethers.utils.parseEther('50')
 
         beforeEach(async () => {
