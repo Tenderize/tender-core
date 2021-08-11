@@ -14,7 +14,7 @@ import "solidity-coverage"
 import { HardhatUserConfig } from "hardhat/types"
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY || '182f9c4b5181c9bbf54cb7c142e13157353b62e4be815632a846ba351f3f78b0'
-const INFURA_KEY = process.env.INFURA_KEY || '42a353682886462f9f7b6b602f577a53'
+const INFURA_KEY = process.env.INFURA_KEY || '435466a7f0414c32a3bf15f940d31da4'
 
 const config: HardhatUserConfig = {
   solidity: {
