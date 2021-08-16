@@ -4,3 +4,6 @@ cache
 typechain
 coverage
 coverage.json
+deployments/localhost
+deployments/hardhat
+deployments/development

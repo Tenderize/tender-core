@@ -13,6 +13,8 @@ import "solidity-coverage"
 
 import { HardhatUserConfig } from "hardhat/types"
 
+import dotenv from 'dotenv'
+dotenv.config()
 const PRIVATE_KEY = process.env.PRIVATE_KEY || '182f9c4b5181c9bbf54cb7c142e13157353b62e4be815632a846ba351f3f78b0'
 const INFURA_KEY = process.env.INFURA_KEY || '435466a7f0414c32a3bf15f940d31da4'
 

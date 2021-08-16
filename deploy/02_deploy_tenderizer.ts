@@ -10,6 +10,9 @@ import {
 import { BigNumber } from '@ethersproject/bignumber'
 import { constants, utils } from 'ethers'
 
+import dotenv from 'dotenv'
+
+dotenv.config({ path: './deploy/.env' })
 const NAME = process.env.NAME || ''
 const SYMBOL = process.env.SYMBOL || ''
 
@@ -21,29 +24,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   const { deployments, getNamedAccounts } = hre // Get the deployments and getNamedAccounts which are provided by hardhat-deploy
   const { deploy } = deployments // the deployments field itself contains the deploy function
 
-  const { deployer } = await getNamedAccounts() // Fetch named accounts from hardhat.config.ts
-
-  console.log('Deploying BalancerSafeMath')
-  const BalancerSafeMath = await deploy('BalancerSafeMath', {
-    from: deployer, // msg.sender overwrite, use named account
-    args: [], // constructor arguments
-    log: true // display the address and gas used in the console (not when run in test though)
-  })
-
-  const RightsManager = await deploy('RightsManager', {
-    from: deployer,
-    log: true
-  })
-
-  const SmartPoolManager = await deploy('SmartPoolManager', {
-    from: deployer,
-    log: true
-  })
-
-  const BFactory = await deploy('BFactory', {
-    from: deployer,
-    log: true
-  })
+  const { deployer } = await getNamedAccounts() // Fetch named accounts from hardhat.process.env.ts
 
   const steakAmount = process.env.STEAK_AMOUNT || '0'
 
@@ -53,16 +34,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   const tenderizer = await deploy(NAME, {
     from: deployer,
-    args: [process.env.TOKEN, process.env.CONTRACT, process.env.NODE],
+    args: [process.env.TOKEN, process.env.CONTRACT, process.env.VALIDATOR],
     log: true, // display the address and gas used in the console (not when run in test though),
     proxy: {
       owner: deployer,
       methodName: 'initialize'
     }
   })
-
-  // const tenderizerContr = (await ethers.getContractAt(NAME, tenderizer.address)) as Tenderizer
-  // await tenderizerContr.initialise(process.env.TOKEN, process.env.CONTRACT, process.env.NODE)
 
   const tenderToken = await deploy('TenderToken', {
     from: deployer,
@@ -91,12 +69,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     swapFee: '3000000000000000'
   }
 
+  const BFactory = await deployments.get('BFactory')
+
   const esp = await deploy('ElasticSupplyPool', {
     from: deployer,
     libraries: {
-      BalancerSafeMath: BalancerSafeMath.address,
-      RightsManager: RightsManager.address,
-      SmartPoolManager: SmartPoolManager.address
+      BalancerSafeMath: (await deployments.get('BalancerSafeMath')).address,
+      RightsManager: (await deployments.get('RightsManager')).address,
+      SmartPoolManager: (await deployments.get('SmartPoolManager')).address
     },
     log: true, // display the address and gas used in the console (not when run in test though)
     args: [BFactory.address, poolParams, permissions]
@@ -229,6 +209,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   }
 }
 
-func.dependencies = ['Registry']
+func.dependencies = ['Registry', 'Libraries']
 func.tags = [NAME, 'Deploy'] // this setup a tag so you can execute the script on its own (and its dependencies)
 export default func

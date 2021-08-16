@@ -82,9 +82,11 @@ describe('Graph Integration Test', () => {
     process.env.SYMBOL = 'GRT'
     process.env.CONTRACT = GraphMock.address
     process.env.TOKEN = GraphToken.address
-    process.env.NODE = NODE
+    process.env.VALIDATOR = NODE
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
-    Graph = await hre.deployments.fixture(['Graph'])
+    Graph = await hre.deployments.fixture(['Graph'], {
+      keepExistingDeployments: false
+    })
     Controller = (await ethers.getContractAt('Controller', Graph.Controller.address)) as Controller
     Tenderizer = (await ethers.getContractAt('Tenderizer', Graph.Graph.address)) as Tenderizer
     TenderToken = (await ethers.getContractAt('TenderToken', Graph.TenderToken.address)) as TenderToken
