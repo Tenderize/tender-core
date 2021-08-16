@@ -69,11 +69,13 @@ describe('Matic Integration Test', () => {
   before('deploy Matic Tenderizer', async () => {
     process.env.NAME = 'Matic'
     process.env.SYMBOL = 'MATIC'
-    process.env.NODE = MaticMock.address
+    process.env.VALIDATOR = MaticMock.address
     process.env.TOKEN = MaticToken.address
     process.env.CONTRACT = '0x0000000000000000000000000000000000000101' // dummy
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
-    Matic = await hre.deployments.fixture(['Matic'])
+    Matic = await hre.deployments.fixture(['Matic'], {
+      keepExistingDeployments: false
+    })
     Controller = (await ethers.getContractAt('Controller', Matic.Controller.address)) as Controller
     Tenderizer = (await ethers.getContractAt('Tenderizer', Matic.Matic.address)) as Tenderizer
     TenderToken = (await ethers.getContractAt('TenderToken', Matic.TenderToken.address)) as TenderToken
