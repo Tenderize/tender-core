@@ -1,4 +1,7 @@
-pragma solidity ^0.8.0;
+// // SPDX-FileCopyrightText: 2020 Tenderize <info@tenderize.me>
+
+// // SPDX-License-Identifier: GPL-3.0
+pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 

@@ -3,7 +3,7 @@
 // // SPDX-License-Identifier: GPL-3.0
 
 // /* See contracts/COMPILERS.md */
-pragma solidity ^0.8.0;
+pragma solidity 0.8.4;
 
 interface ILivepeer {
     function bond(uint256 _amount, address _to) external;

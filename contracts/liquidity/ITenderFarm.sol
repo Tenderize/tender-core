@@ -3,7 +3,7 @@
 // // SPDX-License-Identifier: GPL-3.0
 
 // /* See contracts/COMPILERS.md */
-pragma solidity ^0.8.0;
+pragma solidity 0.8.4;
 
 interface ITenderFarm {
     function farm(uint256 _amount) external;
