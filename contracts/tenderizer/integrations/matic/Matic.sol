@@ -13,16 +13,14 @@ import "./IMatic.sol";
 
 contract Matic is Tenderizer {
     // Matic exchange rate precision
-    uint256 constant EXCHANGE_RATE_PRECISION = 100;
+    uint256 constant EXCHANGE_RATE_PRECISION = 100; // For Validator ID < 8
+    uint256 constant EXCHANGE_RATE_PRECISION_HIGH = 10**29; // For Validator ID >= 8
 
     // Matic stakeManager address
     address maticStakeManager;
 
     // Matic ValidatorShare
     IMatic matic;
-
-    mapping(address => uint256) pendingWithdrawals;
-    uint256 totalPendingWithdrawals;
 
     function initialize(
         IERC20 _steak,
@@ -38,6 +36,8 @@ contract Matic is Tenderizer {
         require(_node != address(0), "ZERO_ADDRESS");
         node = _node;
         matic = IMatic(_node);
+
+        emit GovernanceUpdate("NODE");
     }
 
     function _deposit(address _from, uint256 _amount) internal override {
@@ -68,9 +68,7 @@ contract Matic is Tenderizer {
         steak.approve(maticStakeManager, amount);
 
         // stake tokens
-        uint256 fxRate = matic.exchangeRate();
-        if (fxRate == 0) fxRate = 1;
-        uint256 min = MathUtils.percOf(amount, EXCHANGE_RATE_PRECISION, fxRate);
+        uint256 min = (amount * _getExchangeRatePrecision(matic_) / _getExchangeRate(matic_)) - 1;
         matic_.buyVoucher(amount, min);
 
         emit Stake(address(matic_), amount);
@@ -81,32 +79,60 @@ contract Matic is Tenderizer {
         address _node,
         uint256 _amount
     ) internal override returns (uint256 unstakeLockID) {
-        //  // Check that no withdrawal is pending
-        // require(pendingWithdrawals[_account] == 0, "PENDING_WITHDRAWAL");
-        // uint256 amount = _amount;
-        // // Sanity check. Controller already checks user deposits and withdrawals > 0
-        // if (_account != owner()) require(amount > 0, "ZERO_AMOUNT");
-        // if (amount == 0) {
-        //     amount = IERC20(steak).balanceOf(address(this));
-        // }
-        // // if no _node is specified, stake towards the default node
-        // IMatic node_ = IMatic(_node);
-        // if (_node == address(0)) {
-        //     node_ = IMatic(node);
-        // }
-        // currentPrincipal = currentPrincipal - _amount;
-        // // undelegate shares
-        // node_.sellVoucher(0);
+        uint256 amount = _amount;
+
+        // use default validator share contract if _node isn't specified
+        IMatic matic_ = matic;
+        if (_node != address(0)) {
+            matic_ = IMatic(_node);
+        }
+
+        uint256 exhangeRatePrecision = _getExchangeRatePrecision(matic_);
+        uint256 fxRate = _getExchangeRate(matic_);
+
+        // Sanity check. Controller already checks user deposits and withdrawals > 0
+        if (_account != controller) require(amount > 0, "ZERO_AMOUNT");
+        if (amount == 0) {
+            uint256 shares = matic.balanceOf(address(this));
+            amount = shares * fxRate / exhangeRatePrecision;
+            require(amount > 0, "ZERO_STAKE");
+        }
+
+        currentPrincipal -= amount;
+
+        // Unbond tokens
+        uint256 max = (amount * exhangeRatePrecision / fxRate) + 1;
+        matic_.sellVoucher_new(amount, max);
+
+        // Manage Livepeer unbonding locks
+       unstakeLockID = ++lastUnstakeLockID;
+       unstakeLocks[unstakeLockID] = UnstakeLock({ amount: amount, account: _account });
+       
+       emit Unstake(_account, address(matic_), amount, unstakeLockID);
     }
 
     function _withdraw(
         address _account,
-        uint256 _unstakeLockID
+        uint256 _unstakeID
     ) internal override {
-        // // Check that a withdrawal is pending
-        // uint256 amount = graph.withdrawDelegated(node, ZERO_ADDRESS);
-        // // Transfer amount from unbondingLock to _account
-        // steak.transfer(_account, amount);
+        UnstakeLock storage lock = unstakeLocks[_unstakeID];
+        address account = lock.account;
+        uint256 amount = lock.amount;
+
+        require(account == _account, "ACCOUNT_MISTMATCH");
+        // Check that a withdrawal is pending
+        require(amount > 0, "ZERO_AMOUNT");
+
+        // Remove it from the locks
+        delete unstakeLocks[_unstakeID];
+
+        // Withdraw stake, transfers steak tokens to address(this)
+        matic.unstakeClaimTokens_new(_unstakeID);
+
+        // Transfer amount from unbondingLock to _account
+        steak.transfer(account, amount);
+
+        emit Withdraw(account, amount, _unstakeID);
     }
 
     function _claimRewards() internal override {
@@ -120,16 +146,13 @@ contract Matic is Tenderizer {
 
 
         uint256 shares = matic.balanceOf(address(this));
-        uint256 fxRate = matic.exchangeRate();
-        if (fxRate == 0) fxRate = 1;
-        stake = MathUtils.percOf(shares, fxRate, EXCHANGE_RATE_PRECISION);
+        stake = shares * _getExchangeRate(matic) / _getExchangeRatePrecision(matic);
 
         uint256 currentPrincipal_ = currentPrincipal;
 
         if (stake >= currentPrincipal_) {
             rewards = stake - currentPrincipal_;
         }
-
         // Substract protocol fee amount and add it to pendingFees
         uint256 _pendingFees = pendingFees + MathUtils.percOf(rewards, protocolFee);
         pendingFees = _pendingFees;
@@ -149,5 +172,14 @@ contract Matic is Tenderizer {
         maticStakeManager = _stakingContract;
 
         emit GovernanceUpdate("STAKING_CONTRACT");
+    }
+
+    function _getExchangeRatePrecision(IMatic _matic) internal view returns (uint256) {
+        return _matic.validatorId() < 8 ? EXCHANGE_RATE_PRECISION : EXCHANGE_RATE_PRECISION_HIGH;
+    }
+
+    function _getExchangeRate(IMatic _matic) internal view returns (uint256) {
+        uint256 rate = _matic.exchangeRate();
+        return rate == 0 ? 1 : rate;
     }
 }
