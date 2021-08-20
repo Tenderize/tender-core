@@ -11,7 +11,7 @@
     "start:rpc": "npx hardhat node --no-deploy",
     "deploy:libraries": "npx hardhat deploy --tags Libraries",
     "deploy:registry": "npx hardhat deploy --tags Registry",
-    "deploy:tenderizer": "npx hardhat --network localhost deploy --tags Deploy,$NAME --write false --export deployments/localhost/$NAME.json",
+    "deploy:tenderizer": "npx hardhat --network $NETWORK deploy --tags Deploy,$NAME --write false --export deployments/$NETWORK/$NAME.json",
     "prettier": "npx prettier --write 'contracts/**/*.sol'",
     "solhint": "npx solhint 'contracts/**/*.sol'",
     "eslint": "npx eslint test/**/*.ts scripts/**/*.ts deploy/**/*.ts",
