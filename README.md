@@ -99,6 +99,7 @@ A Tenderizer is a combination of contracts, some general dependencies will be re
 To deploy a Tenderizer provide its name and then execute the deployment. E.g. `export NAME=Livepeer` will ensure that the Livepeer Tenderizer is deployed and saved to `deployments/{networkName}/Livepeer.json` with all its dependencies and contracts in a single file.
 
 ```bash
+export NETWORK=
 export NAME=
 yarn deploy:tenderizer
 ```
