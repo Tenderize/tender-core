@@ -1,8 +1,7 @@
-// // SPDX-FileCopyrightText: 2020 Tenderize <info@tenderize.me>
+// SPDX-FileCopyrightText: 2021 Tenderize <info@tenderize.me>
 
-// // SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: MIT
 
-// /* See contracts/COMPILERS.md */
 pragma solidity 0.8.4;
 
 interface ITenderFarm {
