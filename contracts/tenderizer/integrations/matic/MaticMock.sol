@@ -21,7 +21,13 @@ contract MaticMock {
 
     function sellVoucher(uint256 _minClaimAmount) external {}
 
+    function sellVoucher_new(uint256 _claimAmount, uint256 _maximumSharesToBurn) external {}
+
+    function unstakeClaimTokens_new(uint256 _unbondNonce) external {}
+
     function exchangeRate() external view returns (uint256) {}
+
+    function validatorId() external view returns (uint256) {}
 
     function balanceOf(address _from) external view returns (uint256) {}
 
