@@ -151,6 +151,8 @@
       "address": "0xDcfc00Fd6999a1cd6e61936884eF1Fd10c267225",
       "abi": []
     },
+    "Livepeer": {},
+    "Matic": {},
     "Registry": {
       "address": "0x7E5365fED4d091db2ba784179754437EfD40A4Cc",
       "abi": [
@@ -809,7 +811,7 @@
       ]
     },
     "Graph_Implementation": {
-      "address": "0x83F8a00fA787668Dc8ea9E131AB120D8E1739bC1",
+      "address": "0xDA2c4cd79F1a4BDa4861CF34AF74b83EE1939E29",
       "abi": [
         {
           "anonymous": false,
@@ -1325,7 +1327,7 @@
       ]
     },
     "Graph_Proxy": {
-      "address": "0x212b4074F44e126cabEC80aC6a3C29d62c198b3C",
+      "address": "0x93D91e7abfb6A61f9972cca64c23ca3B6b63Ad23",
       "abi": [
         {
           "inputs": [
@@ -1473,7 +1475,7 @@
       ]
     },
     "Graph": {
-      "address": "0x212b4074F44e126cabEC80aC6a3C29d62c198b3C",
+      "address": "0x93D91e7abfb6A61f9972cca64c23ca3B6b63Ad23",
       "abi": [
         {
           "anonymous": false,
@@ -2132,7 +2134,7 @@
       ]
     },
     "TenderToken": {
-      "address": "0x122E5FCA96773AdC3D40159F719f93B7120CE0df",
+      "address": "0xCF8aF8DcAE7914eB47C9a9B5A2C173c73E04Fb4c",
       "abi": [
         {
           "inputs": [
@@ -2619,7 +2621,7 @@
       ]
     },
     "ElasticSupplyPool": {
-      "address": "0xa2d83a0e81F2d0B62f987198CE003511c81512dd",
+      "address": "0x707F07D0B2445d707FaAc237D17b9F9bd59954F6",
       "abi": [
         {
           "inputs": [
@@ -3870,7 +3872,7 @@
       ]
     },
     "Controller": {
-      "address": "0xe9B0746d8B53cac2c06F2C2651D10B40c6aECc3A",
+      "address": "0x98E162FEcd5ceFF730C7D620CB3fB858A971EDa8",
       "abi": [
         {
           "inputs": [
@@ -4176,7 +4178,7 @@
       ]
     },
     "TenderFarm": {
-      "address": "0xE687e96966fB38729e50a2C01451B60F76Fdf528",
+      "address": "0xCbfe380842c10c359F7d1f2c0544130d964c789F",
       "abi": [
         {
           "inputs": [
@@ -4510,7 +4512,7 @@
       ]
     },
     "TokenFaucet": {
-      "address": "0xAC91733AB2484F1b2Ea8dF53fF090dFAD4f3BAB7",
+      "address": "0xC48B80Ac20C3d064dDa9A57aA8cEb068aF356cf2",
       "abi": [
         {
           "inputs": [
