@@ -67,7 +67,7 @@ contract Matic is Tenderizer {
         steak.approve(maticStakeManager, amount);
 
         // stake tokens
-        uint256 min = (amount * _getExchangeRatePrecision(matic_) / _getExchangeRate(matic_)) - 1;
+        uint256 min = ((amount * _getExchangeRatePrecision(matic_)) / _getExchangeRate(matic_)) - 1;
         matic_.buyVoucher(amount, min);
 
         emit Stake(address(matic_), amount);
@@ -93,27 +93,24 @@ contract Matic is Tenderizer {
         if (_account != controller) require(amount > 0, "ZERO_AMOUNT");
         if (amount == 0) {
             uint256 shares = matic.balanceOf(address(this));
-            amount = shares * fxRate / exhangeRatePrecision;
+            amount = (shares * fxRate) / exhangeRatePrecision;
             require(amount > 0, "ZERO_STAKE");
         }
 
         currentPrincipal -= amount;
 
         // Unbond tokens
-        uint256 max = (amount * exhangeRatePrecision / fxRate) + 1;
+        uint256 max = ((amount * exhangeRatePrecision) / fxRate) + 1;
         matic_.sellVoucher_new(amount, max);
 
         // Manage Livepeer unbonding locks
-       unstakeLockID = ++lastUnstakeLockID;
-       unstakeLocks[unstakeLockID] = UnstakeLock({ amount: amount, account: _account });
-       
-       emit Unstake(_account, address(matic_), amount, unstakeLockID);
+        unstakeLockID = ++lastUnstakeLockID;
+        unstakeLocks[unstakeLockID] = UnstakeLock({ amount: amount, account: _account });
+
+        emit Unstake(_account, address(matic_), amount, unstakeLockID);
     }
 
-    function _withdraw(
-        address _account,
-        uint256 _unstakeID
-    ) internal override {
+    function _withdraw(address _account, uint256 _unstakeID) internal override {
         UnstakeLock storage lock = unstakeLocks[_unstakeID];
         address account = lock.account;
         uint256 amount = lock.amount;
@@ -143,9 +140,8 @@ contract Matic is Tenderizer {
         uint256 rewards;
         uint256 stake;
 
-
         uint256 shares = matic.balanceOf(address(this));
-        stake = shares * _getExchangeRate(matic) / _getExchangeRatePrecision(matic);
+        stake = (shares * _getExchangeRate(matic)) / _getExchangeRatePrecision(matic);
 
         uint256 currentPrincipal_ = currentPrincipal;
 

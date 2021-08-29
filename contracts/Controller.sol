@@ -62,7 +62,7 @@ contract Controller is Ownable, ReentrancyGuard {
     /**
      * @notice Unlock staked tokens
      * @param _amount amount deposited
-     * @return unstakeLockID 
+     * @return unstakeLockID
      * @dev calls Tenderizer to unstake tokens and updates total pooled tokens
      * @dev equal amount of tenderTokens are burned from the user
      * @dev unstaking functionality varies by the protocol, check tenderizer.unstake()

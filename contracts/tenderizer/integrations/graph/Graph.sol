@@ -83,7 +83,7 @@ contract Graph is Tenderizer {
         if (_account == controller) {
             // Check that no governance unstake is pending
             require(governancePendingUnstakeLockID == governanceLastProcessedUnstakeLockID, "GOV_WITHDRAW_PENDING");
-            
+
             amount = pendingUnstakes;
             pendingUnstakes = 0;
             governancePendingUnstakeLockID = unstakeLockID;
@@ -108,18 +108,12 @@ contract Graph is Tenderizer {
             pendingUnstakes += amount;
         }
 
-        unstakeLocks[unstakeLockID] = UnstakeLock({
-            amount: amount,
-            account: _account
-        });
+        unstakeLocks[unstakeLockID] = UnstakeLock({ amount: amount, account: _account });
 
         emit Unstake(_account, node_, amount, unstakeLockID);
     }
 
-    function _withdraw(
-        address _account,
-        uint256 _unstakeLockID
-    ) internal override {
+    function _withdraw(address _account, uint256 _unstakeLockID) internal override {
         UnstakeLock storage lock = unstakeLocks[_unstakeLockID];
         address account = lock.account;
         uint256 amount = lock.amount;
@@ -129,7 +123,7 @@ contract Graph is Tenderizer {
         // Check that a withdrawal is pending and valid
         require(account == _account, "ACCOUNT_MISTMATCH");
         require(amount > 0, "ZERO_AMOUNT");
-        
+
         if (_account == controller) {
             governanceLastProcessedUnstakeLockID = governancePendingUnstakeLockID;
             graph.withdrawDelegated(node, ZERO_ADDRESS);
@@ -138,7 +132,7 @@ contract Graph is Tenderizer {
             require(_unstakeLockID < governanceLastProcessedUnstakeLockID, "GOV_WITHDRAW_PENDING");
             // Transfer amount from unbondingLock to _account
             steak.transfer(_account, amount);
-        } 
+        }
 
         emit Withdraw(account, amount, _unstakeLockID);
     }
@@ -148,11 +142,6 @@ contract Graph is Tenderizer {
         // The rewards is the difference between
         // pending stake and the latest cached stake amount
 
-        // TODO: Oh god this is going to be so costly
-        // What if we gulp before this call so we have the updated state in getDelegator ? bond might be more costly
-        // Let's just code this with everything we need and benchmark gas
-
-        // Account for LPT rewards
         address del = address(this);
         uint256 currentPrincipal_ = currentPrincipal;
 
