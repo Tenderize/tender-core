@@ -11,7 +11,6 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./ITenderizer.sol";
 
 abstract contract Tenderizer is Initializable, ITenderizer {
-
     struct UnstakeLock {
         uint256 amount;
         address account;
@@ -30,7 +29,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     uint256 public pendingLiquidityFees;
     uint256 public currentPrincipal; // Principal since last claiming earnings
 
-    mapping (uint256 => UnstakeLock) public unstakeLocks;
+    mapping(uint256 => UnstakeLock) public unstakeLocks;
     uint256 lastUnstakeLockID;
 
     // Events
@@ -95,11 +94,12 @@ abstract contract Tenderizer is Initializable, ITenderizer {
      * @dev If '_amount' is 0, unstake the entire amount staked towards _account
      * @dev Only callable by controller
      */
-    function unstake(address _account, uint256 _amount) 
+    function unstake(address _account, uint256 _amount)
         external
         override
-        onlyController 
-        returns (uint256 unstakeLockID) {
+        onlyController
+        returns (uint256 unstakeLockID)
+    {
         // Execute state updates to pending withdrawals
         // Unstake tokens
         return _unstake(_account, address(0), _amount);
@@ -107,16 +107,13 @@ abstract contract Tenderizer is Initializable, ITenderizer {
 
     /**
      * @notice Withdraw '_amount' of tokens previously unstaked by '_account'
-      * @param _unstakeLockID ID for the lock to request the withdraw for
+     * @param _unstakeLockID ID for the lock to request the withdraw for
      * @param _account account requesting the withdrawam
      * @dev If '_amount' isn't specified all unstake tokens by '_account' will be withdrawn
      * @dev Requires '_account' to have unstaked prior to calling withdraw
      * @dev Only callable by controller
      */
-    function withdraw(address _account, uint256 _unstakeLockID) 
-        external
-        override
-        onlyController {
+    function withdraw(address _account, uint256 _unstakeLockID) external override onlyController {
         // Execute state updates to pending withdrawals
         // Transfer tokens to _account
         _withdraw(_account, _unstakeLockID);
@@ -186,7 +183,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         address _account,
         address _node,
         uint256 _amount
-    ) internal virtual returns (uint256  unstakeLockID);
+    ) internal virtual returns (uint256 unstakeLockID);
 
     function _withdraw(address _account, uint256 _unstakeLockID) internal virtual;
 

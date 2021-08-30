@@ -88,16 +88,13 @@ contract Livepeer is Tenderizer {
         livepeer.unbond(amount);
 
         // Manage Livepeer unbonding locks
-       unstakeLockID = ++lastUnstakeLockID;
-       unstakeLocks[unstakeLockID] = UnstakeLock({ amount: amount, account: _account });
-       
-       emit Unstake(_account, node_, amount, unstakeLockID);
+        unstakeLockID = ++lastUnstakeLockID;
+        unstakeLocks[unstakeLockID] = UnstakeLock({ amount: amount, account: _account });
+
+        emit Unstake(_account, node_, amount, unstakeLockID);
     }
 
-    function _withdraw(
-        address _account,
-        uint256 _unstakeID
-    ) internal override {
+    function _withdraw(address _account, uint256 _unstakeID) internal override {
         UnstakeLock storage lock = unstakeLocks[_unstakeID];
         address account = lock.account;
         uint256 amount = lock.amount;
@@ -139,7 +136,7 @@ contract Livepeer is Tenderizer {
         }
 
         // withdraw fees
-        uint256  swappedLPT;
+        uint256 swappedLPT;
         if (ethFees >= ethFees_threshold) {
             livepeer.withdrawFees();
 
@@ -166,7 +163,7 @@ contract Livepeer is Tenderizer {
         pendingLiquidityFees = _liquidityFees;
         // Add current pending stake minus fees and set it as current principal
         uint256 newPrincipal = stake + swappedLPT - _pendingFees - _liquidityFees;
-        currentPrincipal =  newPrincipal;
+        currentPrincipal = newPrincipal;
 
         emit RewardsClaimed(rewards, newPrincipal, currentPrincipal_);
     }

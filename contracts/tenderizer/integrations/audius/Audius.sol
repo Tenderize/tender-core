@@ -8,13 +8,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../../libs/MathUtils.sol";
 
 import "../../Tenderizer.sol";
-import "./IGraph.sol";
+import "./IAudius.sol";
 
-contract Graph is Tenderizer {
-    // 100% in parts per million
-    uint32 private constant MAX_PPM = 1000000;
-
-    IGraph graph;
+contract Audius is Tenderizer {
+    IAudius audius;
 
     // unstake lock ID of governance at the time governance unstakes
     uint256 governancePendingUnstakeLockID;
@@ -25,16 +22,15 @@ contract Graph is Tenderizer {
 
     function initialize(
         IERC20 _steak,
-        IGraph _graph,
+        IAudius _audius,
         address _node
     ) public {
         Tenderizer._initialize(_steak, _node, msg.sender);
-        graph = _graph;
+        audius = _audius;
     }
 
     function _deposit(address _from, uint256 _amount) internal override {
         currentPrincipal += _amount;
-
         emit Deposit(_from, _amount);
     }
 
@@ -56,17 +52,17 @@ contract Graph is Tenderizer {
             node_ = node;
         }
 
-        // approve amount to Graph protocol
-        steak.approve(address(graph), amount);
+        // Approve amount to Audius protocol
+        steak.approve(address(audius), amount);
 
         // stake tokens
-        graph.delegate(node_, amount);
+        audius.delegateStake(node_, amount);
 
         emit Stake(node_, amount);
     }
 
     function _unstake(
-        address _account,
+        address _caller,
         address _node,
         uint256 _amount
     ) internal override returns (uint256 unstakeLockID) {
@@ -79,8 +75,8 @@ contract Graph is Tenderizer {
             node_ = node;
         }
 
-        // Unstake from governance
-        if (_account == controller) {
+        // If caller is controller, process all user unstake requests
+        if (_caller == controller) {
             // Check that no governance unstake is pending
             require(governancePendingUnstakeLockID == governanceLastProcessedUnstakeLockID, "GOV_WITHDRAW_PENDING");
 
@@ -88,32 +84,22 @@ contract Graph is Tenderizer {
             pendingUnstakes = 0;
             governancePendingUnstakeLockID = unstakeLockID;
 
-            // Calculate the amount of shares to undelegate
-            IGraph.Delegation memory delegation = graph.getDelegation(node, address(this));
-            IGraph.DelegationPool memory delPool = graph.delegationPools(node);
-
-            uint256 delShares = delegation.shares;
-            uint256 totalShares = delPool.shares;
-            uint256 totalTokens = delPool.tokens;
-
-            uint256 stake = MathUtils.percOf(delShares, totalTokens, totalShares);
-            uint256 shares = MathUtils.percOf(delShares, amount, stake);
-
-            // undelegate shares
-            graph.undelegate(node_, shares);
+            // Undelegate from audius
+            audius.requestUndelegateStake(node_, amount);
         } else {
+            // Caller is a user, initialise unstake locally in Tenderizer
             require(amount > 0, "ZERO_AMOUNT");
 
             currentPrincipal -= amount;
             pendingUnstakes += amount;
         }
 
-        unstakeLocks[unstakeLockID] = UnstakeLock({ amount: amount, account: _account });
+        unstakeLocks[unstakeLockID] = UnstakeLock({ amount: amount, account: _caller });
 
-        emit Unstake(_account, node_, amount, unstakeLockID);
+        emit Unstake(_caller, node_, amount, unstakeLockID);
     }
 
-    function _withdraw(address _account, uint256 _unstakeLockID) internal override {
+    function _withdraw(address _caller, uint256 _unstakeLockID) internal override {
         UnstakeLock storage lock = unstakeLocks[_unstakeLockID];
         address account = lock.account;
         uint256 amount = lock.amount;
@@ -121,38 +107,33 @@ contract Graph is Tenderizer {
         delete unstakeLocks[_unstakeLockID];
 
         // Check that a withdrawal is pending and valid
-        require(account == _account, "ACCOUNT_MISTMATCH");
+        require(account == _caller, "ACCOUNT_MISTMATCH");
         require(amount > 0, "ZERO_AMOUNT");
 
-        if (_account == controller) {
+        // If caller is controller, process all user unstakes
+        if (_caller == controller) {
             governanceLastProcessedUnstakeLockID = governancePendingUnstakeLockID;
-            graph.withdrawDelegated(node, ZERO_ADDRESS);
+            // Withdraw from Audius
+            audius.undelegateStake();
         } else {
+            // Caller is a user, process its unstake if available
             // Check that gov withdrawal for that unstake has occured
             require(_unstakeLockID < governanceLastProcessedUnstakeLockID, "GOV_WITHDRAW_PENDING");
             // Transfer amount from unbondingLock to _account
-            steak.transfer(_account, amount);
+            steak.transfer(_caller, amount);
         }
 
         emit Withdraw(account, amount, _unstakeLockID);
     }
 
     function _claimRewards() internal override {
-        // GRT automatically compounds
-        // The rewards is the difference between
-        // pending stake and the latest cached stake amount
-
-        address del = address(this);
         uint256 currentPrincipal_ = currentPrincipal;
 
-        IGraph.Delegation memory delegation = graph.getDelegation(node, del);
-        IGraph.DelegationPool memory delPool = graph.delegationPools(node);
+        // Process the rewards for the nodes that we have staked to
+        audius.claimRewards(node);
 
-        uint256 delShares = delegation.shares;
-        uint256 totalShares = delPool.shares;
-        uint256 totalTokens = delPool.tokens;
-
-        uint256 stake = MathUtils.percOf(delShares, totalTokens, totalShares);
+        // Get the new total delegator stake
+        uint256 stake = audius.getTotalDelegatorStake(address(this));
 
         uint256 rewards;
         if (stake >= currentPrincipal_) {
@@ -176,7 +157,7 @@ contract Graph is Tenderizer {
     }
 
     function _setStakingContract(address _stakingContract) internal override {
-        graph = IGraph(_stakingContract);
+        audius = IAudius(_stakingContract);
 
         emit GovernanceUpdate("STAKING_CONTRACT");
     }
