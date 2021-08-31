@@ -44,4 +44,7 @@ interface IAudius {
      * @dev Factors in service provider rewards from delegator and transfers deployer cut
      */
     function claimRewards(address _serviceProvider) external;
+
+    /// @notice Get the Staking address
+    function getStakingAddress() external view returns (address)
 }

@@ -472,7 +472,9 @@ describe('Audius Integration Test', () => {
   describe('Setting contract variables', async () => {
     describe('setting staking contract', () => {
       it('sets staking contract', async () => {
+        const audiusStakingAddr = '0xf4e8Ef0763BCB2B1aF693F5970a00050a6aC7E1B'
         const newStakingContract = await smockit(AudiusNoMock)
+        newStakingContract.smocked.getStakingAddress.will.return.with(audiusStakingAddr)
         const txData = Tenderizer.interface.encodeFunctionData('setStakingContract', [newStakingContract.address])
         tx = await Controller.execute(Tenderizer.address, 0, txData)
 
@@ -480,6 +482,8 @@ describe('Audius Integration Test', () => {
         await Controller.gulp()
         expect(AudiusMock.smocked.delegateStake.calls.length).to.eq(0)
         expect(newStakingContract.smocked.delegateStake.calls.length).to.eq(1)
+        const AudiusC = await ethers.getContractAt('Audius', Tenderizer.address)
+        expect(await AudiusC.audiusStaking()).to.eq(audiusStakingAddr)
       })
 
       it('should emit GovernanceUpdate event', async () => {
