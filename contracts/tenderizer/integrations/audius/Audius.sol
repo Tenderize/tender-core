@@ -133,7 +133,7 @@ contract Audius is Tenderizer {
         uint256 currentPrincipal_ = currentPrincipal;
 
         // Process the rewards for the nodes that we have staked to
-        audius.claimRewards(node);
+        try audius.claimRewards(node) {} catch {}
 
         // Get the new total delegator stake
         uint256 stake = audius.getTotalDelegatorStake(address(this));
