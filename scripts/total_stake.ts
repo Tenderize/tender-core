@@ -6,7 +6,7 @@ const hre = require('hardhat')
 
 async function main () {
   const network = process.env.NETWORK
-  const tenderizer = process.env.TENDERIZER
+  const tenderizer = process.env.TENDERIZER as string
 
   const deployments = require(`../deployments/${network}/${tenderizer}.json`)
 

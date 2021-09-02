@@ -13,6 +13,8 @@ import "./IAudius.sol";
 contract Audius is Tenderizer {
     IAudius audius;
 
+    address audiusStaking;
+
     // unstake lock ID of governance at the time governance unstakes
     uint256 governancePendingUnstakeLockID;
     // Set to governancePendingUnstakeLockID when governance withdrawal for the pending lock happens
@@ -27,6 +29,7 @@ contract Audius is Tenderizer {
     ) public {
         Tenderizer._initialize(_steak, _node, msg.sender);
         audius = _audius;
+        audiusStaking = audius.getStakingAddress();
     }
 
     function _deposit(address _from, uint256 _amount) internal override {
@@ -53,7 +56,7 @@ contract Audius is Tenderizer {
         }
 
         // Approve amount to Audius protocol
-        steak.approve(address(audius), amount);
+        steak.approve(audiusStaking, amount);
 
         // stake tokens
         audius.delegateStake(node_, amount);
@@ -130,7 +133,7 @@ contract Audius is Tenderizer {
         uint256 currentPrincipal_ = currentPrincipal;
 
         // Process the rewards for the nodes that we have staked to
-        audius.claimRewards(node);
+        try audius.claimRewards(node) {} catch {}
 
         // Get the new total delegator stake
         uint256 stake = audius.getTotalDelegatorStake(address(this));
@@ -158,6 +161,7 @@ contract Audius is Tenderizer {
 
     function _setStakingContract(address _stakingContract) internal override {
         audius = IAudius(_stakingContract);
+        audiusStaking = audius.getStakingAddress();
 
         emit GovernanceUpdate("STAKING_CONTRACT");
     }

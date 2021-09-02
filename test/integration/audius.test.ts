@@ -47,6 +47,8 @@ describe('Audius Integration Test', () => {
 
   const acceptableDelta = 2
 
+  const dummyStakingAddress = '0xfA668FB97697200FA56ce98E246db61Cc7E14Bd5'
+
   before('get signers', async () => {
     const namedAccs = await hre.getNamedAccounts()
     signers = await ethers.getSigners()
@@ -84,6 +86,8 @@ describe('Audius Integration Test', () => {
     process.env.TOKEN = AudiusToken.address
     process.env.VALIDATOR = NODE
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
+    AudiusMock.smocked.getStakingAddress.will.return.with(dummyStakingAddress)
+
     Audius = await hre.deployments.fixture(['Audius'], {
       keepExistingDeployments: false
     })
@@ -473,6 +477,7 @@ describe('Audius Integration Test', () => {
     describe('setting staking contract', () => {
       it('sets staking contract', async () => {
         const newStakingContract = await smockit(AudiusNoMock)
+        newStakingContract.smocked.getStakingAddress.will.return.with(dummyStakingAddress)
         const txData = Tenderizer.interface.encodeFunctionData('setStakingContract', [newStakingContract.address])
         tx = await Controller.execute(Tenderizer.address, 0, txData)
 
