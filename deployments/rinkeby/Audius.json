@@ -809,7 +809,7 @@
       ]
     },
     "Audius_Implementation": {
-      "address": "0xc68163911fB2fBe92CD50063aADBb13ef5Ab1507",
+      "address": "0x820317E005d96e5f30Ed59ee0CFdE28Dd3C08817",
       "abi": [
         {
           "anonymous": false,
@@ -1325,7 +1325,7 @@
       ]
     },
     "Audius_Proxy": {
-      "address": "0xF300f1ebd7fd666D64Befb6026c88F0ccC486850",
+      "address": "0x1031d8E1a029C38DAF76c805D76cF52FE3342d14",
       "abi": [
         {
           "inputs": [
@@ -1473,7 +1473,7 @@
       ]
     },
     "Audius": {
-      "address": "0xF300f1ebd7fd666D64Befb6026c88F0ccC486850",
+      "address": "0x1031d8E1a029C38DAF76c805D76cF52FE3342d14",
       "abi": [
         {
           "anonymous": false,
@@ -2132,7 +2132,7 @@
       ]
     },
     "TenderToken": {
-      "address": "0xF53B5B5602c248ebd810295C96c2a89Eb327726E",
+      "address": "0x21D74b4797e41f96076b0969F5fBa09a32e3DC8b",
       "abi": [
         {
           "inputs": [
@@ -2619,7 +2619,7 @@
       ]
     },
     "ElasticSupplyPool": {
-      "address": "0xc92948D7F989C133D74332925ba9D42E352D8Af0",
+      "address": "0xC7027748d1ff005f7C72a7784B060cde024eaE89",
       "abi": [
         {
           "inputs": [
@@ -3870,7 +3870,7 @@
       ]
     },
     "Controller": {
-      "address": "0x5a73f8AF889dDbc07ff6Ac60b691188bd5D1e6c4",
+      "address": "0x4279B2e1D16492Ee55C02Cf7165DF419cbEF16Fa",
       "abi": [
         {
           "inputs": [
@@ -4176,7 +4176,7 @@
       ]
     },
     "TenderFarm": {
-      "address": "0xcFc6D458401212C87cEf2c6024505DaE5d51c8DC",
+      "address": "0xb01A225b6e128Cb1497fA92e9Ba86d10363a3e39",
       "abi": [
         {
           "inputs": [
@@ -4510,7 +4510,7 @@
       ]
     },
     "TokenFaucet": {
-      "address": "0x3591fB0F398747e0d7ffe4DD710c37ba717B5b77",
+      "address": "0xc6202eb0a43041eaA801447FEa136095A7E81bEd",
       "abi": [
         {
           "inputs": [
