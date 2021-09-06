@@ -142,12 +142,6 @@ describe('Controller', () => {
     })
   })
 
-  describe('Withdraw', () => {
-    it('revert if amount is 0', async () => {
-      await expect(controller.withdraw(ethers.constants.Zero)).to.be.revertedWith('ZERO_AMOUNT')
-    })
-  })
-
   describe('Collect Liquidity Fees', () => {
     it('return if nextTotalStake is 0', async () => {
       tenderFarmMock.smocked.nextTotalStake.will.return.with(0)

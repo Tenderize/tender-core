@@ -104,8 +104,9 @@ contract Matic is Tenderizer {
         matic_.sellVoucher_new(amount, max);
 
         // Manage Livepeer unbonding locks
-        unstakeLockID = ++lastUnstakeLockID;
+        unstakeLockID = nextUnstakeLockID;
         unstakeLocks[unstakeLockID] = UnstakeLock({ amount: amount, account: _account });
+        nextUnstakeLockID = unstakeLockID + 1;
 
         emit Unstake(_account, address(matic_), amount, unstakeLockID);
     }

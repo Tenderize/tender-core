@@ -88,8 +88,9 @@ contract Livepeer is Tenderizer {
         livepeer.unbond(amount);
 
         // Manage Livepeer unbonding locks
-        unstakeLockID = ++lastUnstakeLockID;
+        unstakeLockID = nextUnstakeLockID;
         unstakeLocks[unstakeLockID] = UnstakeLock({ amount: amount, account: _account });
+        nextUnstakeLockID = unstakeLockID + 1;
 
         emit Unstake(_account, node_, amount, unstakeLockID);
     }

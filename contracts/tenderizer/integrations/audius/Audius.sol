@@ -70,7 +70,7 @@ contract Audius is Tenderizer {
         uint256 _amount
     ) internal override returns (uint256 unstakeLockID) {
         uint256 amount = _amount;
-        unstakeLockID = ++lastUnstakeLockID;
+        unstakeLockID = nextUnstakeLockID;
 
         // if no _node is specified, stake towards the default node
         address node_ = _node;
@@ -97,6 +97,7 @@ contract Audius is Tenderizer {
             pendingUnstakes += amount;
         }
 
+        nextUnstakeLockID = unstakeLockID + 1;
         unstakeLocks[unstakeLockID] = UnstakeLock({ amount: amount, account: _caller });
 
         emit Unstake(_caller, node_, amount, unstakeLockID);

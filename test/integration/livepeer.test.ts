@@ -41,7 +41,7 @@ describe('Livepeer Integration Test', () => {
   let withdrawAmount: BigNumber
 
   let tx: ContractTransaction
-  const lockID = 1
+  const lockID = 0
   const protocolFeesPercent = ethers.utils.parseEther('0.025')
   const liquidityFeesPercent = ethers.utils.parseEther('0.025')
 
@@ -98,7 +98,6 @@ describe('Livepeer Integration Test', () => {
     Livepeer = await hre.deployments.fixture(['Livepeer'], {
       keepExistingDeployments: false
     })
-    console.log(Object.keys(Livepeer))
     Controller = (await ethers.getContractAt('Controller', Livepeer.Controller.address)) as Controller
     Tenderizer = (await ethers.getContractAt('Livepeer', Livepeer.Livepeer.address)) as Livepeer
     TenderToken = (await ethers.getContractAt('TenderToken', Livepeer.TenderToken.address)) as TenderToken
