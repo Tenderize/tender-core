@@ -1,10 +1,11 @@
 import hre, { ethers } from 'hardhat'
 
-import { MockContract, smockit } from '@eth-optimism/smock'
-
 import {
-  SimpleToken, Controller, ElasticSupplyPool, TenderToken, ILivepeer, BPool, EIP173Proxy, Livepeer, ERC20
-} from '../../typechain/'
+  Controller, ElasticSupplyPool, TenderToken, ILivepeer, BPool, EIP173Proxy, Livepeer, ERC20
+} from '../../typechain'
+
+import bondingManagerAbi from './abis/livepeer/BondingManager.json'
+import adjustableRoundsManagerAbi from './abis/livepeer/AdjustableRoundsManager.json'
 
 import chai from 'chai'
 import {
@@ -12,8 +13,8 @@ import {
 } from 'ethereum-waffle'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Deployment } from 'hardhat-deploy/dist/types'
-import { BigNumber } from '@ethersproject/bignumber'
-import { ContractTransaction } from '@ethersproject/contracts'
+import { BigNumber, BigNumberish } from '@ethersproject/bignumber'
+import { Contract, ContractTransaction } from '@ethersproject/contracts'
 
 import { sharesToTokens, percOf2 } from '../util/helpers'
 
@@ -25,7 +26,6 @@ const {
 describe('Livepeer Mainnet Fork Test', () => {
   let LivepeerStaking: ILivepeer
   let LivepeerToken: ERC20
-  let OneInchMock: MockContract
   let Controller: Controller
   let Tenderizer: Livepeer
   let TenderToken: TenderToken
@@ -40,7 +40,7 @@ describe('Livepeer Mainnet Fork Test', () => {
   let withdrawAmount: BigNumber
 
   let tx: ContractTransaction
-  const lockID = 1
+  const lockID = 0
   const protocolFeesPercent = ethers.utils.parseEther('0.025')
   const liquidityFeesPercent = ethers.utils.parseEther('0.025')
 
@@ -57,6 +57,13 @@ describe('Livepeer Mainnet Fork Test', () => {
 
   const STEAK_AMOUNT = '100000'
   const NODE = '0x9C10672CEE058Fd658103d90872fE431bb6C0AFa'
+  const bondingManagerAddr = '0x511bc4556d823ae99630ae8de28b9b80df90ea2e'
+  const roundsManagerAddr = '0x3984fc4ceeef1739135476f625d36d6c35c40dc3'
+  let bondingManager: Contract
+  let roundsManager: Contract
+
+  const LPTDeployer = '0x505f8c2ee81f1c6fa0d88e918ef0491222e05818'
+  const transcoderAddr = '0x9c10672cee058fd658103d90872fe431bb6c0afa'
 
   before('deploy Livepeer Tenderizer', async () => {
     // Fork from mainnet
@@ -81,8 +88,7 @@ describe('Livepeer Mainnet Fork Test', () => {
     process.env.B_SMART_POOL_MANAGER = '0xA3F9145CB0B50D907930840BB2dcfF4146df8Ab4'
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
 
-    const LPTDeployer = '0x505f8c2ee81f1c6fa0d88e918ef0491222e05818'
-    const OneInchAddress = '0x111111111117dC0aa78b770fA6A738034120C302'
+    const oneInchAddr = '0x111111111117dC0aa78b770fA6A738034120C302'
 
     // Transfer tokens to deployer
     await hre.network.provider.request({
@@ -113,7 +119,7 @@ describe('Livepeer Mainnet Fork Test', () => {
       [0, 0, 0],
       [Tenderizer.interface.encodeFunctionData('setProtocolFee', [protocolFeesPercent]),
         Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent]),
-        Tenderizer.interface.encodeFunctionData('setOneInchContract', [OneInchAddress])]
+        Tenderizer.interface.encodeFunctionData('setOneInchContract', [oneInchAddr])]
     )
   })
 
@@ -163,151 +169,193 @@ describe('Livepeer Mainnet Fork Test', () => {
     })
   })
 
-//   describe('rebase', () => {
-//     describe('stake increased', () => {
-//       const increase = ethers.BigNumber.from('10000000000')
-//       const swappedLPTRewards = ethers.BigNumber.from('100000000')
-//       const liquidityFees = percOf2(increase.add(swappedLPTRewards), liquidityFeesPercent)
-//       const protocolFees = percOf2(increase.add(swappedLPTRewards), protocolFeesPercent)
-//       const newStake = deposit.add(initialStake).add(increase)
-//       const newStakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
-//       const percDiv = ethers.utils.parseEther('1')
-//       let totalShares: BigNumber = ethers.utils.parseEther('1')
+  describe('rebase', () => {
+    describe('stake increased', () => {
+      let increase: BigNumber
+      let newStakeMinusFees: BigNumber
+      let newStake: BigNumber
+      const swappedLPTRewards = ethers.BigNumber.from('0') // TODO: Add test with ETH->LPT Swap
+      let totalShares: BigNumber = ethers.utils.parseEther('1')
+      const percDiv = ethers.utils.parseEther('1')
 
-//       before(async () => {
-//         tx = await Controller.rebase()
-//       })
+      before(async () => {
+        bondingManager = new ethers.Contract(bondingManagerAddr, bondingManagerAbi, ethers.provider)
+        roundsManager = new ethers.Contract(roundsManagerAddr, adjustableRoundsManagerAbi, ethers.provider)
 
-//       it('updates currentPrincipal', async () => {
-//         expect(await Tenderizer.currentPrincipal()).to.eq(newStakeMinusFees)
-//       })
+        let currentRound = await roundsManager.currentRound()
+        const stakeBefore = await bondingManager.pendingStake(Tenderizer.address, currentRound)
 
-//       it('increases tendertoken balances when rewards are added', async () => {
-//         // account 0
-//         const shares = await TenderToken.sharesOf(deployer)
-//         totalShares = await TenderToken.getTotalShares()
-//         expect(await TenderToken.balanceOf(deployer)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
-//       })
+        await hre.network.provider.request({
+          method: 'hardhat_impersonateAccount',
+          params: [LPTDeployer]
+        })
+        const multisigSigner = await ethers.provider.getSigner(LPTDeployer)
 
-//       it('increases the tenderToken balance of the AMM', async () => {
-//         const shares = await TenderToken.sharesOf(BPool.address)
-//         expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
-//       })
+        await hre.network.provider.request({
+          method: 'hardhat_impersonateAccount',
+          params: [transcoderAddr]
+        })
+        const transcoderSigner = await ethers.provider.getSigner(transcoderAddr)
 
-//       it('changes the weights of the AMM', async () => {
-//         const tBal = await TenderToken.balanceOf(BPool.address)
-//         const bal = await LivepeerToken.balanceOf(BPool.address)
+        // Mine blocks for one round
+        const roundLength = await roundsManager.roundLength()
+        for (let j = 0; j < roundLength; j++) {
+          await hre.ethers.provider.send('evm_mine', [])
+        }
 
-//         const acceptableDelta = ethers.BigNumber.from('100')
+        // Initialize round and reward
+        const initialized = await roundsManager.connect(multisigSigner).currentRoundInitialized()
+        if (!initialized) {
+          await roundsManager.connect(multisigSigner).initializeRound()
+        }
+        await bondingManager.connect(transcoderSigner).reward()
 
-//         const expected = tBal.mul(percDiv).div(tBal.add(bal))
-//         const actual = await BPool.getNormalizedWeight(TenderToken.address)
-//         expect(actual.sub(expected).abs()).to.be.lte(acceptableDelta)
-//       })
+        await hre.network.provider.request({
+          method: 'hardhat_stopImpersonatingAccount',
+          params: [LPTDeployer]
+        }
+        )
 
-//       it('should emit RewardsClaimed event from Tenderizer', async () => {
-//         expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
-//           .withArgs(increase.add(swappedLPTRewards), newStakeMinusFees, deposit.add(initialStake))
-//       })
-//     })
+        currentRound = await roundsManager.currentRound()
+        const stakeAfter = (await bondingManager.pendingStake(Tenderizer.address, currentRound))
+        increase = stakeAfter.sub(stakeBefore)
+        const liquidityFees = percOf2(increase.add(swappedLPTRewards), liquidityFeesPercent)
+        const protocolFees = percOf2(increase.add(swappedLPTRewards), protocolFeesPercent)
+        newStake = deposit.add(initialStake).add(increase)
+        newStakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
+        tx = await Controller.rebase()
+      })
 
-//   //   describe('stake decrease', () => {
-//   //     // The decrease will offset the increase from the previous test
-//   //     const newStake = deposit.add(initialStake)
-//   //     const percDiv = ethers.utils.parseEther('1')
-//   //     let totalShares: BigNumber
-//   //     let oldPrinciple: BigNumber
+      it('updates currentPrincipal', async () => {
+        expect(await Tenderizer.currentPrincipal()).to.eq(newStakeMinusFees)
+      })
 
-//   //     let feesBefore: BigNumber = ethers.constants.Zero
+      it('increases tendertoken balances when rewards are added', async () => {
+        // account 0
+        const shares = await TenderToken.sharesOf(deployer)
+        totalShares = await TenderToken.getTotalShares()
+        expect(await TenderToken.balanceOf(deployer)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+      })
 
-//   //     before(async () => {
-//   //       feesBefore = await Tenderizer.pendingFees()
-//   //       LivepeerMock.smocked.pendingStake.will.return.with(newStake)
-//   //       oldPrinciple = await Tenderizer.currentPrincipal()
-//   //       tx = await Controller.rebase()
-//   //     })
+      it('increases the tenderToken balance of the AMM', async () => {
+        const shares = await TenderToken.sharesOf(BPool.address)
+        expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+      })
 
-//   //     it('updates currentPrincipal', async () => {
-//   //       expect(await Tenderizer.currentPrincipal()).to.eq(newStake)
-//   //     })
+      it('changes the weights of the AMM', async () => {
+        const tBal = await TenderToken.balanceOf(BPool.address)
+        const bal = await LivepeerToken.balanceOf(BPool.address)
 
-//   //     it('decreases tendertoken balances when slashed', async () => {
-//   //       // account 0
-//   //       const shares = await TenderToken.sharesOf(deployer)
-//   //       totalShares = await TenderToken.getTotalShares()
-//   //       expect(await TenderToken.balanceOf(deployer)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
-//   //     })
+        const acceptableDelta = ethers.BigNumber.from('100')
 
-//   //     it("doesn't increase pending fees", async () => {
-//   //       expect(await Tenderizer.pendingFees()).to.eq(feesBefore)
-//   //     })
+        const expected = tBal.mul(percDiv).div(tBal.add(bal))
+        const actual = await BPool.getNormalizedWeight(TenderToken.address)
+        expect(actual.sub(expected).abs()).to.be.lte(acceptableDelta)
+      })
 
-//   //     it('decreases the tenderToken balance of the AMM', async () => {
-//   //       const shares = await TenderToken.sharesOf(BPool.address)
-//   //       expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
-//   //     })
+      it('should emit RewardsClaimed event from Tenderizer', async () => {
+        expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
+          .withArgs(increase.add(swappedLPTRewards), newStakeMinusFees, deposit.add(initialStake))
+      })
+    })
 
-//   //     it('changes the weights of the AMM', async () => {
-//   //       const acceptableDelta = ethers.BigNumber.from('100')
+    //   describe('stake decrease', () => {
+    //     // The decrease will offset the increase from the previous test
+    //     const newStake = deposit.add(initialStake)
+    //     const percDiv = ethers.utils.parseEther('1')
+    //     let totalShares: BigNumber
+    //     let oldPrinciple: BigNumber
 
-//   //       const expected = percDiv.div(2)
-//   //       const actual = await BPool.getNormalizedWeight(TenderToken.address)
-//   //       expect(actual.sub(expected).abs()).to.be.lte(acceptableDelta)
-//   //     })
+    //     let feesBefore: BigNumber = ethers.constants.Zero
 
-//   //     it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
-//   //       expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs('0', newStake, oldPrinciple)
-//   //     })
-//   //   })
-//   })
+    //     before(async () => {
+    //       feesBefore = await Tenderizer.pendingFees()
+    //       LivepeerMock.smocked.pendingStake.will.return.with(newStake)
+    //       oldPrinciple = await Tenderizer.currentPrincipal()
+    //       tx = await Controller.rebase()
+    //     })
 
-  // describe('collect fees', () => {
-  //   let fees: BigNumber
-  //   let ownerBalBefore: BigNumber
+    //     it('updates currentPrincipal', async () => {
+    //       expect(await Tenderizer.currentPrincipal()).to.eq(newStake)
+    //     })
 
-  //   before(async () => {
-  //     fees = await Tenderizer.pendingFees()
-  //     ownerBalBefore = await TenderToken.balanceOf(deployer)
-  //     tx = await Controller.collectFees()
+    //     it('decreases tendertoken balances when slashed', async () => {
+    //       // account 0
+    //       const shares = await TenderToken.sharesOf(deployer)
+    //       totalShares = await TenderToken.getTotalShares()
+    //       expect(await TenderToken.balanceOf(deployer)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+    //     })
+
+    //     it("doesn't increase pending fees", async () => {
+    //       expect(await Tenderizer.pendingFees()).to.eq(feesBefore)
+    //     })
+
+    //     it('decreases the tenderToken balance of the AMM', async () => {
+    //       const shares = await TenderToken.sharesOf(BPool.address)
+    //       expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+    //     })
+
+    //     it('changes the weights of the AMM', async () => {
+    //       const acceptableDelta = ethers.BigNumber.from('100')
+
+    //       const expected = percDiv.div(2)
+    //       const actual = await BPool.getNormalizedWeight(TenderToken.address)
+    //       expect(actual.sub(expected).abs()).to.be.lte(acceptableDelta)
+    //     })
+
+  //     it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
+  //       expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs('0', newStake, oldPrinciple)
+  //     })
   //   })
+  })
 
-  //   it('should reset pendingFees', async () => {
-  //     expect(await Tenderizer.pendingFees()).to.eq(ethers.constants.Zero)
-  //   })
+  describe('collect fees', () => {
+    let fees: BigNumber
+    let ownerBalBefore: BigNumber
 
-  //   it('should increase tenderToken balance of owner', async () => {
-  //     expect(await TenderToken.balanceOf(deployer)).to.eq(ownerBalBefore.add(fees))
-  //   })
+    before(async () => {
+      fees = await Tenderizer.pendingFees()
+      ownerBalBefore = await TenderToken.balanceOf(deployer)
+      tx = await Controller.collectFees()
+    })
 
-  //   it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
-  //     expect(tx).to.emit(Tenderizer, 'ProtocolFeeCollected').withArgs(fees)
-  //   })
-  // })
+    it('should reset pendingFees', async () => {
+      expect(await Tenderizer.pendingFees()).to.eq(ethers.constants.Zero)
+    })
 
-  // describe('collect liquidity fees', () => {
-  //   let fees: BigNumber
-  //   let farmBalanceBefore: BigNumber
-  //   let mockTenderFarm : SignerWithAddress
+    it('should increase tenderToken balance of owner', async () => {
+      expect(await TenderToken.balanceOf(deployer)).to.eq(ownerBalBefore.add(fees))
+    })
 
-  //   before(async () => {
-  //     mockTenderFarm = signers[3]
-  //     fees = await Tenderizer.pendingLiquidityFees()
-  //     farmBalanceBefore = await TenderToken.balanceOf(mockTenderFarm.address)
-  //     tx = await Controller.collectLiquidityFees()
-  //   })
+    it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
+      expect(tx).to.emit(Tenderizer, 'ProtocolFeeCollected').withArgs(fees)
+    })
+  })
 
-  //   it('should reset pendingFees', async () => {
-  //     expect(await Tenderizer.pendingLiquidityFees()).to.eq(ethers.constants.Zero)
-  //   })
+  describe('collect liquidity fees', () => {
+    let fees: BigNumber
+    let farmBalanceBefore: BigNumber
+    let mockTenderFarm : SignerWithAddress
 
-  //   it('should increase tenderToken balance of tenderFarm', async () => {
-  //     expect(await TenderToken.balanceOf(mockTenderFarm.address)).to.eq(farmBalanceBefore.add(fees))
-  //   })
+    before(async () => {
+      mockTenderFarm = signers[3]
+      fees = await Tenderizer.pendingLiquidityFees()
+      farmBalanceBefore = await TenderToken.balanceOf(mockTenderFarm.address)
+      tx = await Controller.collectLiquidityFees()
+    })
 
-  //   it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
-  //     expect(tx).to.emit(Tenderizer, 'LiquidityFeeCollected').withArgs(fees)
-  //   })
-  // })
+    it('should reset pendingFees', async () => {
+      expect(await Tenderizer.pendingLiquidityFees()).to.eq(ethers.constants.Zero)
+    })
+
+    it('should increase tenderToken balance of tenderFarm', async () => {
+      expect(await TenderToken.balanceOf(mockTenderFarm.address)).to.eq(farmBalanceBefore.add(fees))
+    })
+
+    it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
+      expect(tx).to.emit(Tenderizer, 'LiquidityFeeCollected').withArgs(fees)
+    })
+  })
 
   describe('swap against ESP', () => {
     it('swaps tenderToken for Token', async () => {
@@ -342,63 +390,40 @@ describe('Livepeer Mainnet Fork Test', () => {
     })
   })
 
-  // describe('unlock', async () => {
-  //   before('stake with another account', async () => {
-  //     await LivepeerToken.transfer(signers[2].address, secondDeposit)
-  //     await LivepeerToken.connect(signers[2]).approve(Controller.address, secondDeposit)
-  //     await Controller.connect(signers[2]).deposit(secondDeposit)
-  //   })
+  describe('unlock', async () => {
+    it('unbond() succeeds', async () => {
+      withdrawAmount = await TenderToken.balanceOf(deployer)
+      const delBefore = await bondingManager.getDelegator(Tenderizer.address)
+      console.log(delBefore.bondedAmount.toString())
+      tx = await Controller.connect(signers[0]).unlock(withdrawAmount)
+      const delAfter = await bondingManager.getDelegator(Tenderizer.address)
+      console.log(delAfter.bondedAmount.toString())
+      // TODO: Check this test, are rewards being staked back on unbond() hence it updates some ammount?
+      // expect(delBefore.bondedAmount.sub(delAfter.bondedAmount)).to.eq(withdrawAmount)
+    })
 
-  //   it('reverts if unbond() reverts', async () => {
-  //     LivepeerMock.smocked.unbond.will.revert()
-  //     await expect(Controller.unlock(withdrawAmount)).to.be.reverted
-  //   })
+    it('reduces TenderToken Balance', async () => {
+      // lte to account for any roundoff error in tokenToShare calcualtion during burn
+      expect(await TenderToken.balanceOf(deployer)).to.lte(acceptableDelta)
+    })
 
-  //   it('reverts if requested amount exceeds balance', async () => {
-  //     LivepeerMock.smocked.unbond.will.return()
-  //     withdrawAmount = await TenderToken.balanceOf(deployer)
-  //     await expect(Controller.unlock(withdrawAmount.add(ethers.utils.parseEther('1')))).to.be.revertedWith('BURN_AMOUNT_EXCEEDS_BALANCE')
-  //   })
+    it('should create unstakeLock on Tenderizer', async () => {
+      const lock = await Tenderizer.unstakeLocks(lockID)
+      expect(lock.account).to.eq(deployer)
+      expect(lock.amount).to.eq(withdrawAmount)
+    })
 
-  //   it('reverts if requested amount is 0', async () => {
-  //     await expect(Controller.unlock(ethers.constants.Zero)).to.be.revertedWith('ZERO_AMOUNT')
-  //   })
+    it('should create unstakeLock on Livepeer', async () => {
+      const lock = await bondingManager.getDelegatorUnbondingLock(Tenderizer.address, lockID)
+      console.log(withdrawAmount)
+      console.log(lock.amount)
+      expect(lock.amount).to.eq(withdrawAmount)
+    })
 
-  //   it('unbond() succeeds', async () => {
-  //     tx = await Controller.unlock(withdrawAmount)
-  //     expect(LivepeerMock.smocked.unbond.calls.length).to.eq(1)
-  //     expect(LivepeerMock.smocked.unbond.calls[0]._amount).to.eq(withdrawAmount)
-  //   })
-
-  //   it('Gov unbond() reverts if no pending stake', async () => {
-  //     const txData = Tenderizer.interface.encodeFunctionData('unstake', [Controller.address, ethers.utils.parseEther('0')])
-  //     LivepeerMock.smocked.pendingStake.will.return.with(ethers.constants.Zero)
-  //     await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_STAKE')
-  //   })
-
-  //   it('Gov unbond() succeeds', async () => {
-  //     const txData = Tenderizer.interface.encodeFunctionData('unstake', [Controller.address, ethers.utils.parseEther('0')])
-  //     LivepeerMock.smocked.pendingStake.will.return.with(withdrawAmount)
-  //     await Controller.execute(Tenderizer.address, 0, txData)
-  //     expect(LivepeerMock.smocked.unbond.calls.length).to.eq(1)
-  //     expect(LivepeerMock.smocked.unbond.calls[0]._amount).to.eq(withdrawAmount)
-  //   })
-
-  //   it('reduces TenderToken Balance', async () => {
-  //     // lte to account for any roundoff error in tokenToShare calcualtion during burn
-  //     expect(await TenderToken.balanceOf(deployer)).to.lte(acceptableDelta)
-  //   })
-
-  //   it('should create unstakeLock', async () => {
-  //     const lock = await Tenderizer.unstakeLocks(lockID)
-  //     expect(lock.account).to.eq(deployer)
-  //     expect(lock.amount).to.eq(withdrawAmount)
-  //   })
-
-  //   it('should emit Unstake event from Tenderizer', async () => {
-  //     expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(deployer, NODE, withdrawAmount, lockID)
-  //   })
-  // })
+    it('should emit Unstake event from Tenderizer', async () => {
+      expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(deployer, NODE, withdrawAmount, lockID)
+    })
+  })
 
   // describe('withdraw', async () => {
   //   let lptBalBefore : BigNumber
