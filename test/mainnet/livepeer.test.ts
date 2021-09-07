@@ -13,10 +13,11 @@ import {
 } from 'ethereum-waffle'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Deployment } from 'hardhat-deploy/dist/types'
-import { BigNumber, BigNumberish } from '@ethersproject/bignumber'
+import { BigNumber } from '@ethersproject/bignumber'
 import { Contract, ContractTransaction } from '@ethersproject/contracts'
 
 import { sharesToTokens, percOf2 } from '../util/helpers'
+import { Signer } from '@ethersproject/abstract-signer'
 
 chai.use(solidity)
 const {
@@ -64,6 +65,7 @@ describe('Livepeer Mainnet Fork Test', () => {
 
   const LPTDeployer = '0x505f8c2ee81f1c6fa0d88e918ef0491222e05818'
   const transcoderAddr = '0x9c10672cee058fd658103d90872fe431bb6c0afa'
+  let multisigSigner: Signer
 
   before('deploy Livepeer Tenderizer', async () => {
     // Fork from mainnet
@@ -72,7 +74,7 @@ describe('Livepeer Mainnet Fork Test', () => {
       params: [{
         forking: {
           blockNumber: 12000000,
-          jsonRpcUrl: 'https://eth-mainnet.alchemyapi.io/v2/s93KFT7TnttkCPdNS2Fg_HAoCpP6dEda'
+          jsonRpcUrl: 'https://eth-mainnet.alchemyapi.io/v2/s93KFT7TnttkCPdNS2Fg_HAoCpP6dEda' // TODO: Add to env
         }
       }]
     })
@@ -90,19 +92,15 @@ describe('Livepeer Mainnet Fork Test', () => {
 
     const oneInchAddr = '0x111111111117dC0aa78b770fA6A738034120C302'
 
-    // Transfer tokens to deployer
     await hre.network.provider.request({
       method: 'hardhat_impersonateAccount',
       params: [LPTDeployer]
     })
-    const multisigSigner = await ethers.provider.getSigner(LPTDeployer)
+    multisigSigner = await ethers.provider.getSigner(LPTDeployer)
+
+    // Transfer some LPT
     LivepeerToken = (await ethers.getContractAt('ERC20', process.env.TOKEN)) as ERC20
     await LivepeerToken.connect(multisigSigner).transfer(deployer, ethers.utils.parseEther(process.env.STEAK_AMOUNT).mul(2))
-    await hre.network.provider.request({
-      method: 'hardhat_stopImpersonatingAccount',
-      params: [LPTDeployer]
-    }
-    )
 
     LivepeerStaking = (await ethers.getContractAt('ILivepeer', process.env.CONTRACT)) as ILivepeer
 
@@ -126,7 +124,6 @@ describe('Livepeer Mainnet Fork Test', () => {
   const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
 
   const deposit = ethers.utils.parseEther('100')
-  const secondDeposit = ethers.utils.parseEther('10')
 
   describe('deposit', () => {
     it('reverts because transfer amount exceeds allowance', async () => {
@@ -187,12 +184,6 @@ describe('Livepeer Mainnet Fork Test', () => {
 
         await hre.network.provider.request({
           method: 'hardhat_impersonateAccount',
-          params: [LPTDeployer]
-        })
-        const multisigSigner = await ethers.provider.getSigner(LPTDeployer)
-
-        await hre.network.provider.request({
-          method: 'hardhat_impersonateAccount',
           params: [transcoderAddr]
         })
         const transcoderSigner = await ethers.provider.getSigner(transcoderAddr)
@@ -209,12 +200,6 @@ describe('Livepeer Mainnet Fork Test', () => {
           await roundsManager.connect(multisigSigner).initializeRound()
         }
         await bondingManager.connect(transcoderSigner).reward()
-
-        await hre.network.provider.request({
-          method: 'hardhat_stopImpersonatingAccount',
-          params: [LPTDeployer]
-        }
-        )
 
         currentRound = await roundsManager.currentRound()
         const stakeAfter = (await bondingManager.pendingStake(Tenderizer.address, currentRound))
@@ -258,55 +243,6 @@ describe('Livepeer Mainnet Fork Test', () => {
           .withArgs(increase.add(swappedLPTRewards), newStakeMinusFees, deposit.add(initialStake))
       })
     })
-
-    //   describe('stake decrease', () => {
-    //     // The decrease will offset the increase from the previous test
-    //     const newStake = deposit.add(initialStake)
-    //     const percDiv = ethers.utils.parseEther('1')
-    //     let totalShares: BigNumber
-    //     let oldPrinciple: BigNumber
-
-    //     let feesBefore: BigNumber = ethers.constants.Zero
-
-    //     before(async () => {
-    //       feesBefore = await Tenderizer.pendingFees()
-    //       LivepeerMock.smocked.pendingStake.will.return.with(newStake)
-    //       oldPrinciple = await Tenderizer.currentPrincipal()
-    //       tx = await Controller.rebase()
-    //     })
-
-    //     it('updates currentPrincipal', async () => {
-    //       expect(await Tenderizer.currentPrincipal()).to.eq(newStake)
-    //     })
-
-    //     it('decreases tendertoken balances when slashed', async () => {
-    //       // account 0
-    //       const shares = await TenderToken.sharesOf(deployer)
-    //       totalShares = await TenderToken.getTotalShares()
-    //       expect(await TenderToken.balanceOf(deployer)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
-    //     })
-
-    //     it("doesn't increase pending fees", async () => {
-    //       expect(await Tenderizer.pendingFees()).to.eq(feesBefore)
-    //     })
-
-    //     it('decreases the tenderToken balance of the AMM', async () => {
-    //       const shares = await TenderToken.sharesOf(BPool.address)
-    //       expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
-    //     })
-
-    //     it('changes the weights of the AMM', async () => {
-    //       const acceptableDelta = ethers.BigNumber.from('100')
-
-    //       const expected = percDiv.div(2)
-    //       const actual = await BPool.getNormalizedWeight(TenderToken.address)
-    //       expect(actual.sub(expected).abs()).to.be.lte(acceptableDelta)
-    //     })
-
-  //     it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
-  //       expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs('0', newStake, oldPrinciple)
-  //     })
-  //   })
   })
 
   describe('collect fees', () => {
@@ -391,15 +327,15 @@ describe('Livepeer Mainnet Fork Test', () => {
   })
 
   describe('unlock', async () => {
-    it('unbond() succeeds', async () => {
+    let delBefore: BigNumber
+    before(async () => {
       withdrawAmount = await TenderToken.balanceOf(deployer)
-      const delBefore = await bondingManager.getDelegator(Tenderizer.address)
-      console.log(delBefore.bondedAmount.toString())
+      delBefore = await LivepeerStaking.pendingStake(Tenderizer.address, MAX_ROUND)
       tx = await Controller.connect(signers[0]).unlock(withdrawAmount)
-      const delAfter = await bondingManager.getDelegator(Tenderizer.address)
-      console.log(delAfter.bondedAmount.toString())
-      // TODO: Check this test, are rewards being staked back on unbond() hence it updates some ammount?
-      // expect(delBefore.bondedAmount.sub(delAfter.bondedAmount)).to.eq(withdrawAmount)
+    })
+
+    it('unbond() succeeds', async () => {
+      expect(delBefore.sub(await LivepeerStaking.pendingStake(Tenderizer.address, MAX_ROUND))).to.eq(withdrawAmount)
     })
 
     it('reduces TenderToken Balance', async () => {
@@ -415,8 +351,6 @@ describe('Livepeer Mainnet Fork Test', () => {
 
     it('should create unstakeLock on Livepeer', async () => {
       const lock = await bondingManager.getDelegatorUnbondingLock(Tenderizer.address, lockID)
-      console.log(withdrawAmount)
-      console.log(lock.amount)
       expect(lock.amount).to.eq(withdrawAmount)
     })
 
@@ -425,45 +359,46 @@ describe('Livepeer Mainnet Fork Test', () => {
     })
   })
 
-  // describe('withdraw', async () => {
-  //   let lptBalBefore : BigNumber
+  describe('withdraw', async () => {
+    let lptBalBefore : BigNumber
 
-  //   it('reverts if wihtdraw() reverts', async () => {
-  //     LivepeerMock.smocked.withdrawStake.will.revert()
-  //     await expect(Controller.withdraw(lockID)).to.be.reverted
-  //   })
+    it('reverts if wihtdraw() reverts - unbond period not complete', async () => {
+      await expect(Controller.withdraw(lockID)).to.be.reverted
+    })
 
-  //   it('withdraw() succeeds', async () => {
-  //     LivepeerMock.smocked.withdrawStake.will.return()
-  //     // Smocked doesn't actually execute transactions, so balance of Controller is not updated
-  //     // hence manually transferring some tokens to simlaute withdrawal
-  //     await LivepeerToken.transfer(Tenderizer.address, withdrawAmount.mul(2))
+    // TODO: Change to before, but can't increase max timeout on before()
+    it('wihtdraw() succeeeds - unstake lock is deleted', async () => {
+      // Mine blocks for 7 rounds (withdraw period)
+      const roundLength = await roundsManager.roundLength()
+      for (let i = 0; i < 7; i++) {
+        for (let j = 0; j < roundLength; j++) {
+          await hre.ethers.provider.send('evm_mine', [])
+        }
+        await roundsManager.connect(multisigSigner).initializeRound()
+      }
+      lptBalBefore = await LivepeerToken.balanceOf(deployer)
+      tx = await Controller.withdraw(lockID)
+    }).timeout(60000) // Set high timeout for test, to mine 7 rounds
 
-  //     lptBalBefore = await LivepeerToken.balanceOf(deployer)
+    it('should delete unstakeLock on Livepeer', async () => {
+      const lock = await bondingManager.getDelegatorUnbondingLock(Tenderizer.address, lockID)
+      expect(lock.amount).to.eq(0)
+    })
 
-  //     tx = await Controller.withdraw(lockID)
-  //     expect(LivepeerMock.smocked.withdrawStake.calls.length).to.eq(1)
-  //   })
+    it('increases LPT balance', async () => {
+      expect(await LivepeerToken.balanceOf(deployer)).to.eq(lptBalBefore.add(withdrawAmount))
+    })
 
-  //   it('increases LPT balance', async () => {
-  //     expect(await LivepeerToken.balanceOf(deployer)).to.eq(lptBalBefore.add(withdrawAmount))
-  //   })
+    it('should delete unstakeLock', async () => {
+      const lock = await Tenderizer.unstakeLocks(lockID)
+      expect(lock.account).to.eq(ethers.constants.AddressZero)
+      expect(lock.amount).to.eq(0)
+    })
 
-  //   it('TenderToken balance of other account stays the same', async () => {
-  //     const balOtherAcc = await TenderToken.balanceOf(signers[2].address)
-  //     expect(balOtherAcc.sub(secondDeposit).abs()).to.lte(acceptableDelta)
-  //   })
-
-  //   it('should delete unstakeLock', async () => {
-  //     const lock = await Tenderizer.unstakeLocks(lockID)
-  //     expect(lock.account).to.eq(ethers.constants.AddressZero)
-  //     expect(lock.amount).to.eq(0)
-  //   })
-
-  //   it('should emit Withdraw event from Tenderizer', async () => {
-  //     expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(deployer, withdrawAmount, lockID)
-  //   })
-  // })
+    it('should emit Withdraw event from Tenderizer', async () => {
+      expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(deployer, withdrawAmount, lockID)
+    })
+  })
 
   describe('upgrade', () => {
     let proxy: EIP173Proxy
@@ -502,120 +437,4 @@ describe('Livepeer Mainnet Fork Test', () => {
       expect(newPrincipal).to.equal(beforeBalance)
     })
   })
-
-  // describe('Setting contract variables', async () => {
-  //   describe('setting staking contract', () => {
-  //     it('sets staking contract', async () => {
-  //       const newStakingContract = await smockit(LivepeerNoMock)
-  //       const txData = Tenderizer.interface.encodeFunctionData('setStakingContract', [newStakingContract.address])
-  //       tx = await Controller.execute(Tenderizer.address, 0, txData)
-
-  //       // assert that bond() call is made to new staking contract on gulp()
-  //       await Controller.gulp()
-  //       expect(LivepeerMock.smocked.bond.calls.length).to.eq(0)
-  //       expect(newStakingContract.smocked.bond.calls.length).to.eq(1)
-  //     })
-
-  //     it('should emit GovernanceUpdate event', async () => {
-  //       expect(tx).to.emit(Tenderizer, 'GovernanceUpdate').withArgs('STAKING_CONTRACT')
-  //     })
-  //   })
-
-  //   // TODO: Split into common file since these will be the same on all integrations?
-  //   describe('setting node', async () => {
-  //     it('reverts if Zero address is set', async () => {
-  //       const txData = Tenderizer.interface.encodeFunctionData('setNode', [ethers.constants.AddressZero])
-  //       await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_ADDRESS')
-  //     })
-
-  //     it('reverts if not called by controller', async () => {
-  //       await expect(Tenderizer.setNode(ethers.constants.AddressZero)).to.be.reverted
-  //     })
-
-  //     it('sets node successfully', async () => {
-  //       const newNodeAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
-  //       const txData = Tenderizer.interface.encodeFunctionData('setNode', [newNodeAddress])
-  //       tx = await Controller.execute(Tenderizer.address, 0, txData)
-  //       expect(await Tenderizer.node()).to.equal(newNodeAddress)
-  //     })
-
-  //     it('should emit GovernanceUpdate event', async () => {
-  //       expect(tx).to.emit(Tenderizer, 'GovernanceUpdate').withArgs('NODE')
-  //     })
-  //   })
-
-  //   describe('setting steak', async () => {
-  //     it('reverts if Zero address is set', async () => {
-  //       const txData = Tenderizer.interface.encodeFunctionData('setSteak', [ethers.constants.AddressZero])
-  //       await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_ADDRESS')
-  //     })
-
-  //     it('sets steak successfully', async () => {
-  //       const newSteakAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
-  //       const txData = Tenderizer.interface.encodeFunctionData('setSteak', [newSteakAddress])
-  //       tx = await Controller.execute(Tenderizer.address, 0, txData)
-  //       expect(await Tenderizer.steak()).to.equal(newSteakAddress)
-  //     })
-
-  //     it('should emit GovernanceUpdate event', async () => {
-  //       expect(tx).to.emit(Tenderizer, 'GovernanceUpdate').withArgs('STEAK')
-  //     })
-  //   })
-
-  //   describe('setting protocol fee', async () => {
-  //     it('sets protocol fee', async () => {
-  //       const newFee = ethers.utils.parseEther('0.05') // 5%
-  //       const txData = Tenderizer.interface.encodeFunctionData('setProtocolFee', [newFee])
-  //       tx = await Controller.execute(Tenderizer.address, 0, txData)
-  //       expect(await Tenderizer.protocolFee()).to.equal(newFee)
-  //     })
-
-  //     it('should emit GovernanceUpdate event', async () => {
-  //       expect(tx).to.emit(Tenderizer, 'GovernanceUpdate').withArgs('PROTOCOL_FEE')
-  //     })
-  //   })
-
-  //   describe('setting liquidity fee', async () => {
-  //     it('sets liquidity fee', async () => {
-  //       const newFee = ethers.utils.parseEther('0.05') // 5%
-  //       const txData = Tenderizer.interface.encodeFunctionData('setLiquidityFee', [newFee])
-  //       tx = await Controller.execute(Tenderizer.address, 0, txData)
-  //       expect(await Tenderizer.liquidityFee()).to.equal(newFee)
-  //     })
-
-  //     it('should emit GovernanceUpdate event', async () => {
-  //       expect(tx).to.emit(Tenderizer, 'GovernanceUpdate').withArgs('LIQUIDITY_FEE')
-  //     })
-  //   })
-
-  //   describe('setting controller', async () => {
-  //     it('reverts if Zero address is set', async () => {
-  //       const txData = Tenderizer.interface.encodeFunctionData('setController', [ethers.constants.AddressZero])
-  //       await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_ADDRESS')
-  //     })
-
-  //     it('sets controller successfully', async () => {
-  //       const newControllerAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
-  //       const txData = Tenderizer.interface.encodeFunctionData('setController', [newControllerAddress])
-  //       tx = await Controller.execute(Tenderizer.address, 0, txData)
-  //       expect(await Tenderizer.controller()).to.equal(newControllerAddress)
-  //     })
-
-  //     it('should emit GovernanceUpdate event', async () => {
-  //       expect(tx).to.emit(Tenderizer, 'GovernanceUpdate').withArgs('CONTROLLER')
-  //     })
-  //   })
-
-  //   describe('setting esp', async () => {
-  //     it('reverts if Zero address is set', async () => {
-  //       await expect(Controller.setEsp(ethers.constants.AddressZero)).to.be.revertedWith('ZERO_ADDRESS')
-  //     })
-
-  //     it('sets esp successfully', async () => {
-  //       const newEspAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
-  //       tx = await Controller.setEsp(newEspAddress)
-  //       expect(await Controller.esp()).to.equal(newEspAddress)
-  //     })
-  //   })
-  // })
 })
