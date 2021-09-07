@@ -64,24 +64,26 @@ describe('Livepeer Mainnet Fork Test', () => {
   let roundsManager: Contract
 
   const LPTDeployer = '0x505f8c2ee81f1c6fa0d88e918ef0491222e05818'
-  const transcoderAddr = '0x9c10672cee058fd658103d90872fe431bb6c0afa'
   let multisigSigner: Signer
 
-  before('deploy Livepeer Tenderizer', async () => {
+  const testTimeout = 120000
+
+  before('deploy Livepeer Tenderizer', async function () {
+    this.timeout(testTimeout)
     // Fork from mainnet
     await hre.network.provider.request({
       method: 'hardhat_reset',
       params: [{
         forking: {
           blockNumber: 12000000,
-          jsonRpcUrl: 'https://eth-mainnet.alchemyapi.io/v2/s93KFT7TnttkCPdNS2Fg_HAoCpP6dEda' // TODO: Add to env
+          jsonRpcUrl: process.env.ALCHEMY_URL || 'https://eth-mainnet.alchemyapi.io/v2/s93KFT7TnttkCPdNS2Fg_HAoCpP6dEda'
         }
       }]
     })
 
     process.env.NAME = 'Livepeer'
     process.env.SYMBOL = 'LPT'
-    process.env.CONTRACT = '0x511bc4556d823ae99630ae8de28b9b80df90ea2e'
+    process.env.CONTRACT = bondingManagerAddr
     process.env.TOKEN = '0x58b6a8a3302369daec383334672404ee733ab239'
     process.env.VALIDATOR = NODE
     process.env.BFACTORY = '0x9424B1412450D0f8Fc2255FAf6046b98213B76Bd'
@@ -184,9 +186,9 @@ describe('Livepeer Mainnet Fork Test', () => {
 
         await hre.network.provider.request({
           method: 'hardhat_impersonateAccount',
-          params: [transcoderAddr]
+          params: [NODE]
         })
-        const transcoderSigner = await ethers.provider.getSigner(transcoderAddr)
+        const transcoderSigner = await ethers.provider.getSigner(NODE)
 
         // Mine blocks for one round
         const roundLength = await roundsManager.roundLength()
@@ -378,7 +380,7 @@ describe('Livepeer Mainnet Fork Test', () => {
       }
       lptBalBefore = await LivepeerToken.balanceOf(deployer)
       tx = await Controller.withdraw(lockID)
-    }).timeout(60000) // Set high timeout for test, to mine 7 rounds
+    }).timeout(testTimeout) // Set high timeout for test, to mine 7 rounds
 
     it('should delete unstakeLock on Livepeer', async () => {
       const lock = await bondingManager.getDelegatorUnbondingLock(Tenderizer.address, lockID)
