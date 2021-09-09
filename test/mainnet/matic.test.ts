@@ -4,7 +4,7 @@ import {
   Controller, ElasticSupplyPool, TenderToken, IMatic, BPool, EIP173Proxy, Matic, ERC20
 } from '../../typechain'
 
-// import bondingManagerAbi from './abis/livepeer/BondingManager.json'
+import rootChainAbi from './abis/matic/RootChain.json'
 
 import chai from 'chai'
 import {
@@ -16,6 +16,7 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { Contract, ContractTransaction } from '@ethersproject/contracts'
 
 import { Signer } from '@ethersproject/abstract-signer'
+import { percOf2, sharesToTokens } from '../util/helpers'
 
 chai.use(solidity)
 const {
@@ -45,7 +46,7 @@ describe('Matic Mainnet Fork Test', () => {
 
   const acceptableDelta = 2
 
-  const MAX_ROUND = BigNumber.from(2).pow(256).sub(1)
+  const EXCHAGE_RATE_PERCEISON = BigNumber.from(10).pow(29)
 
   before('get signers', async () => {
     const namedAccs = await hre.getNamedAccounts()
@@ -57,7 +58,7 @@ describe('Matic Mainnet Fork Test', () => {
   const STEAK_AMOUNT = '100000'
   const NODE = '0xaC1D6c20cE7F1fBF1915eFc0898D188b9C6A5CeD' // Validator share address
   const stakeManagerAddr = '0x5e3ef299fddf15eaa0432e6e66473ace8c13d908'
-  let bondingManager: Contract
+  const rootChainAddr = '0x86E4Dc95c7FBdBf52e33D563BbDB00823894C287'
 
   const maticHolder = '0x2f7e209e0F5F645c7612D7610193Fe268F118b28'
   let maticHolderSinger: Signer
@@ -106,7 +107,7 @@ describe('Matic Mainnet Fork Test', () => {
     MaticToken = (await ethers.getContractAt('ERC20', process.env.TOKEN)) as ERC20
     await MaticToken.connect(maticHolderSinger).transfer(deployer, ethers.utils.parseEther(process.env.STEAK_AMOUNT).mul(2))
 
-    MaticStaking = (await ethers.getContractAt('IMatic', process.env.CONTRACT)) as IMatic
+    MaticStaking = (await ethers.getContractAt('IMatic', process.env.VALIDATOR)) as IMatic
 
     Matic = await hre.deployments.fixture(['Matic'], {
       keepExistingDeployments: false
@@ -157,96 +158,78 @@ describe('Matic Mainnet Fork Test', () => {
     })
   })
 
-  //   describe('stake', () => {
-  //     it('bond succeeds', async () => {
-  //       const stakeBefore = await LivepeerStaking.pendingStake(Tenderizer.address, MAX_ROUND)
-  //       tx = await Controller.gulp()
-  //       expect(await LivepeerStaking.pendingStake(Tenderizer.address, MAX_ROUND)).to.eq(stakeBefore.add(deposit))
-  //     })
+  describe('stake', () => {
+    let stakeBefore: BigNumber
+    before(async () => {
+      // Exchange rate would be 1 at this point, so can simply comapre the shares
+      stakeBefore = await MaticStaking.balanceOf(Tenderizer.address)
+      tx = await Controller.gulp()
+    })
 
-  //     it('emits Stake event from tenderizer', async () => {
-  //       expect(tx).to.emit(Tenderizer, 'Stake').withArgs(NODE, deposit)
-  //     })
-  //   })
+    it('bond succeeds', async () => {
+      expect(await MaticStaking.balanceOf(Tenderizer.address)).to.eq(stakeBefore.add(deposit))
+    })
 
-  //   describe('rebase', () => {
-  //     describe('stake increased', () => {
-  //       let increase: BigNumber
-  //       let newStakeMinusFees: BigNumber
-  //       let newStake: BigNumber
-  //       const swappedLPTRewards = ethers.BigNumber.from('0') // TODO: Add test with ETH->LPT Swap
-  //       let totalShares: BigNumber = ethers.utils.parseEther('1')
-  //       const percDiv = ethers.utils.parseEther('1')
+    it('emits Stake event from tenderizer', async () => {
+      expect(tx).to.emit(Tenderizer, 'Stake').withArgs(NODE, deposit)
+    })
+  })
 
-  //       before(async () => {
-  //         bondingManager = new ethers.Contract(bondingManagerAddr, bondingManagerAbi, ethers.provider)
-  //         roundsManager = new ethers.Contract(roundsManagerAddr, adjustableRoundsManagerAbi, ethers.provider)
+//   describe('rebase', () => {
+//     describe('stake increased', () => {
+//       let increase: BigNumber
+//       let newStakeMinusFees: BigNumber
+//       let newStake: BigNumber
+//       const swappedLPTRewards = ethers.BigNumber.from('0') // TODO: Add test with ETH->LPT Swap
+//       let totalShares: BigNumber = ethers.utils.parseEther('1')
+//       const percDiv = ethers.utils.parseEther('1')
 
-  //         let currentRound = await roundsManager.currentRound()
-  //         const stakeBefore = await bondingManager.pendingStake(Tenderizer.address, currentRound)
+//       before(async () => {
+//         const rootChain = new ethers.Contract(rootChainAddr, rootChainAbi, ethers.provider)
 
-  //         await hre.network.provider.request({
-  //           method: 'hardhat_impersonateAccount',
-  //           params: [NODE]
-  //         })
-  //         const transcoderSigner = await ethers.provider.getSigner(NODE)
 
-  //         // Mine blocks for one round
-  //         const roundLength = await roundsManager.roundLength()
-  //         for (let j = 0; j < roundLength; j++) {
-  //           await hre.ethers.provider.send('evm_mine', [])
-  //         }
+//         // const stakeAfter = (await bondingManager.pendingStake(Tenderizer.address, currentRound))
+//         increase = stakeAfter.sub(stakeBefore)
+//         const liquidityFees = percOf2(increase.add(swappedLPTRewards), liquidityFeesPercent)
+//         const protocolFees = percOf2(increase.add(swappedLPTRewards), protocolFeesPercent)
+//         newStake = deposit.add(initialStake).add(increase)
+//         newStakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
+//         tx = await Controller.rebase()
+//       })
 
-  //         // Initialize round and reward
-  //         const initialized = await roundsManager.connect(maticHolderSinger).currentRoundInitialized()
-  //         if (!initialized) {
-  //           await roundsManager.connect(maticHolderSinger).initializeRound()
-  //         }
-  //         await bondingManager.connect(transcoderSigner).reward()
+//       it('updates currentPrincipal', async () => {
+//         expect(await Tenderizer.currentPrincipal()).to.eq(newStakeMinusFees)
+//       })
 
-  //         currentRound = await roundsManager.currentRound()
-  //         const stakeAfter = (await bondingManager.pendingStake(Tenderizer.address, currentRound))
-  //         increase = stakeAfter.sub(stakeBefore)
-  //         const liquidityFees = percOf2(increase.add(swappedLPTRewards), liquidityFeesPercent)
-  //         const protocolFees = percOf2(increase.add(swappedLPTRewards), protocolFeesPercent)
-  //         newStake = deposit.add(initialStake).add(increase)
-  //         newStakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
-  //         tx = await Controller.rebase()
-  //       })
+//       it('increases tendertoken balances when rewards are added', async () => {
+//         // account 0
+//         const shares = await TenderToken.sharesOf(deployer)
+//         totalShares = await TenderToken.getTotalShares()
+//         expect(await TenderToken.balanceOf(deployer)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+//       })
 
-  //       it('updates currentPrincipal', async () => {
-  //         expect(await Tenderizer.currentPrincipal()).to.eq(newStakeMinusFees)
-  //       })
+//       it('increases the tenderToken balance of the AMM', async () => {
+//         const shares = await TenderToken.sharesOf(BPool.address)
+//         expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+//       })
 
-  //       it('increases tendertoken balances when rewards are added', async () => {
-  //         // account 0
-  //         const shares = await TenderToken.sharesOf(deployer)
-  //         totalShares = await TenderToken.getTotalShares()
-  //         expect(await TenderToken.balanceOf(deployer)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
-  //       })
+//       it('changes the weights of the AMM', async () => {
+//         const tBal = await TenderToken.balanceOf(BPool.address)
+//         const bal = await MaticToken.balanceOf(BPool.address)
 
-  //       it('increases the tenderToken balance of the AMM', async () => {
-  //         const shares = await TenderToken.sharesOf(BPool.address)
-  //         expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
-  //       })
+//         const acceptableDelta = ethers.BigNumber.from('100')
 
-  //       it('changes the weights of the AMM', async () => {
-  //         const tBal = await TenderToken.balanceOf(BPool.address)
-  //         const bal = await MaticToken.balanceOf(BPool.address)
+//         const expected = tBal.mul(percDiv).div(tBal.add(bal))
+//         const actual = await BPool.getNormalizedWeight(TenderToken.address)
+//         expect(actual.sub(expected).abs()).to.be.lte(acceptableDelta)
+//       })
 
-  //         const acceptableDelta = ethers.BigNumber.from('100')
-
-  //         const expected = tBal.mul(percDiv).div(tBal.add(bal))
-  //         const actual = await BPool.getNormalizedWeight(TenderToken.address)
-  //         expect(actual.sub(expected).abs()).to.be.lte(acceptableDelta)
-  //       })
-
-  //       it('should emit RewardsClaimed event from Tenderizer', async () => {
-  //         expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
-  //           .withArgs(increase.add(swappedLPTRewards), newStakeMinusFees, deposit.add(initialStake))
-  //       })
-  //     })
-  //   })
+//       it('should emit RewardsClaimed event from Tenderizer', async () => {
+//         expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
+//           .withArgs(increase.add(swappedLPTRewards), newStakeMinusFees, deposit.add(initialStake))
+//       })
+//     })
+//   })
 
   //   describe('collect fees', () => {
   //     let fees: BigNumber
