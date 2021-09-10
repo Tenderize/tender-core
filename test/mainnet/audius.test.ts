@@ -5,6 +5,7 @@ import {
 } from '../../typechain'
 
 import claimsManagerAbi from './abis/audius/ClaimsManager.json'
+import govAbi from './abis/audius/Governance.json'
 
 import chai from 'chai'
 import {
@@ -58,6 +59,8 @@ describe('Audius Mainnet Fork Test', () => {
 
   const delegateManagerAddr = '0x4d7968ebfD390D5E7926Cb3587C39eFf2F9FB225'
   const claimsManagerAddr = '0x44617F9dCEd9787C3B06a05B35B4C779a2AA1334'
+  const govAddr = '0x4DEcA517D6817B6510798b7328F2314d3003AbAC'
+  const guardianAddr = '0x7eE3c2091471474c9c4831A550f1a79DaBA0CcEf'
   const AUDIOHolder = '0x9416fd2bc773c85a65d699ca9fc9525f1424df94'
 
   const undelegateStakeRequestedTopic = '0x0c0ebdfe3f3ccdb3ad070f98a3fb9656a7b8781c299a5c0cd0f37e4d5a02556d'
@@ -93,6 +96,14 @@ describe('Audius Mainnet Fork Test', () => {
       params: [AUDIOHolder]
     })
     const AUDIOHolderSigner = await ethers.provider.getSigner(AUDIOHolder)
+
+    // Transfer some ETH to Gov to execute txs
+    const ETHHolder = '0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8'
+    await hre.network.provider.request({
+      method: 'hardhat_impersonateAccount',
+      params: [ETHHolder]
+    })
+    await hre.web3.eth.sendTransaction({ from: ETHHolder, to: guardianAddr, value: ethers.utils.parseEther('10').toString() })
 
     // Transfer some AUDIO
     AudiusToken = (await ethers.getContractAt('ERC20', process.env.TOKEN)) as ERC20
@@ -164,13 +175,11 @@ describe('Audius Mainnet Fork Test', () => {
   })
 
   describe('rebase', () => {
+    let increase: BigNumber
     describe('stake increased', () => {
-      let increase: BigNumber
       let newStakeMinusFees: BigNumber
       let newStake: BigNumber
-      const swappedLPTRewards = ethers.BigNumber.from('0') // TODO: Add test with ETH->LPT Swap
       let totalShares: BigNumber = ethers.utils.parseEther('1')
-      const percDiv = ethers.utils.parseEther('1')
 
       before(async function () {
         this.timeout(testTimeout * 10)
@@ -195,10 +204,10 @@ describe('Audius Mainnet Fork Test', () => {
         tx = await Controller.rebase()
         const stakeAfter = await AudiusStaking.getTotalDelegatorStake(Tenderizer.address)
         increase = stakeAfter.sub(stakeBefore)
-        const liquidityFees = percOf2(increase.add(swappedLPTRewards), liquidityFeesPercent)
-        const protocolFees = percOf2(increase.add(swappedLPTRewards), protocolFeesPercent)
+        const liquidityFees = percOf2(increase, liquidityFeesPercent)
+        const protocolFees = percOf2(increase, protocolFeesPercent)
         newStake = deposit.add(initialStake).add(increase)
-        newStakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
+        newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
       })
 
       it('updates currentPrincipal', async () => {
@@ -217,24 +226,69 @@ describe('Audius Mainnet Fork Test', () => {
         expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
       })
 
-      it('changes the weights of the AMM', async () => {
-        const tBal = await TenderToken.balanceOf(BPool.address)
-        const bal = await AudiusToken.balanceOf(BPool.address)
-
-        const acceptableDelta = ethers.BigNumber.from('100')
-
-        const expected = tBal.mul(percDiv).div(tBal.add(bal))
-        const actual = await BPool.getNormalizedWeight(TenderToken.address)
-        expect(actual.sub(expected).abs()).to.be.lte(acceptableDelta)
-      })
-
       it('should emit RewardsClaimed event from Tenderizer', async () => {
         expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
-          .withArgs(increase.add(swappedLPTRewards), newStakeMinusFees, deposit.add(initialStake))
+          .withArgs(increase, newStakeMinusFees, deposit.add(initialStake))
       })
     })
 
-    // TODO: Slashing test
+    describe('stake decrease', () => {
+      // The decrease will offset the increase from the previous test
+      let newStake: BigNumber
+      let totalShares: BigNumber
+      let oldPrinciple: BigNumber
+
+      let feesBefore: BigNumber = ethers.constants.Zero
+      let tx: ContractTransaction
+
+      before(async () => {
+        feesBefore = await Tenderizer.pendingFees()
+        oldPrinciple = await Tenderizer.currentPrincipal()
+
+        // Impersonate guardian and slash NODE
+        await hre.network.provider.request({
+          method: 'hardhat_impersonateAccount',
+          params: [guardianAddr]
+        })
+        const guardianSinger = await ethers.provider.getSigner(guardianAddr)
+        const gov = new ethers.Contract(govAddr, govAbi, ethers.provider)
+        const abi = new ethers.utils.AbiCoder()
+        await gov.connect(guardianSinger).guardianExecuteTransaction(
+          hre.web3.utils.fromAscii('DelegateManager\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0'),
+          ethers.BigNumber.from(0),
+          'slash(uint256,address)',
+          abi.encode(['uint256', 'address'], [ethers.utils.parseEther('100'), NODE]),
+          { from: guardianAddr }
+        )
+
+        newStake = await AudiusStaking.getTotalDelegatorStake(Tenderizer.address)
+        tx = await Controller.rebase()
+      })
+
+      it('updates currentPrincipal', async () => {
+        expect(await Tenderizer.currentPrincipal()).to.eq(newStake)
+      })
+
+      it('decreases tendertoken balances when slashed', async () => {
+        // account 0
+        const shares = await TenderToken.sharesOf(deployer)
+        totalShares = await TenderToken.getTotalShares()
+        expect(await TenderToken.balanceOf(deployer)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+      })
+
+      it("doesn't increase pending fees", async () => {
+        expect(await Tenderizer.pendingFees()).to.eq(feesBefore)
+      })
+
+      it('decreases the tenderToken balance of the AMM', async () => {
+        const shares = await TenderToken.sharesOf(BPool.address)
+        expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+      })
+
+      it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
+        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs('0', newStake, oldPrinciple)
+      })
+    })
   })
 
   describe('collect fees', () => {
