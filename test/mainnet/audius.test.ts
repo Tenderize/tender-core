@@ -4,8 +4,7 @@ import {
   Controller, ElasticSupplyPool, TenderToken, IAudius, BPool, EIP173Proxy, Audius, ERC20
 } from '../../typechain'
 
-// import bondingManagerAbi from './abis/livepeer/BondingManager.json'
-// import adjustableRoundsManagerAbi from './abis/livepeer/AdjustableRoundsManager.json'
+import claimsManagerAbi from './abis/audius/ClaimsManager.json'
 
 import chai from 'chai'
 import {
@@ -14,10 +13,9 @@ import {
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Deployment } from 'hardhat-deploy/dist/types'
 import { BigNumber } from '@ethersproject/bignumber'
-import { Contract, ContractTransaction } from '@ethersproject/contracts'
+import { ContractTransaction } from '@ethersproject/contracts'
 
 import { sharesToTokens, percOf2 } from '../util/helpers'
-import { Signer } from '@ethersproject/abstract-signer'
 
 chai.use(solidity)
 const {
@@ -41,13 +39,12 @@ describe('Audius Mainnet Fork Test', () => {
   let withdrawAmount: BigNumber
 
   let tx: ContractTransaction
-  const lockID = 0
+  const unbondLockID = 1
+  const govUnboundLockID = 2
   const protocolFeesPercent = ethers.utils.parseEther('0.025')
   const liquidityFeesPercent = ethers.utils.parseEther('0.025')
 
   const acceptableDelta = 2
-
-  const MAX_ROUND = BigNumber.from(2).pow(256).sub(1)
 
   before('get signers', async () => {
     const namedAccs = await hre.getNamedAccounts()
@@ -58,13 +55,12 @@ describe('Audius Mainnet Fork Test', () => {
 
   const STEAK_AMOUNT = '100000'
   const NODE = '0x0C3523357Fe79cC6348902A956d561be6039f462'
-  const delegateManagerAddr = '0x4d7968ebfD390D5E7926Cb3587C39eFf2F9FB225'
-  //   const roundsManagerAddr = '0x3984fc4ceeef1739135476f625d36d6c35c40dc3'
-  //   let bondingManager: Contract
-  //   let roundsManager: Contract
 
+  const delegateManagerAddr = '0x4d7968ebfD390D5E7926Cb3587C39eFf2F9FB225'
+  const claimsManagerAddr = '0x44617F9dCEd9787C3B06a05B35B4C779a2AA1334'
   const AUDIOHolder = '0x9416fd2bc773c85a65d699ca9fc9525f1424df94'
-  let multisigSigner: Signer
+
+  const undelegateStakeRequestedTopic = '0x0c0ebdfe3f3ccdb3ad070f98a3fb9656a7b8781c299a5c0cd0f37e4d5a02556d'
 
   const testTimeout = 120000
 
@@ -167,275 +163,292 @@ describe('Audius Mainnet Fork Test', () => {
     })
   })
 
-  //   describe('rebase', () => {
-  //     describe('stake increased', () => {
-  //       let increase: BigNumber
-  //       let newStakeMinusFees: BigNumber
-  //       let newStake: BigNumber
-  //       const swappedLPTRewards = ethers.BigNumber.from('0') // TODO: Add test with ETH->LPT Swap
-  //       let totalShares: BigNumber = ethers.utils.parseEther('1')
-  //       const percDiv = ethers.utils.parseEther('1')
+  describe('rebase', () => {
+    describe('stake increased', () => {
+      let increase: BigNumber
+      let newStakeMinusFees: BigNumber
+      let newStake: BigNumber
+      const swappedLPTRewards = ethers.BigNumber.from('0') // TODO: Add test with ETH->LPT Swap
+      let totalShares: BigNumber = ethers.utils.parseEther('1')
+      const percDiv = ethers.utils.parseEther('1')
 
-  //       before(async () => {
-  //         bondingManager = new ethers.Contract(bondingManagerAddr, bondingManagerAbi, ethers.provider)
-  //         roundsManager = new ethers.Contract(roundsManagerAddr, adjustableRoundsManagerAbi, ethers.provider)
+      before(async function () {
+        this.timeout(testTimeout * 10)
+        const claimsManager = new ethers.Contract(claimsManagerAddr, claimsManagerAbi, ethers.provider)
 
-  //         let currentRound = await roundsManager.currentRound()
-  //         const stakeBefore = await bondingManager.pendingStake(Tenderizer.address, currentRound)
+        const stakeBefore = await AudiusStaking.getTotalDelegatorStake(Tenderizer.address)
 
-  //         await hre.network.provider.request({
-  //           method: 'hardhat_impersonateAccount',
-  //           params: [NODE]
-  //         })
-  //         const transcoderSigner = await ethers.provider.getSigner(NODE)
+        // Mine blocks so new round can be initiated
+        // Rounds can be initiated only once per week
+        for (let j = 0; j < 40000; j++) {
+          await hre.ethers.provider.send('evm_mine', [])
+        }
 
-  //         // Mine blocks for one round
-  //         const roundLength = await roundsManager.roundLength()
-  //         for (let j = 0; j < roundLength; j++) {
-  //           await hre.ethers.provider.send('evm_mine', [])
-  //         }
+        // Initiate new round and distribute rewards
+        await hre.network.provider.request({
+          method: 'hardhat_impersonateAccount',
+          params: [NODE]
+        })
+        const nodeSigner = await ethers.provider.getSigner(NODE)
+        await claimsManager.connect(nodeSigner).initiateRound()
 
-  //         // Initialize round and reward
-  //         const initialized = await roundsManager.connect(multisigSigner).currentRoundInitialized()
-  //         if (!initialized) {
-  //           await roundsManager.connect(multisigSigner).initializeRound()
-  //         }
-  //         await bondingManager.connect(transcoderSigner).reward()
+        tx = await Controller.rebase()
+        const stakeAfter = await AudiusStaking.getTotalDelegatorStake(Tenderizer.address)
+        increase = stakeAfter.sub(stakeBefore)
+        const liquidityFees = percOf2(increase.add(swappedLPTRewards), liquidityFeesPercent)
+        const protocolFees = percOf2(increase.add(swappedLPTRewards), protocolFeesPercent)
+        newStake = deposit.add(initialStake).add(increase)
+        newStakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
+      })
 
-  //         currentRound = await roundsManager.currentRound()
-  //         const stakeAfter = (await bondingManager.pendingStake(Tenderizer.address, currentRound))
-  //         increase = stakeAfter.sub(stakeBefore)
-  //         const liquidityFees = percOf2(increase.add(swappedLPTRewards), liquidityFeesPercent)
-  //         const protocolFees = percOf2(increase.add(swappedLPTRewards), protocolFeesPercent)
-  //         newStake = deposit.add(initialStake).add(increase)
-  //         newStakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
-  //         tx = await Controller.rebase()
-  //       })
+      it('updates currentPrincipal', async () => {
+        expect(await Tenderizer.currentPrincipal()).to.eq(newStakeMinusFees)
+      })
 
-  //       it('updates currentPrincipal', async () => {
-  //         expect(await Tenderizer.currentPrincipal()).to.eq(newStakeMinusFees)
-  //       })
+      it('increases tendertoken balances when rewards are added', async () => {
+        // account 0
+        const shares = await TenderToken.sharesOf(deployer)
+        totalShares = await TenderToken.getTotalShares()
+        expect(await TenderToken.balanceOf(deployer)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+      })
 
-  //       it('increases tendertoken balances when rewards are added', async () => {
-  //         // account 0
-  //         const shares = await TenderToken.sharesOf(deployer)
-  //         totalShares = await TenderToken.getTotalShares()
-  //         expect(await TenderToken.balanceOf(deployer)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
-  //       })
+      it('increases the tenderToken balance of the AMM', async () => {
+        const shares = await TenderToken.sharesOf(BPool.address)
+        expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+      })
 
-  //       it('increases the tenderToken balance of the AMM', async () => {
-  //         const shares = await TenderToken.sharesOf(BPool.address)
-  //         expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
-  //       })
+      it('changes the weights of the AMM', async () => {
+        const tBal = await TenderToken.balanceOf(BPool.address)
+        const bal = await AudiusToken.balanceOf(BPool.address)
 
-  //       it('changes the weights of the AMM', async () => {
-  //         const tBal = await TenderToken.balanceOf(BPool.address)
-  //         const bal = await AudiusToken.balanceOf(BPool.address)
+        const acceptableDelta = ethers.BigNumber.from('100')
 
-  //         const acceptableDelta = ethers.BigNumber.from('100')
+        const expected = tBal.mul(percDiv).div(tBal.add(bal))
+        const actual = await BPool.getNormalizedWeight(TenderToken.address)
+        expect(actual.sub(expected).abs()).to.be.lte(acceptableDelta)
+      })
 
-  //         const expected = tBal.mul(percDiv).div(tBal.add(bal))
-  //         const actual = await BPool.getNormalizedWeight(TenderToken.address)
-  //         expect(actual.sub(expected).abs()).to.be.lte(acceptableDelta)
-  //       })
+      it('should emit RewardsClaimed event from Tenderizer', async () => {
+        expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
+          .withArgs(increase.add(swappedLPTRewards), newStakeMinusFees, deposit.add(initialStake))
+      })
+    })
 
-  //       it('should emit RewardsClaimed event from Tenderizer', async () => {
-  //         expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
-  //           .withArgs(increase.add(swappedLPTRewards), newStakeMinusFees, deposit.add(initialStake))
-  //       })
-  //     })
-  //   })
+    // TODO: Slashing test
+  })
 
-  //   describe('collect fees', () => {
-  //     let fees: BigNumber
-  //     let ownerBalBefore: BigNumber
+  describe('collect fees', () => {
+    let fees: BigNumber
+    let ownerBalBefore: BigNumber
 
-  //     before(async () => {
-  //       fees = await Tenderizer.pendingFees()
-  //       ownerBalBefore = await TenderToken.balanceOf(deployer)
-  //       tx = await Controller.collectFees()
-  //     })
+    before(async () => {
+      fees = await Tenderizer.pendingFees()
+      ownerBalBefore = await TenderToken.balanceOf(deployer)
+      tx = await Controller.collectFees()
+    })
 
-  //     it('should reset pendingFees', async () => {
-  //       expect(await Tenderizer.pendingFees()).to.eq(ethers.constants.Zero)
-  //     })
+    it('should reset pendingFees', async () => {
+      expect(await Tenderizer.pendingFees()).to.eq(ethers.constants.Zero)
+    })
 
-  //     it('should increase tenderToken balance of owner', async () => {
-  //       expect(await TenderToken.balanceOf(deployer)).to.eq(ownerBalBefore.add(fees))
-  //     })
+    it('should increase tenderToken balance of owner', async () => {
+      expect(await TenderToken.balanceOf(deployer)).to.eq(ownerBalBefore.add(fees))
+    })
 
-  //     it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
-  //       expect(tx).to.emit(Tenderizer, 'ProtocolFeeCollected').withArgs(fees)
-  //     })
-  //   })
+    it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
+      expect(tx).to.emit(Tenderizer, 'ProtocolFeeCollected').withArgs(fees)
+    })
+  })
 
-  //   describe('collect liquidity fees', () => {
-  //     let fees: BigNumber
-  //     let farmBalanceBefore: BigNumber
-  //     let mockTenderFarm : SignerWithAddress
+  describe('collect liquidity fees', () => {
+    let fees: BigNumber
+    let farmBalanceBefore: BigNumber
+    let mockTenderFarm : SignerWithAddress
 
-  //     before(async () => {
-  //       mockTenderFarm = signers[3]
-  //       fees = await Tenderizer.pendingLiquidityFees()
-  //       farmBalanceBefore = await TenderToken.balanceOf(mockTenderFarm.address)
-  //       tx = await Controller.collectLiquidityFees()
-  //     })
+    before(async () => {
+      mockTenderFarm = signers[3]
+      fees = await Tenderizer.pendingLiquidityFees()
+      farmBalanceBefore = await TenderToken.balanceOf(mockTenderFarm.address)
+      tx = await Controller.collectLiquidityFees()
+    })
 
-  //     it('should reset pendingFees', async () => {
-  //       expect(await Tenderizer.pendingLiquidityFees()).to.eq(ethers.constants.Zero)
-  //     })
+    it('should reset pendingFees', async () => {
+      expect(await Tenderizer.pendingLiquidityFees()).to.eq(ethers.constants.Zero)
+    })
 
-  //     it('should increase tenderToken balance of tenderFarm', async () => {
-  //       expect(await TenderToken.balanceOf(mockTenderFarm.address)).to.eq(farmBalanceBefore.add(fees))
-  //     })
+    it('should increase tenderToken balance of tenderFarm', async () => {
+      expect(await TenderToken.balanceOf(mockTenderFarm.address)).to.eq(farmBalanceBefore.add(fees))
+    })
 
-  //     it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
-  //       expect(tx).to.emit(Tenderizer, 'LiquidityFeeCollected').withArgs(fees)
-  //     })
-  //   })
+    it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
+      expect(tx).to.emit(Tenderizer, 'LiquidityFeeCollected').withArgs(fees)
+    })
+  })
 
-  //   describe('swap against ESP', () => {
-  //     it('swaps tenderToken for Token', async () => {
-  //       const amount = deposit.div(2)
-  //       const lptBalBefore = await AudiusToken.balanceOf(deployer)
+  describe('swap against ESP', () => {
+    it('swaps tenderToken for Token', async () => {
+      const amount = deposit.div(2)
+      const lptBalBefore = await AudiusToken.balanceOf(deployer)
 
-  //       const tenderBal = await BPool.getBalance(TenderToken.address)
-  //       const lptBal = await BPool.getBalance(AudiusToken.address)
-  //       const tenderWeight = await BPool.getDenormalizedWeight(TenderToken.address)
-  //       const lptWeight = await BPool.getDenormalizedWeight(AudiusToken.address)
-  //       const swapFee = await BPool.getSwapFee()
-  //       const expOut = await BPool.calcOutGivenIn(
-  //         tenderBal,
-  //         tenderWeight,
-  //         lptBal,
-  //         lptWeight,
-  //         amount,
-  //         swapFee
-  //       )
+      const tenderBal = await BPool.getBalance(TenderToken.address)
+      const lptBal = await BPool.getBalance(AudiusToken.address)
+      const tenderWeight = await BPool.getDenormalizedWeight(TenderToken.address)
+      const lptWeight = await BPool.getDenormalizedWeight(AudiusToken.address)
+      const swapFee = await BPool.getSwapFee()
+      const expOut = await BPool.calcOutGivenIn(
+        tenderBal,
+        tenderWeight,
+        lptBal,
+        lptWeight,
+        amount,
+        swapFee
+      )
 
-  //       await TenderToken.approve(BPool.address, amount)
-  //       await BPool.swapExactAmountIn(
-  //         TenderToken.address,
-  //         amount,
-  //         AudiusToken.address,
-  //         ethers.constants.One, // TODO: set proper value
-  //         ethers.utils.parseEther('10') // TODO: set proper value
-  //       )
+      await TenderToken.approve(BPool.address, amount)
+      await BPool.swapExactAmountIn(
+        TenderToken.address,
+        amount,
+        AudiusToken.address,
+        ethers.constants.One, // TODO: set proper value
+        ethers.utils.parseEther('10') // TODO: set proper value
+      )
 
-  //       const lptBalAfter = await AudiusToken.balanceOf(deployer)
-  //       expect(lptBalAfter.sub(lptBalBefore)).to.eq(expOut)
-  //     })
-  //   })
+      const lptBalAfter = await AudiusToken.balanceOf(deployer)
+      expect(lptBalAfter.sub(lptBalBefore)).to.eq(expOut)
+    })
+  })
 
-  //   describe('unlock', async () => {
-  //     let delBefore: BigNumber
-  //     before(async () => {
-  //       withdrawAmount = await TenderToken.balanceOf(deployer)
-  //       delBefore = await AudiusStaking.pendingStake(Tenderizer.address, MAX_ROUND)
-  //       tx = await Controller.connect(signers[0]).unlock(withdrawAmount)
-  //     })
+  describe('unlock', () => {
+    describe('user unlock', async () => {
+      it('reverts if user does not have enough tender token balance', async () => {
+        withdrawAmount = await TenderToken.balanceOf(deployer)
+        await expect(Controller.unlock(withdrawAmount.add(ethers.utils.parseEther('1')))).to.be.revertedWith('BURN_AMOUNT_EXCEEDS_BALANCE')
+      })
 
-  //     it('unbond() succeeds', async () => {
-  //       expect(delBefore.sub(await AudiusStaking.pendingStake(Tenderizer.address, MAX_ROUND))).to.eq(withdrawAmount)
-  //     })
+      it('on success - updates current pricinple', async () => {
+        const principleBefore = await Tenderizer.currentPrincipal()
+        tx = await Controller.unlock(withdrawAmount)
+        expect(await Tenderizer.currentPrincipal()).to.eq(principleBefore.sub(withdrawAmount))
+      })
 
-  //     it('reduces TenderToken Balance', async () => {
-  //       // lte to account for any roundoff error in tokenToShare calcualtion during burn
-  //       expect(await TenderToken.balanceOf(deployer)).to.lte(acceptableDelta)
-  //     })
+      it('reduces TenderToken Balance', async () => {
+        // lte to account for any roundoff error in tokenToShare calcualtion during burn
+        expect(await TenderToken.balanceOf(deployer)).to.lte(acceptableDelta)
+      })
 
-  //     it('should create unstakeLock on Tenderizer', async () => {
-  //       const lock = await Tenderizer.unstakeLocks(lockID)
-  //       expect(lock.account).to.eq(deployer)
-  //       expect(lock.amount).to.eq(withdrawAmount)
-  //     })
+      it('should create unstakeLock', async () => {
+        const lock = await Tenderizer.unstakeLocks(unbondLockID)
+        expect(lock.account).to.eq(deployer)
+        expect(lock.amount.sub(withdrawAmount).abs()).to.lte(acceptableDelta)
+      })
 
-  //     it('should create unstakeLock on Audius', async () => {
-  //       const lock = await bondingManager.getDelegatorUnbondingLock(Tenderizer.address, lockID)
-  //       expect(lock.amount).to.eq(withdrawAmount)
-  //     })
+      it('should emit Unstake event from Tenderizer', async () => {
+        expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(deployer, NODE, withdrawAmount, unbondLockID)
+      })
+    })
 
-  //     it('should emit Unstake event from Tenderizer', async () => {
-  //       expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(deployer, NODE, withdrawAmount, lockID)
-  //     })
-  //   })
+    describe('gov unlock', async () => {
+      before(async () => {
+        const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('unstake',
+          [Controller.address, ethers.utils.parseEther('0')]))
+        tx = await Controller.execute(Tenderizer.address, 0, txData)
+      })
 
-  //   describe('withdraw', async () => {
-  //     let lptBalBefore : BigNumber
+      it('requestUndelegateStake() suceeds - event emitted', async () => {
+        const rx = await tx.wait()
+        if (rx.events === undefined) throw new Error('No events')
+        expect(rx.events[0].topics[0]).to.eq(undelegateStakeRequestedTopic)
+      })
 
-  //     it('reverts if wihtdraw() reverts - unbond period not complete', async () => {
-  //       await expect(Controller.withdraw(lockID)).to.be.reverted
-  //     })
+      it('should emit Unstake event from Tenderizer', async () => {
+        expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(Controller.address, NODE, withdrawAmount, govUnboundLockID)
+      })
+    })
+  })
 
-  //     // TODO: Change to before, but can't increase max timeout on before()
-  //     it('wihtdraw() succeeeds - unstake lock is deleted', async () => {
-  //       // Mine blocks for 7 rounds (withdraw period)
-  //       const roundLength = await roundsManager.roundLength()
-  //       for (let i = 0; i < 7; i++) {
-  //         for (let j = 0; j < roundLength; j++) {
-  //           await hre.ethers.provider.send('evm_mine', [])
-  //         }
-  //         await roundsManager.connect(multisigSigner).initializeRound()
-  //       }
-  //       lptBalBefore = await AudiusToken.balanceOf(deployer)
-  //       tx = await Controller.withdraw(lockID)
-  //     }).timeout(testTimeout) // Set high timeout for test, to mine 7 rounds
+  describe('withdraw', () => {
+    describe('gov withdrawal', async () => {
+      it('reverts if undelegateStake() reverts - lockup pending', async () => {
+        const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('withdraw',
+          [Controller.address, govUnboundLockID]))
+        await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.reverted
+      })
 
-  //     it('should delete unstakeLock on Audius', async () => {
-  //       const lock = await bondingManager.getDelegatorUnbondingLock(Tenderizer.address, lockID)
-  //       expect(lock.amount).to.eq(0)
-  //     })
+      it('undelegateStake() succeeds', async () => {
+        // Mine blocks to complete lockup
+        for (let j = 0; j < 46523; j++) {
+          await hre.ethers.provider.send('evm_mine', [])
+        }
+        const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('withdraw',
+          [Controller.address, govUnboundLockID]))
+        tx = await Controller.execute(Tenderizer.address, 0, txData)
+      }).timeout(testTimeout * 10)
 
-  //     it('increases LPT balance', async () => {
-  //       expect(await AudiusToken.balanceOf(deployer)).to.eq(lptBalBefore.add(withdrawAmount))
-  //     })
+      it('should emit Withdraw event from Tenderizer', async () => {
+        expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(Controller.address, withdrawAmount, govUnboundLockID)
+      })
+    })
 
-  //     it('should delete unstakeLock', async () => {
-  //       const lock = await Tenderizer.unstakeLocks(lockID)
-  //       expect(lock.account).to.eq(ethers.constants.AddressZero)
-  //       expect(lock.amount).to.eq(0)
-  //     })
+    describe('user withdrawal', async () => {
+      let AUDIOBalanceBefore : BigNumber
+      it('reverts if account mismatch from unboondigLock', async () => {
+        await expect(Controller.connect(signers[1]).withdraw(unbondLockID))
+          .to.be.revertedWith('ACCOUNT_MISTMATCH')
+      })
 
-  //     it('should emit Withdraw event from Tenderizer', async () => {
-  //       expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(deployer, withdrawAmount, lockID)
-  //     })
-  //   })
+      it('success - increases AUDIO balance', async () => {
+        AUDIOBalanceBefore = await AudiusToken.balanceOf(deployer)
+        tx = await Controller.withdraw(unbondLockID)
+        expect(await AudiusToken.balanceOf(deployer)).to.eq(AUDIOBalanceBefore.add(withdrawAmount))
+      })
 
-  //   describe('upgrade', () => {
-  //     let proxy: EIP173Proxy
-  //     let newTenderizer:any
-  //     let beforeBalance: BigNumber
-  //     before(async () => {
-  //       proxy = (await ethers.getContractAt('EIP173Proxy', Audius.Audius_Proxy.address)) as EIP173Proxy
-  //       beforeBalance = await Tenderizer.currentPrincipal()
-  //       const newFac = await ethers.getContractFactory('Audius', signers[0])
-  //       newTenderizer = await newFac.deploy()
-  //     })
+      it('should delete unstakeLock', async () => {
+        const lock = await Tenderizer.unstakeLocks(unbondLockID)
+        expect(lock.account).to.eq(ethers.constants.AddressZero)
+        expect(lock.amount).to.eq(0)
+      })
 
-  //     it('upgrade tenderizer', async () => {
-  //       await hre.network.provider.request({
-  //         method: 'hardhat_impersonateAccount',
-  //         params: [Controller.address]
-  //       }
-  //       )
+      it('should emit Withdraw event from Tenderizer', async () => {
+        expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(deployer, withdrawAmount, unbondLockID)
+      })
+    })
+  })
 
-  //       const signer = await ethers.provider.getSigner(Controller.address)
+  describe('upgrade', () => {
+    let proxy: EIP173Proxy
+    let newTenderizer:any
+    let beforeBalance: BigNumber
+    before(async () => {
+      proxy = (await ethers.getContractAt('EIP173Proxy', Audius.Audius_Proxy.address)) as EIP173Proxy
+      beforeBalance = await Tenderizer.currentPrincipal()
+      const newFac = await ethers.getContractFactory('Audius', signers[0])
+      newTenderizer = await newFac.deploy()
+    })
 
-  //       expect(await proxy.connect(signer).upgradeTo(newTenderizer.address, { gasLimit: 400000, gasPrice: 0 })).to.emit(
-  //         proxy,
-  //         'ProxyImplementationUpdated'
-  //       ).withArgs(Audius.Audius_Implementation.address, newTenderizer.address)
+    it('upgrade tenderizer', async () => {
+      await hre.network.provider.request({
+        method: 'hardhat_impersonateAccount',
+        params: [Controller.address]
+      }
+      )
 
-  //       await hre.network.provider.request({
-  //         method: 'hardhat_stopImpersonatingAccount',
-  //         params: [Controller.address]
-  //       }
-  //       )
-  //     })
+      const signer = await ethers.provider.getSigner(Controller.address)
 
-//     it('current principal still matches', async () => {
-//       const newPrincipal = await Tenderizer.currentPrincipal()
-//       expect(newPrincipal).to.equal(beforeBalance)
-//     })
-//   })
+      expect(await proxy.connect(signer).upgradeTo(newTenderizer.address, { gasLimit: 400000, gasPrice: 0 })).to.emit(
+        proxy,
+        'ProxyImplementationUpdated'
+      ).withArgs(Audius.Audius_Implementation.address, newTenderizer.address)
+
+      await hre.network.provider.request({
+        method: 'hardhat_stopImpersonatingAccount',
+        params: [Controller.address]
+      }
+      )
+    })
+
+    it('current principal still matches', async () => {
+      const newPrincipal = await Tenderizer.currentPrincipal()
+      expect(newPrincipal).to.equal(beforeBalance)
+    })
+  })
 })
