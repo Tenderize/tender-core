@@ -5,12 +5,12 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 import "../libs/MathUtils.sol";
 import "../token/ITenderToken.sol";
 
-contract TenderFarm is Ownable {
+contract TenderFarm is Initializable {
     event Farm(address indexed account, uint256 amount);
     event Unfarm(address indexed account, uint256 amount);
     event Harvest(address indexed account, uint256 amount);
@@ -18,6 +18,7 @@ contract TenderFarm is Ownable {
 
     IERC20 public token; // LP token
     ITenderToken public rewardToken; // tender token
+    address public controller;
 
     uint256 public totalStake; // total amount of LP tokens staked
     uint256 public nextTotalStake;
@@ -30,9 +31,19 @@ contract TenderFarm is Ownable {
 
     mapping(address => Stake) public stakes;
 
-    constructor(IERC20 _stakeToken, ITenderToken _rewardToken) {
+    function initialize(
+        IERC20 _stakeToken,
+        ITenderToken _rewardToken,
+        address _controller
+    ) public initializer {
         token = _stakeToken;
         rewardToken = _rewardToken;
+        controller = _controller;
+    }
+
+    modifier onlyController() {
+        require(msg.sender == controller);
+        _;
     }
 
     /**
@@ -82,7 +93,7 @@ contract TenderFarm is Ownable {
      * @dev only callable by owner
      * @param _amount amount of reward tokens to add
      */
-    function addRewards(uint256 _amount) public onlyOwner {
+    function addRewards(uint256 _amount) public onlyController {
         uint256 _nextStake = nextTotalStake;
         require(_nextStake > 0, "NO_STAKE");
         totalStake = _nextStake;
@@ -150,5 +161,10 @@ contract TenderFarm is Ownable {
 
     function _stakeOf(address _of) internal view returns (uint256) {
         return stakes[_of].stake;
+    }
+
+    function setController(address _controller) external onlyController {
+        require(_controller != address(0), "ZERO_ADDRESS");
+        controller = _controller;
     }
 }

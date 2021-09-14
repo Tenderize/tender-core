@@ -98,7 +98,6 @@ describe('Livepeer Integration Test', () => {
     Livepeer = await hre.deployments.fixture(['Livepeer'], {
       keepExistingDeployments: false
     })
-    console.log(Object.keys(Livepeer))
     Controller = (await ethers.getContractAt('Controller', Livepeer.Controller.address)) as Controller
     Tenderizer = (await ethers.getContractAt('Livepeer', Livepeer.Livepeer.address)) as Livepeer
     TenderToken = (await ethers.getContractAt('TenderToken', Livepeer.TenderToken.address)) as TenderToken
@@ -483,7 +482,7 @@ describe('Livepeer Integration Test', () => {
     })
   })
 
-  describe('upgrade', () => {
+  describe('upgrade tenderizer', () => {
     let proxy: EIP173Proxy
     let newTenderizer:any
     let beforeBalance: BigNumber

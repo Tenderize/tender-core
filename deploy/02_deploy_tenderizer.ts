@@ -145,12 +145,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   const tenderFarm = await deploy('TenderFarm', {
     from: deployer,
     log: true,
-    args: [await Esp.address, tenderToken.address]
+    args: [await Esp.address, tenderToken.address, Controller.address],
+    proxy: {
+      proxyContract: 'EIP173ProxyWithReceive',
+      owner: deployer,
+      methodName: 'initialize'
+    }
   })
 
   const TenderFarm: TenderFarm = (await ethers.getContractAt('TenderFarm', tenderFarm.address)) as TenderFarm
-  await TenderFarm.transferOwnership(controller.address)
-  await Controller.setTenderFarm(TenderFarm.address)
+  const FarmProxy: EIP173Proxy = (await ethers.getContractAt('EIP173Proxy', tenderFarm.address)) as EIP173Proxy
+  await FarmProxy.transferOwnership(controller.address)
+  await Controller.setTenderFarm(FarmProxy.address)
   console.log('Deployed TenderFarm')
 
   // Stake tokens in tenderfarm for deployer

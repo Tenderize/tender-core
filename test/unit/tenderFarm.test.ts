@@ -1,5 +1,5 @@
 import {
-  ethers
+  ethers, upgrades
 } from 'hardhat'
 import ethersTypes, { constants } from 'ethers'
 import chai from 'chai'
@@ -24,7 +24,7 @@ describe('TenderFarm', () => {
 
   let tenderToken: TenderToken
   let lpToken : SimpleToken
-  let tenderFarm: TenderFarm
+  let tenderFarm: any
 
   let signers: ethersTypes.Signer[]
 
@@ -65,9 +65,10 @@ describe('TenderFarm', () => {
 
     lpToken = (await LPTokenFactory.deploy('LP token', 'LP', ethers.utils.parseEther('1000000000000000'))) as SimpleToken
     tenderToken = (await TenderTokenFactory.deploy('Tender Token', 'Tender')) as TenderToken
-    tenderFarm = (await TenderFarmFactory.deploy(lpToken.address, tenderToken.address)) as TenderFarm
     await lpToken.deployed()
     await tenderToken.deployed()
+
+    tenderFarm = await upgrades.deployProxy(TenderFarmFactory, [lpToken.address, tenderToken.address, account0])
     await tenderFarm.deployed()
 
     const tenderSupply = ethers.utils.parseEther('1000000000000000')
@@ -108,6 +109,21 @@ describe('TenderFarm', () => {
       const stake = await tenderFarm.stakes(account0)
       expect(stake.stake).to.eq(0)
       expect(stake.lastCRF).to.eq(0)
+    })
+  })
+
+  describe('Upgrade TenderFarm', () => {
+    it('upgrades tenderFarm - nextTotalStake() remains the same', async () => {
+      // Farm some amount
+      const amount = ethers.utils.parseEther('100')
+      await lpToken.approve(tenderFarm.address, amount)
+      await tenderFarm.farm(amount)
+
+      // Upgrade farm
+      const newFac = await ethers.getContractFactory('TenderFarm', signers[0])
+      tenderFarm = await upgrades.upgradeProxy(tenderFarm.address, newFac)
+
+      expect(await tenderFarm.nextTotalStake()).to.equal(amount)
     })
   })
 
@@ -271,7 +287,8 @@ describe('TenderFarm', () => {
         'TenderFarm',
         signers[0]
       )
-      tenderFarm = (await TenderFarmFactory.deploy(lpMock.address, tenderToken.address)) as TenderFarm
+      tenderFarm = (await TenderFarmFactory.deploy()) as TenderFarm
+      await tenderFarm.initialize(lpMock.address, tenderToken.address, account0)
 
       // stake for an account
       lpMock.smocked.transferFrom.will.return.with(true)
@@ -491,7 +508,8 @@ describe('TenderFarm', () => {
         'TenderFarm',
         signers[0]
       )
-      tenderFarm = (await TenderFarmFactory.deploy(lpToken.address, ttMock.address)) as TenderFarm
+      tenderFarm = (await TenderFarmFactory.deploy()) as TenderFarm
+      await tenderFarm.initialize(lpToken.address, ttMock.address, account0)
 
       const amount = ethers.utils.parseEther('100')
       await lpToken.approve(tenderFarm.address, amount)
@@ -544,6 +562,12 @@ describe('TenderFarm', () => {
       await tenderFarm.farm(stakeAmount)
       await tenderToken.approve(tenderFarm.address, rewardAmount)
     })
+
+    it('reverts if not called by controller', async () => {
+      await tenderToken.connect(signers[1]).approve(tenderFarm.address, rewardAmount)
+      await expect(tenderFarm.connect(signers[1]).addRewards(rewardAmount)).to.be.reverted
+    })
+
     it('reverts if transfer amound exceeds allowance', async () => {
       await expect(tenderFarm.addRewards(rewardAmount.mul(2))).to.be.reverted
     })
@@ -632,6 +656,18 @@ describe('TenderFarm', () => {
 
       // Check available rewards
       expect(await tenderFarm.availableRewards(account2)).to.eq(0)
+    })
+  })
+
+  describe('Setting Controller', () => {
+    it('reverts if Zero address is set', async () => {
+      await expect(tenderFarm.setController(ethers.constants.AddressZero)).to.be.revertedWith('ZERO_ADDRESS')
+    })
+
+    it('sets controller successfully', async () => {
+      const newControllerAddr = '0xfA668FB97697200FA56ce98E246db61Cc7E14Bd5' // dummy
+      await tenderFarm.setController(newControllerAddr)
+      expect(await tenderFarm.controller()).to.equal(newControllerAddr)
     })
   })
 })
