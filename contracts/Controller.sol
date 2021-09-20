@@ -86,7 +86,6 @@ contract Controller is Ownable, ReentrancyGuard {
      * @dev caller address should match the user address in lock
      */
     function withdraw(uint256 _unstakeLockID) public nonReentrant {
-        require(_unstakeLockID > 0, "ZERO_AMOUNT");
         // Execute pending withdrawal
         // Reverts if unthawing period hasn't ended
         tenderizer.withdraw(msg.sender, _unstakeLockID);

@@ -39,8 +39,8 @@ describe('Graph Integration Test', () => {
 
   let withdrawAmount: BigNumber
   let tx: ContractTransaction
-  const unbondLockID = 1
-  const govUnboundLockID = 2
+  const unbondLockID = 0
+  const govUnboundLockID = 1
 
   const protocolFeesPercent = ethers.utils.parseEther('0.025')
   const liquidityFeesPercent = ethers.utils.parseEther('0.025')

@@ -30,7 +30,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     uint256 public currentPrincipal; // Principal since last claiming earnings
 
     mapping(uint256 => UnstakeLock) public unstakeLocks;
-    uint256 lastUnstakeLockID;
+    uint256 nextUnstakeLockID;
 
     // Events
     event Deposit(address indexed from, uint256 amount);

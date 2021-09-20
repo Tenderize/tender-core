@@ -43,7 +43,7 @@ describe('Matic Integration Test', () => {
   let withdrawAmount: BigNumber
 
   let tx: ContractTransaction
-  const lockID = 1
+  const lockID = 0
   const protocolFeesPercent = ethers.utils.parseEther('0.025')
   const liquidityFeesPercent = ethers.utils.parseEther('0.025')
 
