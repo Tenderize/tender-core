@@ -6,8 +6,6 @@ pragma solidity 0.8.4;
 
 // note this contract interface is only for stakeManager use
 interface IMatic {
-    function getLiquidRewards(address user) external view returns (uint256);
-
     function owner() external view returns (address);
 
     function restake() external;
@@ -21,13 +19,6 @@ interface IMatic {
     function exchangeRate() external view returns (uint256);
 
     function validatorId() external view returns (uint256);
-
-    struct Delegator {
-        uint256 shares;
-        uint256 withdrawEpoch;
-    }
-
-    function delegators(address) external view returns (Delegator memory);
 
     function balanceOf(address) external view returns (uint256);
 }
