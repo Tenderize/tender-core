@@ -1,7 +1,7 @@
 import hre, { ethers } from 'hardhat'
 
 import {
-  Controller, ElasticSupplyPool, TenderToken, ILivepeer, BPool, EIP173Proxy, Livepeer, ERC20
+  Controller, ElasticSupplyPool, TenderToken, ILivepeer, BPool, Livepeer, ERC20
 } from '../../typechain'
 
 import bondingManagerAbi from './abis/livepeer/BondingManager.json'
@@ -60,6 +60,7 @@ describe('Livepeer Mainnet Fork Test', () => {
   const NODE = '0x9C10672CEE058Fd658103d90872fE431bb6C0AFa'
   const bondingManagerAddr = '0x511bc4556d823ae99630ae8de28b9b80df90ea2e'
   const roundsManagerAddr = '0x3984fc4ceeef1739135476f625d36d6c35c40dc3'
+  const ticketBrokerAddr = '0x5b1cE829384EeBFa30286F12d1E7A695ca45F5D2'
   let bondingManager: Contract
   let roundsManager: Contract
 
@@ -75,7 +76,7 @@ describe('Livepeer Mainnet Fork Test', () => {
       method: 'hardhat_reset',
       params: [{
         forking: {
-          blockNumber: 12000000,
+          blockNumber: 13351803,
           jsonRpcUrl: process.env.ALCHEMY_URL || 'https://eth-mainnet.alchemyapi.io/v2/s93KFT7TnttkCPdNS2Fg_HAoCpP6dEda'
         }
       }]
@@ -84,7 +85,7 @@ describe('Livepeer Mainnet Fork Test', () => {
     process.env.NAME = 'Livepeer'
     process.env.SYMBOL = 'LPT'
     process.env.CONTRACT = bondingManagerAddr
-    process.env.TOKEN = '0x58b6a8a3302369daec383334672404ee733ab239'
+    process.env.TOKEN = '0x58b6A8A3302369DAEc383334672404Ee733aB239'
     process.env.VALIDATOR = NODE
     process.env.BFACTORY = '0x9424B1412450D0f8Fc2255FAf6046b98213B76Bd'
     process.env.B_SAFEMATH = '0xCfE28868F6E0A24b7333D22D8943279e76aC2cdc'
@@ -92,7 +93,7 @@ describe('Livepeer Mainnet Fork Test', () => {
     process.env.B_SMART_POOL_MANAGER = '0xA3F9145CB0B50D907930840BB2dcfF4146df8Ab4'
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
 
-    const oneInchAddr = '0x111111111117dC0aa78b770fA6A738034120C302'
+    const uniswapRouter = '0xE592427A0AEce92De3Edee1F18E0157C05861564'
 
     await hre.network.provider.request({
       method: 'hardhat_impersonateAccount',
@@ -119,7 +120,7 @@ describe('Livepeer Mainnet Fork Test', () => {
       [0, 0, 0],
       [Tenderizer.interface.encodeFunctionData('setProtocolFee', [protocolFeesPercent]),
         Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent]),
-        Tenderizer.interface.encodeFunctionData('setOneInchContract', [oneInchAddr])]
+        Tenderizer.interface.encodeFunctionData('setUniswapRouter', [uniswapRouter])]
     )
   })
 
@@ -173,11 +174,12 @@ describe('Livepeer Mainnet Fork Test', () => {
       let increase: BigNumber
       let newStakeMinusFees: BigNumber
       let newStake: BigNumber
-      const swappedLPTRewards = ethers.BigNumber.from('0') // TODO: Add test with ETH->LPT Swap
+      const swappedLPTRewards = ethers.BigNumber.from('1873688105130638110') // Value swapped for 1 ETH at pinned block
       let totalShares: BigNumber = ethers.utils.parseEther('1')
       const percDiv = ethers.utils.parseEther('1')
 
-      before(async () => {
+      before(async function () {
+        this.timeout(testTimeout * 10)
         bondingManager = new ethers.Contract(bondingManagerAddr, bondingManagerAbi, ethers.provider)
         roundsManager = new ethers.Contract(roundsManagerAddr, adjustableRoundsManagerAbi, ethers.provider)
 
@@ -205,6 +207,19 @@ describe('Livepeer Mainnet Fork Test', () => {
 
         currentRound = await roundsManager.currentRound()
         const stakeAfter = (await bondingManager.pendingStake(Tenderizer.address, currentRound))
+
+        // Generate some ETH fees
+        await hre.network.provider.request({
+          method: 'hardhat_impersonateAccount',
+          params: [ticketBrokerAddr]
+        })
+        const ticketBrokerSigner = await ethers.provider.getSigner(ticketBrokerAddr)
+        await hre.network.provider.send('hardhat_setBalance', [
+          ticketBrokerAddr,
+          `0x${ethers.utils.parseEther('10').toString()}`
+        ])
+        await bondingManager.connect(ticketBrokerSigner).updateTranscoderWithFees(NODE, ethers.utils.parseEther('1'), currentRound)
+
         increase = stakeAfter.sub(stakeBefore)
         const liquidityFees = percOf2(increase.add(swappedLPTRewards), liquidityFeesPercent)
         const protocolFees = percOf2(increase.add(swappedLPTRewards), protocolFeesPercent)
@@ -368,18 +383,18 @@ describe('Livepeer Mainnet Fork Test', () => {
       await expect(Controller.withdraw(lockID)).to.be.reverted
     })
 
-    // TODO: Change to before, but can't increase max timeout on before()
     it('wihtdraw() succeeeds - unstake lock is deleted', async () => {
       // Mine blocks for 7 rounds (withdraw period)
       const roundLength = await roundsManager.roundLength()
-      for (let i = 0; i < 7; i++) {
-        for (let j = 0; j < roundLength; j++) {
-          await hre.ethers.provider.send('evm_mine', [])
-        }
-        await roundsManager.connect(multisigSigner).initializeRound()
+      for (let j = 0; j < roundLength * 7; j++) {
+        await hre.ethers.provider.send('evm_mine', [])
       }
+      await roundsManager.connect(multisigSigner).initializeRound()
       lptBalBefore = await LivepeerToken.balanceOf(deployer)
       tx = await Controller.withdraw(lockID)
+      const lock = await Tenderizer.unstakeLocks(lockID)
+      expect(lock.account).to.eq(ethers.constants.AddressZero)
+      expect(lock.amount).to.eq(0)
     }).timeout(testTimeout) // Set high timeout for test, to mine 7 rounds
 
     it('should delete unstakeLock on Livepeer', async () => {
@@ -391,52 +406,8 @@ describe('Livepeer Mainnet Fork Test', () => {
       expect(await LivepeerToken.balanceOf(deployer)).to.eq(lptBalBefore.add(withdrawAmount))
     })
 
-    it('should delete unstakeLock', async () => {
-      const lock = await Tenderizer.unstakeLocks(lockID)
-      expect(lock.account).to.eq(ethers.constants.AddressZero)
-      expect(lock.amount).to.eq(0)
-    })
-
     it('should emit Withdraw event from Tenderizer', async () => {
       expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(deployer, withdrawAmount, lockID)
-    })
-  })
-
-  describe('upgrade', () => {
-    let proxy: EIP173Proxy
-    let newTenderizer:any
-    let beforeBalance: BigNumber
-    before(async () => {
-      proxy = (await ethers.getContractAt('EIP173Proxy', Livepeer.Livepeer_Proxy.address)) as EIP173Proxy
-      beforeBalance = await Tenderizer.currentPrincipal()
-      const newFac = await ethers.getContractFactory('Livepeer', signers[0])
-      newTenderizer = await newFac.deploy()
-    })
-
-    it('upgrade tenderizer', async () => {
-      await hre.network.provider.request({
-        method: 'hardhat_impersonateAccount',
-        params: [Controller.address]
-      }
-      )
-
-      const signer = await ethers.provider.getSigner(Controller.address)
-
-      expect(await proxy.connect(signer).upgradeTo(newTenderizer.address, { gasLimit: 400000, gasPrice: 0 })).to.emit(
-        proxy,
-        'ProxyImplementationUpdated'
-      ).withArgs(Livepeer.Livepeer_Implementation.address, newTenderizer.address)
-
-      await hre.network.provider.request({
-        method: 'hardhat_stopImpersonatingAccount',
-        params: [Controller.address]
-      }
-      )
-    })
-
-    it('current principal still matches', async () => {
-      const newPrincipal = await Tenderizer.currentPrincipal()
-      expect(newPrincipal).to.equal(beforeBalance)
     })
   })
 })

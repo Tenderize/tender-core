@@ -38,6 +38,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     args: [process.env.TOKEN, process.env.CONTRACT, process.env.VALIDATOR],
     log: true, // display the address and gas used in the console (not when run in test though),
     proxy: {
+      proxyContract: 'EIP173ProxyWithReceive',
       owner: deployer,
       methodName: 'initialize'
     }
