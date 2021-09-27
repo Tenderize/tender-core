@@ -3,7 +3,7 @@ import hre, { ethers } from 'hardhat'
 import { MockContract, smockit } from '@eth-optimism/smock'
 
 import {
-  SimpleToken, Controller, ElasticSupplyPool, TenderToken, ILivepeer, BPool, EIP173Proxy, IOneInch, Livepeer
+  SimpleToken, Controller, ElasticSupplyPool, TenderToken, ILivepeer, BPool, EIP173Proxy, Livepeer, ISwapRouterWithWETH, IWETH
 } from '../../typechain/'
 
 import chai from 'chai'
@@ -26,7 +26,8 @@ describe('Livepeer Integration Test', () => {
   let LivepeerNoMock: ILivepeer
   let LivepeerMock: MockContract
   let LivepeerToken: SimpleToken
-  let OneInchMock: MockContract
+  let UniswapRouterMock: MockContract
+  let WethMock: MockContract
   let Controller: Controller
   let Tenderizer: Livepeer
   let TenderToken: TenderToken
@@ -74,15 +75,26 @@ describe('Livepeer Integration Test', () => {
     LivepeerMock = await smockit(LivepeerNoMock)
   })
 
-  before('deploy OneInch Mock', async () => {
-    const OneInchFac = await ethers.getContractFactory(
-      'OneInchMock',
+  before('deploy Uniswap Router Mock', async () => {
+    const UniswapRouterFac = await ethers.getContractFactory(
+      'UniswapRouterMock',
       signers[0]
     )
 
-    const OneInchNoMock = (await OneInchFac.deploy()) as IOneInch
+    const UniswapRouterNoMock = (await UniswapRouterFac.deploy()) as ISwapRouterWithWETH
 
-    OneInchMock = await smockit(OneInchNoMock)
+    UniswapRouterMock = await smockit(UniswapRouterNoMock)
+  })
+
+  before('deploy WETH Mock', async () => {
+    const WETHFac = await ethers.getContractFactory(
+      'WETHMock',
+      signers[0]
+    )
+
+    const WETHNoMock = (await WETHFac.deploy()) as IWETH
+
+    WethMock = await smockit(WETHNoMock)
   })
 
   const STEAK_AMOUNT = '100000'
@@ -103,12 +115,13 @@ describe('Livepeer Integration Test', () => {
     TenderToken = (await ethers.getContractAt('TenderToken', Livepeer.TenderToken.address)) as TenderToken
     Esp = (await ethers.getContractAt('ElasticSupplyPool', Livepeer.ElasticSupplyPool.address)) as ElasticSupplyPool
     BPool = (await ethers.getContractAt('BPool', await Esp.bPool())) as BPool
+    UniswapRouterMock.smocked.WETH9.will.return.with(WethMock.address)
     await Controller.batchExecute(
       [Tenderizer.address, Tenderizer.address, Tenderizer.address],
       [0, 0, 0],
       [Tenderizer.interface.encodeFunctionData('setProtocolFee', [protocolFeesPercent]),
         Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent]),
-        Tenderizer.interface.encodeFunctionData('setOneInchContract', [OneInchMock.address])]
+        Tenderizer.interface.encodeFunctionData('setUniswapRouter', [UniswapRouterMock.address])]
     )
   })
 
@@ -213,7 +226,9 @@ describe('Livepeer Integration Test', () => {
       before(async () => {
         LivepeerMock.smocked.pendingStake.will.return.with(newStake)
         LivepeerMock.smocked.pendingFees.will.return.with(ethers.utils.parseEther('0.1'))
-        OneInchMock.smocked.swap.will.return.with(swappedLPTRewards)
+        WethMock.smocked.deposit.will.return()
+        WethMock.smocked.approve.will.return.with(true)
+        UniswapRouterMock.smocked.exactInputSingle.will.return.with(swappedLPTRewards)
         tx = await Controller.rebase()
       })
 

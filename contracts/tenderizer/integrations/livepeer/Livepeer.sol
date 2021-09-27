@@ -9,12 +9,16 @@ import "../../../libs/MathUtils.sol";
 
 import "../../Tenderizer.sol";
 import "./ILivepeer.sol";
-import "../../../liquidity/IOneInch.sol";
+
+import '../../../token/IWETH.sol';
+import '../../../liquidity/ISwapRouter.sol';
 
 contract Livepeer is Tenderizer {
     uint256 private constant MAX_ROUND = 2**256 - 1;
 
-    IOneInch private oneInch;
+    IWETH private WETH;
+    ISwapRouterWithWETH public uniswapRouter;
+    uint24 private constant UNISWAP_POOL_FEE = 10000;
 
     ILivepeer livepeer;
 
@@ -141,17 +145,28 @@ contract Livepeer is Tenderizer {
         if (ethFees >= ethFees_threshold) {
             livepeer.withdrawFees();
 
+            // Wrap ETH
+            uint256 bal = address(this).balance;
+            WETH.deposit{value: bal}();
+            WETH.approve(address(uniswapRouter), bal);
+
             // swap ETH fees for LPT
-            if (address(oneInch) != address(0)) {
-                uint256 swapAmount = address(this).balance;
-                (uint256 returnAmount, uint256[] memory distribution) = oneInch.getExpectedReturn(
-                    IERC20(address(0)),
-                    steak,
-                    swapAmount,
-                    20,
-                    0
-                );
-                swappedLPT = oneInch.swap(IERC20(address(0)), steak, swapAmount, returnAmount, distribution, 0);
+            if (address(uniswapRouter) != address(0)) {
+                ISwapRouter.ExactInputSingleParams memory params =
+                ISwapRouter.ExactInputSingleParams({
+                    tokenIn: address(WETH),
+                    tokenOut: address(steak),
+                    fee: UNISWAP_POOL_FEE,
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: bal,
+                    amountOutMinimum: 0, // TODO: Set5% max slippage
+                    sqrtPriceLimitX96: 0
+                });
+                try uniswapRouter.exactInputSingle(params) returns (uint256 _swappedLPT) {
+                    swappedLPT = _swappedLPT;
+                } catch {}
+                
                 // Add swapped LPT to rewards
                 rewards += swappedLPT;
             }
@@ -179,7 +194,8 @@ contract Livepeer is Tenderizer {
         emit GovernanceUpdate("STAKING_CONTRACT");
     }
 
-    function setOneInchContract(address _oneInch) external onlyController {
-        oneInch = IOneInch(_oneInch);
+    function setUniswapRouter(address _uniswapRouter) external onlyController {
+        uniswapRouter = ISwapRouterWithWETH(_uniswapRouter);
+        WETH = IWETH(uniswapRouter.WETH9());
     }
 }
