@@ -455,7 +455,12 @@ describe('Audius Integration Test', () => {
 
       const signer = await ethers.provider.getSigner(Controller.address)
 
-      expect(await proxy.connect(signer).upgradeTo(newTenderizer.address, { gasLimit: 400000, gasPrice: 0 })).to.emit(
+      await hre.network.provider.send('hardhat_setBalance', [
+        Controller.address,
+        `0x${ethers.utils.parseEther('10')}`
+      ])
+
+      expect(await proxy.connect(signer).upgradeTo(newTenderizer.address)).to.emit(
         proxy,
         'ProxyImplementationUpdated'
       ).withArgs(Audius.Audius_Implementation.address, newTenderizer.address)
