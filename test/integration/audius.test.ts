@@ -167,7 +167,6 @@ describe('Audius Integration Test', () => {
       const protocolFees = percOf2(increase, protocolFeesPercent)
       const newStake = deposit.add(initialStake).add(increase)
       const newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
-      const percDiv = ethers.utils.parseEther('1')
       let totalShares: BigNumber = ethers.utils.parseEther('1')
       let tx: ContractTransaction
 
@@ -193,15 +192,12 @@ describe('Audius Integration Test', () => {
         expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
       })
 
-      it('changes the weights of the AMM', async () => {
-        const tBal = await TenderToken.balanceOf(BPool.address)
-        const bal = await AudiusToken.balanceOf(BPool.address)
+      it('steak balance stays the same', async () => {
+        expect(await AudiusToken.balanceOf(BPool.address)).to.eq(initialStake)
+      })
 
-        const acceptableDelta = ethers.BigNumber.from('100')
-
-        const expected = tBal.mul(percDiv).div(tBal.add(bal))
-        const actual = await BPool.getNormalizedWeight(TenderToken.address)
-        expect(actual.sub(expected).abs()).to.be.lte(acceptableDelta)
+      it('weights of the AMM stay 50-50', async () => {
+        expect(await BPool.getNormalizedWeight(TenderToken.address)).to.be.eq(ethers.utils.parseEther('1').div(2))
       })
 
       it('should emit RewardsClaimed event from Tenderizer', async () => {
@@ -212,7 +208,6 @@ describe('Audius Integration Test', () => {
     describe('stake decrease', () => {
       // The decrease will offset the increase from the previous test
       const newStake = deposit.add(initialStake)
-      const percDiv = ethers.utils.parseEther('1')
       let totalShares: BigNumber
       let oldPrinciple: BigNumber
 
@@ -246,12 +241,12 @@ describe('Audius Integration Test', () => {
         expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
       })
 
-      it('changes the weights of the AMM', async () => {
-        const acceptableDelta = ethers.BigNumber.from('100')
+      it('steak balance stays the same', async () => {
+        expect(await AudiusToken.balanceOf(BPool.address)).to.eq(initialStake)
+      })
 
-        const expected = percDiv.div(2)
-        const actual = await BPool.getNormalizedWeight(TenderToken.address)
-        expect(actual.sub(expected).abs()).to.be.lte(acceptableDelta)
+      it('weights of the AMM stay 50-50', async () => {
+        expect(await BPool.getNormalizedWeight(TenderToken.address)).to.be.eq(ethers.utils.parseEther('1').div(2))
       })
 
       it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
