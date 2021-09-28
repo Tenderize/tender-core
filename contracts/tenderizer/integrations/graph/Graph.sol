@@ -96,8 +96,8 @@ contract Graph is Tenderizer {
             uint256 totalShares = delPool.shares;
             uint256 totalTokens = delPool.tokens;
 
-            uint256 stake = MathUtils.percOf(delShares, totalTokens, totalShares);
-            uint256 shares = MathUtils.percOf(delShares, amount, stake);
+            uint256 stake = delShares * totalTokens / totalShares;
+            uint256 shares = delShares *  amount / stake;
 
             // undelegate shares
             graph.undelegate(node_, shares);
@@ -153,7 +153,7 @@ contract Graph is Tenderizer {
         uint256 totalShares = delPool.shares;
         uint256 totalTokens = delPool.tokens;
 
-        uint256 stake = MathUtils.percOf(delShares, totalTokens, totalShares);
+        uint256 stake = delShares * totalTokens / totalShares;
 
         uint256 rewards;
         if (stake >= currentPrincipal_) {
