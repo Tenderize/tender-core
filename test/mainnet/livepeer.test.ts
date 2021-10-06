@@ -176,7 +176,6 @@ describe('Livepeer Mainnet Fork Test', () => {
       let newStake: BigNumber
       const swappedLPTRewards = ethers.BigNumber.from('1873688105130638110') // Value swapped for 1 ETH at pinned block
       let totalShares: BigNumber = ethers.utils.parseEther('1')
-      const percDiv = ethers.utils.parseEther('1')
 
       before(async function () {
         this.timeout(testTimeout * 10)
@@ -244,15 +243,12 @@ describe('Livepeer Mainnet Fork Test', () => {
         expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
       })
 
-      it('changes the weights of the AMM', async () => {
-        const tBal = await TenderToken.balanceOf(BPool.address)
-        const bal = await LivepeerToken.balanceOf(BPool.address)
+      it('weights of the AMM stay 50-50', async () => {
+        expect(await BPool.getNormalizedWeight(TenderToken.address)).to.be.eq(ethers.utils.parseEther('1').div(2))
+      })
 
-        const acceptableDelta = ethers.BigNumber.from('100')
-
-        const expected = tBal.mul(percDiv).div(tBal.add(bal))
-        const actual = await BPool.getNormalizedWeight(TenderToken.address)
-        expect(actual.sub(expected).abs()).to.be.lte(acceptableDelta)
+      it('stakes all rewards claimed - drains tenderizer', async () => {
+        expect(await LivepeerToken.balanceOf(Tenderizer.address)).to.eq(0)
       })
 
       it('should emit RewardsClaimed event from Tenderizer', async () => {
