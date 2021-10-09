@@ -67,8 +67,8 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         awaiting to be staked
      * @dev requires '_amount' to be approved by '_from'
      */
-    function deposit(address _from, uint256 _amount) external override onlyController {
-        _deposit(_from, _amount);
+    function deposit(address _from, uint256 _amount) external override onlyController returns (uint256 amountOut) {
+        amountOut = _deposit(_from, _amount);
     }
 
     /**
@@ -175,7 +175,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         return _totalStakedTokens();
     }
 
-    function _deposit(address _account, uint256 _amount) internal virtual;
+    function _deposit(address _account, uint256 _amount) internal virtual returns (uint256);
 
     function _stake(address _account, uint256 _amount) internal virtual;
 
