@@ -472,6 +472,35 @@ describe('Graph Integration Test', () => {
       it('should emit Withdraw event from Tenderizer', async () => {
         expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(deployer, withdrawAmount, unbondLockID)
       })
+
+      it('should withdraw tenderizer GRT balance if < requested amount', async () => {
+        await Controller.connect(signers[2]).unlock(secondDeposit)
+        let txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('unstake',
+          [Controller.address, ethers.utils.parseEther('0')]))
+        await Controller.execute(Tenderizer.address, 0, txData)
+        txData = txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('withdraw',
+          [Controller.address, 3]))
+        await Controller.execute(Tenderizer.address, 0, txData)
+        const amountToBurn = (await GraphToken.balanceOf(Tenderizer.address)).sub(secondDeposit).add(1)
+        await hre.network.provider.request({
+          method: 'hardhat_impersonateAccount',
+          params: [Tenderizer.address]
+        }
+        )
+        const signer = await ethers.provider.getSigner(Tenderizer.address)
+        await hre.network.provider.send('hardhat_setBalance', [
+          Tenderizer.address,
+          `0x${ethers.utils.parseEther('10')}`
+        ])
+        await GraphToken.connect(signer).transfer(deployer, amountToBurn)
+        await hre.network.provider.request({
+          method: 'hardhat_stopImpersonatingAccount',
+          params: [Tenderizer.address]
+        }
+        )
+        await Controller.connect(signers[2]).withdraw(2)
+        expect(await GraphToken.balanceOf(signers[2].address)).to.eq(secondDeposit.sub(1))
+      })
     })
   })
 

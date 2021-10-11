@@ -131,8 +131,16 @@ contract Graph is Tenderizer {
         } else {
             // Check that gov withdrawal for that unstake has occured
             require(_unstakeLockID < governanceLastProcessedUnstakeLockID, "GOV_WITHDRAW_PENDING");
+            
             // Transfer amount from unbondingLock to _account
-            steak.transfer(_account, amount);
+            try steak.transfer(_account, amount) {
+            } catch {
+                // Account for roundoff errors in shares calculations
+                uint256 steakBal = steak.balanceOf(address(this));
+                if (amount > steakBal) { 
+                    steak.transfer(_account, steakBal); 
+                }
+            }
         }
 
         emit Withdraw(account, amount, _unstakeLockID);
