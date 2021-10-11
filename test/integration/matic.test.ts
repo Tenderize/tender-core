@@ -185,7 +185,11 @@ describe('Matic Integration Test', () => {
       }
       )
       const signer = await ethers.provider.getSigner(Tenderizer.address)
-      await MaticToken.connect(signer).transfer(NODE, deposit.add(initialStake), { gasLimit: 400000, gasPrice: 0 })
+      await hre.network.provider.send('hardhat_setBalance', [
+        Tenderizer.address,
+        `0x${ethers.utils.parseEther('10')}`
+      ])
+      await MaticToken.connect(signer).transfer(NODE, deposit.add(initialStake))
       await hre.network.provider.request({
         method: 'hardhat_stopImpersonatingAccount',
         params: [Tenderizer.address]
@@ -508,7 +512,12 @@ describe('Matic Integration Test', () => {
 
       const signer = await ethers.provider.getSigner(Controller.address)
 
-      expect(await proxy.connect(signer).upgradeTo(newTenderizer.address, { gasLimit: 400000, gasPrice: 0 })).to.emit(
+      await hre.network.provider.send('hardhat_setBalance', [
+        Controller.address,
+        `0x${ethers.utils.parseEther('10')}`
+      ])
+
+      expect(await proxy.connect(signer).upgradeTo(newTenderizer.address)).to.emit(
         proxy,
         'ProxyImplementationUpdated'
       ).withArgs(Matic.Matic_Implementation.address, newTenderizer.address)
