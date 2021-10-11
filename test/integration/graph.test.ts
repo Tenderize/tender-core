@@ -76,6 +76,8 @@ describe('Graph Integration Test', () => {
 
   const STEAK_AMOUNT = '100000'
   const NODE = '0xf4e8Ef0763BCB2B1aF693F5970a00050a6aC7E1B'
+  const DELEGATION_TAX = BigNumber.from(5000)
+  const MAX_PPM = BigNumber.from(1000000)
 
   before('deploy Graph Tenderizer', async () => {
     process.env.NAME = 'Graph'
@@ -84,6 +86,7 @@ describe('Graph Integration Test', () => {
     process.env.TOKEN = GraphToken.address
     process.env.VALIDATOR = NODE
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
+    GraphMock.smocked.delegationTaxPercentage.will.return.with(DELEGATION_TAX)
     Graph = await hre.deployments.fixture(['Graph'], {
       keepExistingDeployments: false
     })
@@ -109,6 +112,9 @@ describe('Graph Integration Test', () => {
   const deposit = ethers.utils.parseEther('100')
   const secondDeposit = ethers.utils.parseEther('10')
 
+  const supplyAfterTax = deposit.add(initialStake)
+    .sub(deposit.add(initialStake).mul(DELEGATION_TAX).div(MAX_PPM))
+
   describe('deposit', () => {
     describe('deposits funds succesfully', async () => {
       let tx: ContractTransaction
@@ -118,15 +124,16 @@ describe('Graph Integration Test', () => {
       })
 
       it('increases TenderToken supply', async () => {
-        expect(await TenderToken.totalSupply()).to.eq(deposit.add(initialStake))
+        expect(await TenderToken.totalSupply()).to.eq(supplyAfterTax)
       })
 
       it('increases Tenderizer principle', async () => {
-        expect(await Tenderizer.currentPrincipal()).to.eq(deposit.add(initialStake))
+        expect(await Tenderizer.currentPrincipal()).to.eq(supplyAfterTax)
       })
 
       it('increases TenderToken balance of depositor', async () => {
-        expect(await TenderToken.balanceOf(deployer)).to.eq(deposit)
+        expect(await TenderToken.balanceOf(deployer)).to.eq(
+          deposit.sub(deposit.mul(DELEGATION_TAX).div(MAX_PPM)))
       })
 
       it('emits Deposit event from tenderizer', async () => {
@@ -161,7 +168,7 @@ describe('Graph Integration Test', () => {
       const increase = ethers.BigNumber.from('10000000000')
       const liquidityFees = percOf2(increase, liquidityFeesPercent)
       const protocolFees = percOf2(increase, protocolFeesPercent)
-      const newStake = deposit.add(initialStake).add(increase)
+      const newStake = supplyAfterTax.add(increase)
       const newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
       let totalShares: BigNumber = ethers.utils.parseEther('1')
       let tx: ContractTransaction
@@ -211,13 +218,13 @@ describe('Graph Integration Test', () => {
       })
 
       it('should emit RewardsClaimed event from Tenderizer', async () => {
-        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs(increase, newStakeMinusFees, deposit.add(initialStake))
+        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs(increase, newStakeMinusFees, supplyAfterTax)
       })
     })
 
     describe('stake decrease', () => {
       // The decrease will offset the increase from the previous test
-      const newStake = deposit.add(initialStake)
+      const newStake = supplyAfterTax
       let totalShares: BigNumber
       let oldPrinciple: BigNumber
 
@@ -362,7 +369,8 @@ describe('Graph Integration Test', () => {
 
       it('TenderToken balance of other account stays the same', async () => {
         const otherAccBal = await TenderToken.balanceOf(signers[2].address)
-        expect(otherAccBal.sub(secondDeposit).abs()).to.lte(acceptableDelta)
+        const exp = secondDeposit.sub(secondDeposit.mul(DELEGATION_TAX).div(MAX_PPM))
+        expect(otherAccBal.sub(exp).abs()).to.lte(acceptableDelta)
       })
 
       it('should create unstakeLock', async () => {
@@ -469,14 +477,15 @@ describe('Graph Integration Test', () => {
       })
 
       it('should withdraw tenderizer GRT balance if < requested amount', async () => {
-        await Controller.connect(signers[2]).unlock(secondDeposit)
+        const secondDepositActTokens = secondDeposit.sub(secondDeposit.mul(DELEGATION_TAX).div(MAX_PPM))
+        await Controller.connect(signers[2]).unlock(secondDepositActTokens)
         let txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('unstake',
           [Controller.address, ethers.utils.parseEther('0')]))
         await Controller.execute(Tenderizer.address, 0, txData)
         txData = txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('withdraw',
           [Controller.address, 3]))
         await Controller.execute(Tenderizer.address, 0, txData)
-        const amountToBurn = (await GraphToken.balanceOf(Tenderizer.address)).sub(secondDeposit).add(1)
+        const amountToBurn = (await GraphToken.balanceOf(Tenderizer.address)).sub(secondDepositActTokens).add(1)
         await hre.network.provider.request({
           method: 'hardhat_impersonateAccount',
           params: [Tenderizer.address]
@@ -494,7 +503,7 @@ describe('Graph Integration Test', () => {
         }
         )
         await Controller.connect(signers[2]).withdraw(2)
-        expect(await GraphToken.balanceOf(signers[2].address)).to.eq(secondDeposit.sub(1))
+        expect(await GraphToken.balanceOf(signers[2].address)).to.eq(secondDepositActTokens.sub(1))
       })
     })
   })

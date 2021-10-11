@@ -23,6 +23,8 @@ contract Graph is Tenderizer {
     // Amount to unstake next by governance to process user withdrawals
     uint256 pendingUnstakes;
 
+    uint32 delegationTaxPercentage;
+
     function initialize(
         IERC20 _steak,
         IGraph _graph,
@@ -30,11 +32,12 @@ contract Graph is Tenderizer {
     ) public {
         Tenderizer._initialize(_steak, _node, msg.sender);
         graph = _graph;
+        resetDelegationTaxPercentage();
     }
 
     function _deposit(address _from, uint256 _amount) internal override returns (uint256 amountOut){
-        currentPrincipal += _amount;
-        amountOut = _amount;
+        amountOut = _amount - (uint256(delegationTaxPercentage) * _amount / MAX_PPM);
+        currentPrincipal += amountOut;
         emit Deposit(_from, _amount);
     }
 
@@ -184,9 +187,13 @@ contract Graph is Tenderizer {
         return currentPrincipal;
     }
 
+    function resetDelegationTaxPercentage() public {
+        delegationTaxPercentage = graph.delegationTaxPercentage();
+    }
+
     function _setStakingContract(address _stakingContract) internal override {
         graph = IGraph(_stakingContract);
-
+        resetDelegationTaxPercentage();
         emit GovernanceUpdate("STAKING_CONTRACT");
     }
 }

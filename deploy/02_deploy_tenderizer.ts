@@ -5,7 +5,7 @@ import {
 } from 'hardhat'
 
 import {
-  TenderToken, Tenderizer, ElasticSupplyPool, ERC20, Controller, EIP173Proxy, TenderFarm, BPool, Registry
+  TenderToken, Tenderizer, ElasticSupplyPool, ERC20, Controller, EIP173Proxy, TenderFarm, BPool, Registry, IGraph
 } from '../typechain'
 import { BigNumber } from '@ethersproject/bignumber'
 import { constants, utils } from 'ethers'
@@ -29,6 +29,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   const steakAmount = process.env.STEAK_AMOUNT || '0'
 
   const bootstrapSupply: BigNumber = ethers.utils.parseEther(steakAmount).div(2)
+  let tenderBootstrapSupply = bootstrapSupply
 
   console.log(`Bootstrap Tenderizer with ${steakAmount} ${SYMBOL}`)
 
@@ -48,6 +49,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     log: true // display the address and gas used in the console (not when run in test though)
   })
 
+  // Account for GRT Delegation Tax
+  if (SYMBOL === 'GRT') {
+    const graphStaking: IGraph = (await ethers.getContractAt('IGraph', process.env.CONTRACT as string)) as IGraph
+    const tax = await graphStaking.delegationTaxPercentage()
+    tenderBootstrapSupply = bootstrapSupply.sub(bootstrapSupply.mul(tax).div(1000000))
+  }
+
   const permissions = {
     canPauseSwapping: true,
     canChangeSwapFee: true,
@@ -64,7 +72,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
       tenderToken.address,
       process.env.TOKEN
     ],
-    tokenBalances: [bootstrapSupply, bootstrapSupply],
+    tokenBalances: [tenderBootstrapSupply, bootstrapSupply],
     tokenWeights: ['7071067811870000000', '7071067811870000000'],
     swapFee: '3000000000000000'
   }
@@ -116,7 +124,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   console.log('Approving tokens and tender tokens for creating the Elastic Supply Pool')
 
   await Steak.approve(esp.address, bootstrapSupply)
-  await TenderToken.approve(esp.address, bootstrapSupply)
+  await TenderToken.approve(esp.address, tenderBootstrapSupply)
 
   console.log('Creating Elastic Supply Pool')
 
