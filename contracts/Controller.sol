@@ -97,11 +97,11 @@ contract Controller is Ownable, ReentrancyGuard {
      * @dev only callable by owner(gov)
      */
     function rebase() public nonReentrant {
-        // stake tokens
-        gulp();
-
         // claim rewards
         tenderizer.claimRewards();
+
+        // stake tokens
+        gulp();
 
         // update total pooled tokens
         _updateTotalPooledTokens();
