@@ -96,67 +96,12 @@ contract ElasticSupplyPool is ConfigurableRightsPool {
     }
 
     /*
-     * @param token The address of the token in the underlying BPool to be weight adjusted.
-     * @dev Checks if the token's current pool balance has deviated from cached balance,
-     *      if so it adjusts the token's weights proportional to the deviation.
-     *      The underlying BPool enforces bounds on MIN_WEIGHTS=1e18, MAX_WEIGHT=50e18 and TOTAL_WEIGHT=50e18.
-     *      NOTE: The BPool.rebind function CAN REVERT if the updated weights go beyond the enforced bounds.
+     * @param token The address of the token in the underlying BPool to be resynced
      */
     function resyncWeight(address token) external logs lock needsBPool {
-        // NOTE: Skipping gradual update check
-        // Pool will never go into gradual update state as `updateWeightsGradually` is disabled
-        // require(
-        //     ConfigurableRightsPool.gradualUpdate.startBlock == 0,
-        //     "ERR_NO_UPDATE_DURING_GRADUAL");
-
         require(IBPool(address(bPool)).isBound(token), "ERR_NOT_BOUND");
-
-        // get cached balance
-        uint256 tokenBalanceBefore = IBPool(address(bPool)).getBalance(token);
 
         // sync balance
         IBPool(address(bPool)).gulp(token);
-
-        // get new balance
-        uint256 tokenBalanceAfter = IBPool(address(bPool)).getBalance(token);
-
-        // No-Op
-        if (tokenBalanceBefore == tokenBalanceAfter) {
-            return;
-        }
-
-        // current token weight
-        uint256 tokenWeightBefore = IBPool(address(bPool)).getDenormalizedWeight(token);
-
-        // target token weight = RebaseRatio * previous token weight
-        uint256 tokenWeightTarget = BalancerSafeMath.bdiv(
-            BalancerSafeMath.bmul(tokenWeightBefore, tokenBalanceAfter),
-            tokenBalanceBefore
-        );
-
-        // new token weight = sqrt(current token weight * target token weight)
-        uint256 tokenWeightAfter = BalancerSafeMath.sqrt(
-            BalancerSafeMath.bdiv(BalancerSafeMath.bmul(tokenWeightBefore, tokenWeightTarget), 1)
-        );
-
-        address[] memory tokens = IBPool(address(bPool)).getCurrentTokens();
-        for (uint256 i = 0; i < tokens.length; i++) {
-            if (tokens[i] == token) {
-                // adjust weight
-                IBPool(address(bPool)).rebind(token, tokenBalanceAfter, tokenWeightAfter);
-            } else {
-                uint256 otherWeightBefore = IBPool(address(bPool)).getDenormalizedWeight(tokens[i]);
-                uint256 otherBalance = bPool.getBalance(tokens[i]);
-
-                // other token weight = (new token weight * other token weight before) / target token weight
-                uint256 otherWeightAfter = BalancerSafeMath.bdiv(
-                    BalancerSafeMath.bmul(tokenWeightAfter, otherWeightBefore),
-                    tokenWeightTarget
-                );
-
-                // adjust weight
-                IBPool(address(bPool)).rebind(tokens[i], otherBalance, otherWeightAfter);
-            }
-        }
     }
 }
