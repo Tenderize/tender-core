@@ -1,7 +1,7 @@
 import hre, { ethers } from 'hardhat'
 
 import {
-  Controller, ElasticSupplyPool, TenderToken, IAudius, BPool, EIP173Proxy, Audius, ERC20
+  Controller, ElasticSupplyPool, TenderToken, IAudius, BPool, Audius, ERC20
 } from '../../typechain'
 
 import claimsManagerAbi from './abis/audius/ClaimsManager.json'
@@ -40,8 +40,8 @@ describe('Audius Mainnet Fork Test', () => {
   let withdrawAmount: BigNumber
 
   let tx: ContractTransaction
-  const unbondLockID = 1
-  const govUnboundLockID = 2
+  const unbondLockID = 0
+  const govUnboundLockID = 1
   const protocolFeesPercent = ethers.utils.parseEther('0.025')
   const liquidityFeesPercent = ethers.utils.parseEther('0.025')
 
@@ -226,6 +226,10 @@ describe('Audius Mainnet Fork Test', () => {
         expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
       })
 
+      it('weights of the AMM stay 50-50', async () => {
+        expect(await BPool.getNormalizedWeight(TenderToken.address)).to.be.eq(ethers.utils.parseEther('1').div(2))
+      })
+
       it('should emit RewardsClaimed event from Tenderizer', async () => {
         expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
           .withArgs(increase, newStakeMinusFees, deposit.add(initialStake))
@@ -283,6 +287,10 @@ describe('Audius Mainnet Fork Test', () => {
       it('decreases the tenderToken balance of the AMM', async () => {
         const shares = await TenderToken.sharesOf(BPool.address)
         expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+      })
+
+      it('weights of the AMM stay 50-50', async () => {
+        expect(await BPool.getNormalizedWeight(TenderToken.address)).to.be.eq(ethers.utils.parseEther('1').div(2))
       })
 
       it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
@@ -465,44 +473,6 @@ describe('Audius Mainnet Fork Test', () => {
       it('should emit Withdraw event from Tenderizer', async () => {
         expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(deployer, withdrawAmount, unbondLockID)
       })
-    })
-  })
-
-  describe('upgrade', () => {
-    let proxy: EIP173Proxy
-    let newTenderizer:any
-    let beforeBalance: BigNumber
-    before(async () => {
-      proxy = (await ethers.getContractAt('EIP173Proxy', Audius.Audius_Proxy.address)) as EIP173Proxy
-      beforeBalance = await Tenderizer.currentPrincipal()
-      const newFac = await ethers.getContractFactory('Audius', signers[0])
-      newTenderizer = await newFac.deploy()
-    })
-
-    it('upgrade tenderizer', async () => {
-      await hre.network.provider.request({
-        method: 'hardhat_impersonateAccount',
-        params: [Controller.address]
-      }
-      )
-
-      const signer = await ethers.provider.getSigner(Controller.address)
-
-      expect(await proxy.connect(signer).upgradeTo(newTenderizer.address, { gasLimit: 400000, gasPrice: 0 })).to.emit(
-        proxy,
-        'ProxyImplementationUpdated'
-      ).withArgs(Audius.Audius_Implementation.address, newTenderizer.address)
-
-      await hre.network.provider.request({
-        method: 'hardhat_stopImpersonatingAccount',
-        params: [Controller.address]
-      }
-      )
-    })
-
-    it('current principal still matches', async () => {
-      const newPrincipal = await Tenderizer.currentPrincipal()
-      expect(newPrincipal).to.equal(beforeBalance)
     })
   })
 })
