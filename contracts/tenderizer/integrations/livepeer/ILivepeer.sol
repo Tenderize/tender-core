@@ -35,4 +35,6 @@ interface ILivepeer {
             uint256 lastClaimRound,
             uint256 nextUnbondingLockId
         );
+
+    function setUnbondingPeriod(uint64 _unbondingPeriod) external;
 }
