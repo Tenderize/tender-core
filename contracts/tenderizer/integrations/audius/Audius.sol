@@ -32,8 +32,9 @@ contract Audius is Tenderizer {
         audiusStaking = audius.getStakingAddress();
     }
 
-    function _deposit(address _from, uint256 _amount) internal override {
+    function _deposit(address _from, uint256 _amount) internal override returns (uint256 amountOut){
         currentPrincipal += _amount;
+        amountOut = _amount;
         emit Deposit(_from, _amount);
     }
 

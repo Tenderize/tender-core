@@ -48,10 +48,10 @@ contract Controller is Ownable, ReentrancyGuard {
     function deposit(uint256 _amount) public {
         require(_amount > 0, "ZERO_AMOUNT");
 
+        uint256 amountOut = tenderizer.deposit(msg.sender, _amount);
         // mint tenderTokens
-        require(tenderToken.mint(msg.sender, _amount), "TENDER_MINT_FAILED");
-
-        tenderizer.deposit(msg.sender, _amount);
+        
+        require(tenderToken.mint(msg.sender, amountOut), "TENDER_MINT_FAILED");
 
         _updateTotalPooledTokens();
 

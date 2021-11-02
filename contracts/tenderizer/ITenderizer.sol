@@ -7,7 +7,7 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface ITenderizer {
-    function deposit(address _from, uint256 _amount) external;
+    function deposit(address _from, uint256 _amount) external returns (uint256 amountOut) ;
 
     function stake(address _node, uint256 _amount) external;
 
