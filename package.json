@@ -54,6 +54,7 @@
     "@typechain/ethers-v5": "^6.0.5",
     "@typechain/truffle-v5": "^4.0.1",
     "@typechain/web3-v1": "^2.2.0",
+    "@uniswap/v3-periphery": "^1.2.0",
     "balancer-core": "https://github.com/balancer-labs/balancer-core",
     "chai": "^4.3.4",
     "configurable-rights-pool": "https://github.com/Tenderize/configurable-rights-pool#tenderize",
