@@ -6,6 +6,7 @@ import "hardhat-typechain"
 // deployment plugins
 import 'hardhat-deploy';
 import 'hardhat-deploy-ethers';
+import '@openzeppelin/hardhat-upgrades'
 
 // Tools
 import "hardhat-gas-reporter"

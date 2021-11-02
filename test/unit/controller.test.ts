@@ -74,7 +74,7 @@ describe('Controller', () => {
       signers[0]
     )
 
-    tenderFarmNoMock = (await TenderFarmFactory.deploy(esp, tenderTokenMock.address)) as TenderFarm
+    tenderFarmNoMock = (await TenderFarmFactory.deploy()) as TenderFarm
     tenderFarmMock = await smockit(tenderFarmNoMock)
   })
 

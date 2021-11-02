@@ -481,7 +481,7 @@ describe('Livepeer Integration Test', () => {
     })
   })
 
-  describe('upgrade', () => {
+  describe('upgrade tenderizer', () => {
     let proxy: EIP173Proxy
     let newTenderizer:any
     let beforeBalance: BigNumber
