@@ -1,5 +1,5 @@
 import {
-  ethers
+  ethers, upgrades
 } from 'hardhat'
 import { MockContract, smockit } from '@eth-optimism/smock'
 import ethersTypes from 'ethers'
@@ -8,7 +8,6 @@ import {
   solidity
 } from 'ethereum-waffle'
 import {
-  Controller,
   TenderToken,
   SimpleToken,
   TenderFarm
@@ -23,7 +22,7 @@ const {
 describe('Controller', () => {
   let snapshotId: any
 
-  let controller: Controller
+  let controller: any
   let signers: ethersTypes.Signer[]
 
   let account0: string
@@ -87,14 +86,14 @@ describe('Controller', () => {
 
     account0 = await signers[0].getAddress()
 
-    controller = (await ControllerFactory.deploy(steakMock.address, tenderizer, tenderTokenMock.address, esp)) as Controller
+    controller = await upgrades.deployProxy(ControllerFactory, [steakMock.address, tenderizer, tenderTokenMock.address, esp])
     await controller.deployed()
     await controller.setTenderFarm(tenderFarmMock.address)
   })
 
   describe('Constructor', () => {
-    it('Owner is deployer', async () => {
-      expect(await controller.owner()).to.eq(account0)
+    it('Gov is initially deployer', async () => {
+      expect(await controller.gov()).to.eq(account0)
     })
 
     it('Sets steak token', async () => {
@@ -159,6 +158,32 @@ describe('Controller', () => {
         [tenderFarmNoMock.interface.encodeFunctionData('farm', [depositAmount]),
           tenderFarmNoMock.interface.encodeFunctionData('harvest')]
       )).to.be.revertedWith('INVALID_ARGUMENTS')
+    })
+  })
+
+  describe('Upgrade Controller', () => {
+    it('upgrades Controller - steak() remains the same', async () => {
+      // Upgrade farm
+      const newFac = await ethers.getContractFactory('Controller', signers[0])
+      controller = await upgrades.upgradeProxy(controller.address, newFac)
+
+      expect(await controller.steak()).to.equal(steakMock.address)
+    })
+  })
+
+  describe('setting new gov address', async () => {
+    const newDummyGov = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
+    it('reverts if Zero address is set', async () => {
+      await expect(controller.setGov(ethers.constants.AddressZero)).to.be.revertedWith('ZERO_ADDRESS')
+    })
+
+    it('reverts if not called by current gov', async () => {
+      await expect(controller.connect(signers[1]).setGov(newDummyGov)).to.be.reverted
+    })
+
+    it('sets gov successfully', async () => {
+      await controller.setGov(newDummyGov)
+      expect(await controller.gov()).to.equal(newDummyGov)
     })
   })
 })

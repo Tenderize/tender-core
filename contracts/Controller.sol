@@ -5,9 +5,9 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
+import "./libs/ReentrancyGuard.sol";
 import "./token/ITenderToken.sol";
 import "./tenderizer/ITenderizer.sol";
 import "./liquidity/IElasticSupplyPool.sol";
@@ -17,25 +17,34 @@ import "./liquidity/ITenderFarm.sol";
  * @title Controller contract for a Tenderizer
  */
 
-contract Controller is Ownable, ReentrancyGuard {
+contract Controller is Initializable, ReentrancyGuard {
     IERC20 public steak;
     ITenderizer public tenderizer;
     ITenderToken public tenderToken;
     IElasticSupplyPool public esp;
     ITenderFarm public tenderFarm;
 
-    constructor(
+    address public gov;
+
+    function initialize(
         IERC20 _steak,
         ITenderizer _tenderizer,
         ITenderToken _tenderToken,
         IElasticSupplyPool _esp
-    ) {
+    ) public initializer {
         steak = _steak;
         tenderizer = _tenderizer;
         // TODO: consider deploying these contracts using factories and proxies
         // from the constructutor so that deploying a new system is only deploying a single contract
         tenderToken = _tenderToken;
         esp = _esp;
+        gov = msg.sender;
+        _status = _NOT_ENTERED;
+    }
+
+    modifier onlyGov() {
+        require(msg.sender == gov);
+        _;
     }
 
     /**
@@ -133,7 +142,7 @@ contract Controller is Ownable, ReentrancyGuard {
      * @dev mints equal number of tender tokens to the owner
      * @dev only callable by owner(gov)
      */
-    function collectFees() public onlyOwner {
+    function collectFees() public onlyGov {
         _collectFees();
     }
 
@@ -142,7 +151,7 @@ contract Controller is Ownable, ReentrancyGuard {
      * @dev mints equal number of tender tokens to the tenderFarm
      * @dev only callable by owner(gov)
      */
-    function collectLiquidityFees() public onlyOwner {
+    function collectLiquidityFees() public onlyGov {
         _collectLiquidityFees();
     }
 
@@ -151,20 +160,30 @@ contract Controller is Ownable, ReentrancyGuard {
      * @param _esp Elastic Supply Pool contract address
      * @dev only callable by owner(gov)
      */
-    function setEsp(IElasticSupplyPool _esp) public onlyOwner {
+    function setEsp(IElasticSupplyPool _esp) public onlyGov {
         require(address(_esp) != address(0), "ZERO_ADDRESS");
         esp = _esp;
     }
 
-    function migrateToNewTenderizer(ITenderizer _tenderizer) public onlyOwner {}
+    function migrateToNewTenderizer(ITenderizer _tenderizer) public onlyGov {}
 
     /**
      * @notice Set TenderFarm contract
      * @param _tenderFarm TenderFarm contract address
      * @dev only callable by owner(gov)
      */
-    function setTenderFarm(ITenderFarm _tenderFarm) public onlyOwner {
+    function setTenderFarm(ITenderFarm _tenderFarm) public onlyGov {
         tenderFarm = _tenderFarm;
+    }
+
+    /**
+     * @notice Set new Governance address
+     * @param _gov Governance address
+     * @dev only callable by owner(gov)
+     */
+    function setGov(address _gov) public onlyGov {
+        require(_gov != address(0), "ZERO_ADDRESS");
+        gov = _gov;
     }
 
     /**
@@ -178,7 +197,7 @@ contract Controller is Ownable, ReentrancyGuard {
         address _target,
         uint256 _value,
         bytes calldata _data
-    ) public onlyOwner {
+    ) public onlyGov {
         _execute(_target, _value, _data);
     }
 
@@ -194,7 +213,7 @@ contract Controller is Ownable, ReentrancyGuard {
         address[] calldata _targets,
         uint256[] calldata _values,
         bytes[] calldata _datas
-    ) public onlyOwner {
+    ) public onlyGov {
         require(_targets.length == _values.length && _targets.length == _datas.length, "INVALID_ARGUMENTS");
         for (uint256 i = 0; i < _targets.length; i++) {
             _execute(_targets[i], _values[i], _datas[i]);
@@ -223,7 +242,7 @@ contract Controller is Ownable, ReentrancyGuard {
         uint256 amount = tenderizer.collectFees();
 
         // mint tenderToken to fee distributor (governance)
-        tenderToken.mint(owner(), amount);
+        tenderToken.mint(gov, amount);
     }
 
     function _collectLiquidityFees() internal {
@@ -231,7 +250,7 @@ contract Controller is Ownable, ReentrancyGuard {
         // collect fees and get amount
         uint256 amount = tenderizer.collectLiquidityFees();
 
-        // mint tenderToken to fee distributor (governance)
+        // mint tenderToken and transfer to tenderFarm
         tenderToken.mint(address(this), amount);
         tenderToken.approve(address(tenderFarm), amount);
         tenderFarm.addRewards(amount);
