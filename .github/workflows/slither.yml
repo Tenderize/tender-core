@@ -1,0 +1,22 @@
+name: Security
+
+on: [push]
+
+jobs:
+  main_job:
+    runs-on: ubuntu-latest
+    name: Slither Security 
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Slither Static Analysis
+        uses: Tenderize/slither-static-analysis-action@master
+        with:
+          slither-version: '0.8.1'
+          run-npm-install: true
+          high-threshold: 1
+          medium-threshold: 1
+          low-threshold: 1
+          optimization-threshold: 1
+          informative-threshold: 10
+          projectPath: "."
