@@ -8,6 +8,7 @@ import "./NamedToken.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../libs/MathUtils.sol";
+import {ERC20, ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 
 /**
  * @title Interest-bearing ERC20-like token for Tenderize protocol.
@@ -19,7 +20,7 @@ import "../libs/MathUtils.sol";
 
     shares[account] * _getTotalPooledTokens() / _getTotalShares()
  */
-contract TenderToken is NamedToken, Ownable, IERC20 {
+contract TenderToken is Ownable, ERC20Permit {
     uint8 internal constant DECIMALS = 18;
 
     /**
@@ -42,15 +43,16 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
      */
     mapping(address => mapping(address => uint256)) private allowances;
 
-    constructor(string memory _name, string memory _symbol)
-        NamedToken(string(abi.encodePacked("tender ", _name)), string(abi.encodePacked("t", _symbol)))
+    constructor(string memory _name, string memory _symbol) 
+        ERC20(string(abi.encodePacked("tender ", _name)), string(abi.encodePacked("t", _symbol)))
+        ERC20Permit(string(abi.encodePacked("tender ", _name)))
     {}
 
     /**
      * @notice The number of decimals the TenderToken uses
      * @return the number of decimals for getting user representation of a token amount.
      */
-    function decimals() public pure returns (uint8) {
+    function decimals() public override pure returns (uint8) {
         return DECIMALS;
     }
 
@@ -60,7 +62,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
         is pegged to the total amount of Tokens controlled by the protocol.
      * @return total supply
      */
-    function totalSupply() external view override returns (uint256) {
+    function totalSupply() public view override returns (uint256) {
         return _getTotalPooledTokens();
     }
 
@@ -89,7 +91,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
         total Tokens controlled by the protocol. See `sharesOf`.
      * @param _account address of the account to check the balance for
      */
-    function balanceOf(address _account) external view override returns (uint256) {
+    function balanceOf(address _account) public view override returns (uint256) {
         return sharesToTokens(_sharesOf(_account));
     }
 
@@ -110,7 +112,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
      * @param _spender address that is allowed to spend the allowance
      * @return amount '_spender' is allowed to spend from '_owner'
      */
-    function allowance(address _owner, address _spender) external view override returns (uint256) {
+    function allowance(address _owner, address _spender) public view override returns (uint256) {
         return allowances[_owner][_spender];
     }
 
@@ -156,7 +158,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
         - the caller must have a balance of at least `_amount`.
      * @dev The `_amount` argument is the amount of tokens, not shares.
      */
-    function transfer(address _recipient, uint256 _amount) external override returns (bool) {
+    function transfer(address _recipient, uint256 _amount) public override returns (bool) {
         _transfer(msg.sender, _recipient, _amount);
         return true;
     }
@@ -171,7 +173,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
         - `_spender` cannot be the zero address.
      * @dev The `_amount` argument is the amount of tokens, not shares.
      */
-    function approve(address _spender, uint256 _amount) external override returns (bool) {
+    function approve(address _spender, uint256 _amount) public override returns (bool) {
         _approve(msg.sender, _spender, _amount);
         return true;
     }
@@ -194,7 +196,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
         address _sender,
         address _recipient,
         uint256 _amount
-    ) external override returns (bool) {
+    ) public override returns (bool) {
         uint256 currentAllowance = allowances[_sender][msg.sender];
         require(currentAllowance >= _amount, "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE");
 
@@ -213,7 +215,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
      * @dev Requirements:
         - `_spender` cannot be the the zero address.
      */
-    function increaseAllowance(address _spender, uint256 _addedValue) public returns (bool) {
+    function increaseAllowance(address _spender, uint256 _addedValue) public override returns (bool) {
         _approve(msg.sender, _spender, allowances[msg.sender][_spender] + _addedValue);
         return true;
     }
@@ -229,7 +231,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
         - `_spender` cannot be the zero address.
         - `_spender` must have allowance for the caller of at least `_subtractedValue`.
      */
-    function decreaseAllowance(address _spender, uint256 _subtractedValue) public returns (bool) {
+    function decreaseAllowance(address _spender, uint256 _subtractedValue) public override returns (bool) {
         uint256 currentAllowance = allowances[msg.sender][_spender];
         require(currentAllowance >= _subtractedValue, "DECREASED_ALLOWANCE_BELOW_ZERO");
         _approve(msg.sender, _spender, currentAllowance - _subtractedValue);
@@ -309,7 +311,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
         address _sender,
         address _recipient,
         uint256 _amount
-    ) internal {
+    ) internal override {
         uint256 _sharesToTransfer = tokensToShares(_amount);
         _transferShares(_sender, _recipient, _sharesToTransfer);
         emit Transfer(_sender, _recipient, _amount);
@@ -323,7 +325,7 @@ contract TenderToken is NamedToken, Ownable, IERC20 {
         address _owner,
         address _spender,
         uint256 _amount
-    ) internal {
+    ) internal override {
         require(_owner != address(0), "APPROVE_FROM_ZERO_ADDRESS");
         require(_spender != address(0), "APPROVE_TO_ZERO_ADDRESS");
 

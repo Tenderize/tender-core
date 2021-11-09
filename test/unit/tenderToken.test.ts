@@ -12,7 +12,10 @@ import {
 
 import * as rpc from '../util/snapshot'
 
+import { getSignature, getDomainSeparator } from '../util/eip_712'
+
 import { sharesToTokens, tokensToShares } from '../util/helpers'
+
 chai.use(solidity)
 const {
   expect
@@ -835,6 +838,178 @@ describe('TenderToken', () => {
           expect(await tenderToken.tokensToShares(ethers.utils.parseEther('2'))).to.eq(tokensToShares(ethers.utils.parseEther('2'), totalSupply, newTotalPooledTokens))
           expect(await tenderToken.tokensToShares(totalSupply)).to.eq(tokensToShares(totalSupply, totalSupply, newTotalPooledTokens))
         })
+      })
+    })
+  })
+
+  describe('EIP-2612: ERC20Permit', () => {
+    const initialAmount = ethers.utils.parseEther('100')
+
+    let chainId: number
+    let from: string
+    let spender: string
+
+    before(async function () {
+      const network = await ethers.provider.getNetwork()
+      chainId = network.chainId
+      from = account0
+      spender = account1
+    })
+
+    beforeEach(async () => {
+      await tenderToken.mint(account0, initialAmount)
+    })
+
+    it('initial nonce is 0', async function () {
+      const initialNonce = await tenderToken.nonces(account0)
+      expect(initialNonce).to.equal(0)
+    })
+
+    it('domain separator', async function () {
+      const domainSeparator = await tenderToken.DOMAIN_SEPARATOR()
+      expect(domainSeparator).to.equal(
+        getDomainSeparator('tender Mock', tenderToken.address, chainId)
+      )
+    })
+
+    describe('permit', () => {
+      it('should fail with an invalid signature', async () => {
+        const message = {
+          owner: from,
+          spender: spender,
+          value: initialAmount,
+          nonce: 0,
+          deadline: ethers.constants.MaxUint256
+        }
+
+        const wrongSigner = await ethers.getSigner(account2)
+        const { v, r, s } = await getSignature(
+          wrongSigner, // use a different account to sign than what is provided as owner in the message
+          await tenderToken.name(),
+          chainId,
+          tenderToken.address,
+          message
+        )
+
+        const tx = tenderToken.permit(
+          from,
+          spender,
+          initialAmount,
+          ethers.constants.MaxUint256,
+          v,
+          r,
+          s
+        )
+        await expect(tx).to.be.revertedWith(
+          'ERC20Permit: invalid signature'
+        )
+      })
+
+      it('should fail on a double-spend (re-using the same nonce and thus signature)', async () => {
+        const message = {
+          owner: from,
+          spender: spender,
+          value: initialAmount,
+          nonce: 0,
+          deadline: ethers.constants.MaxUint256
+        }
+
+        const { v, r, s } = await getSignature(
+          await ethers.getSigner(from), // use a different account to sign than what is provided as owner in the message
+          await tenderToken.name(),
+          chainId,
+          tenderToken.address,
+          message
+        )
+
+        await tenderToken.permit(
+          from,
+          spender,
+          initialAmount,
+          ethers.constants.MaxUint256,
+          v,
+          r,
+          s
+        )
+
+        await expect(tenderToken.permit(
+          from,
+          spender,
+          initialAmount,
+          ethers.constants.MaxUint256,
+          v,
+          r,
+          s
+        )).to.be.revertedWith('ERC20Permit: invalid signature')
+      })
+
+      it('should fail if the deadline has passed', async () => {
+        const message = {
+          owner: from,
+          spender: spender,
+          value: initialAmount,
+          nonce: 0,
+          deadline: 1
+        }
+
+        const { v, r, s } = await getSignature(
+          await ethers.getSigner(from), // use a different account to sign than what is provided as owner in the message
+          await tenderToken.name(),
+          chainId,
+          tenderToken.address,
+          message
+        )
+
+        const tx = tenderToken.permit(
+          from,
+          spender,
+          initialAmount,
+          1,
+          v,
+          r,
+          s
+        )
+
+        await expect(tx).to.be.revertedWith('ERC20Permit: expired deadline')
+      })
+
+      it('should move permitted tokens', async () => {
+        const message = {
+          owner: from,
+          spender: spender,
+          value: initialAmount,
+          nonce: 0,
+          deadline: ethers.constants.MaxUint256
+        }
+
+        const { v, r, s } = await getSignature(
+          await ethers.getSigner(from), // use a different account to sign than what is provided as owner in the message
+          await tenderToken.name(),
+          chainId,
+          tenderToken.address,
+          message
+        )
+
+        const tx = await tenderToken.permit(
+          from,
+          spender,
+          initialAmount,
+          ethers.constants.MaxUint256,
+          v,
+          r,
+          s
+        )
+
+        expect(tx).to.emit(tenderToken, 'Approval').withArgs(
+          from, spender, initialAmount
+        )
+
+        expect(await tenderToken.allowance(from, spender)).to.eq(initialAmount)
+
+        const receiver = await ethers.getSigner(spender)
+        await tenderToken.connect(receiver).transferFrom(from, spender, initialAmount)
+        expect(await tenderToken.balanceOf(account1)).to.eq(initialAmount)
+        expect(await tenderToken.balanceOf(account0)).to.eq(ethers.constants.Zero)
       })
     })
   })
