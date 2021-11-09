@@ -17,6 +17,7 @@ import {
   tokensToShares,
   getApprovalDigest
 } from '../util/helpers'
+import { arrayify } from 'ethers/lib/utils'
 
 chai.use(solidity)
 const {
@@ -855,10 +856,11 @@ describe('TenderToken', () => {
       deadline
     )
 
-    const sig = await signers[0].signMessage(Buffer.from(digest.slice(2), 'hex'))
+    // const sig = await signers[0].signMessage(Buffer.from('\x19Ethereum Signed Message:\n32' + digest.slice(2), 'hex'))
+    const sig = await signers[0].signMessage(ethers.utils.hashMessage(digest))
     const split = ethers.utils.splitSignature(sig)
 
-    await expect(tenderToken.permit(account0, account1, TEST_AMOUNT, deadline, split.v, ethers.utils.hexlify(split.r), ethers.utils.hexlify(split.s)))
+    await expect(tenderToken.permit(account0, account1, TEST_AMOUNT, deadline, split.v, split.r, split.s))
       .to.emit(tenderToken, 'Approval')
       .withArgs(account0, account1, TEST_AMOUNT)
     expect(await tenderToken.allowance(account0, account1)).to.eq(TEST_AMOUNT)
