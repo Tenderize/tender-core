@@ -4,7 +4,6 @@
 
 pragma solidity 0.8.4;
 
-import "./NamedToken.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../libs/MathUtils.sol";

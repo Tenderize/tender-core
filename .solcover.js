@@ -15,6 +15,5 @@ module.exports = {
         'liquidity/IElasticSupplyPool.sol',
         'liquidity/IOneInch.sol',
         'token/ITenderToken.sol',
-        'token/NamedToken.sol'
     ]
   };
