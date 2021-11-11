@@ -94,7 +94,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   const controller = await deploy('Controller', {
     from: deployer,
     log: true,
-    args: [process.env.TOKEN, tenderizer.address, tenderToken.address, esp.address]
+    args: [process.env.TOKEN, tenderizer.address, tenderToken.address, esp.address],
+    proxy: {
+      proxyContract: 'EIP173ProxyWithReceive',
+      owner: deployer,
+      methodName: 'initialize'
+    }
   })
 
   const TenderToken: TenderToken = (await ethers.getContractAt('TenderToken', tenderToken.address)) as TenderToken
