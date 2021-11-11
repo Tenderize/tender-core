@@ -65,7 +65,7 @@ describe('Audius Mainnet Fork Test', () => {
 
   const undelegateStakeRequestedTopic = '0x0c0ebdfe3f3ccdb3ad070f98a3fb9656a7b8781c299a5c0cd0f37e4d5a02556d'
 
-  const testTimeout = 120000
+  const testTimeout = 1200000
 
   before('deploy Audius Tenderizer', async function () {
     this.timeout(testTimeout)
@@ -74,7 +74,6 @@ describe('Audius Mainnet Fork Test', () => {
       method: 'hardhat_reset',
       params: [{
         forking: {
-          blockNumber: 12900000,
           jsonRpcUrl: process.env.ALCHEMY_URL || 'https://eth-mainnet.alchemyapi.io/v2/s93KFT7TnttkCPdNS2Fg_HAoCpP6dEda'
         }
       }]
@@ -245,7 +244,8 @@ describe('Audius Mainnet Fork Test', () => {
       let feesBefore: BigNumber = ethers.constants.Zero
       let tx: ContractTransaction
 
-      before(async () => {
+      before(async function () {
+        this.timeout(testTimeout)
         feesBefore = await Tenderizer.pendingFees()
         oldPrinciple = await Tenderizer.currentPrincipal()
 
