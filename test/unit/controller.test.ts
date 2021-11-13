@@ -174,15 +174,15 @@ describe('Controller', () => {
   describe('setting new gov address', async () => {
     const newDummyGov = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
     it('reverts if Zero address is set', async () => {
-      await expect(controller.setGov(ethers.constants.AddressZero)).to.be.revertedWith('ZERO_ADDRESS')
+      await expect(controller.setGovernance(ethers.constants.AddressZero)).to.be.revertedWith('ZERO_ADDRESS')
     })
 
     it('reverts if not called by current gov', async () => {
-      await expect(controller.connect(signers[1]).setGov(newDummyGov)).to.be.reverted
+      await expect(controller.connect(signers[1]).setGovernance(newDummyGov)).to.be.reverted
     })
 
     it('sets gov successfully', async () => {
-      await controller.setGov(newDummyGov)
+      await controller.setGovernance(newDummyGov)
       expect(await controller.gov()).to.equal(newDummyGov)
     })
   })
