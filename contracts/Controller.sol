@@ -24,13 +24,14 @@ contract Controller is Initializable, ReentrancyGuard {
     IElasticSupplyPool public esp;
     ITenderFarm public tenderFarm;
 
-    address public gov;
+    address public governance;
 
     function initialize(
         IERC20 _steak,
         ITenderizer _tenderizer,
         ITenderToken _tenderToken,
-        IElasticSupplyPool _esp
+        IElasticSupplyPool _esp,
+        address _governance
     ) public initializer {
         steak = _steak;
         tenderizer = _tenderizer;
@@ -38,12 +39,12 @@ contract Controller is Initializable, ReentrancyGuard {
         // from the constructutor so that deploying a new system is only deploying a single contract
         tenderToken = _tenderToken;
         esp = _esp;
-        gov = msg.sender;
+        governance =  _governance;
         _status = _NOT_ENTERED;
     }
 
-    modifier onlyGov() {
-        require(msg.sender == gov);
+    modifier onlyGovernance() {
+        require(msg.sender == governance);
         _;
     }
 
@@ -142,7 +143,7 @@ contract Controller is Initializable, ReentrancyGuard {
      * @dev mints equal number of tender tokens to the owner
      * @dev only callable by owner(gov)
      */
-    function collectFees() public onlyGov {
+    function collectFees() public onlyGovernance {
         _collectFees();
     }
 
@@ -151,7 +152,7 @@ contract Controller is Initializable, ReentrancyGuard {
      * @dev mints equal number of tender tokens to the tenderFarm
      * @dev only callable by owner(gov)
      */
-    function collectLiquidityFees() public onlyGov {
+    function collectLiquidityFees() public onlyGovernance {
         _collectLiquidityFees();
     }
 
@@ -160,30 +161,30 @@ contract Controller is Initializable, ReentrancyGuard {
      * @param _esp Elastic Supply Pool contract address
      * @dev only callable by owner(gov)
      */
-    function setEsp(IElasticSupplyPool _esp) public onlyGov {
+    function setEsp(IElasticSupplyPool _esp) public onlyGovernance {
         require(address(_esp) != address(0), "ZERO_ADDRESS");
         esp = _esp;
     }
 
-    function migrateToNewTenderizer(ITenderizer _tenderizer) public onlyGov {}
+    function migrateToNewTenderizer(ITenderizer _tenderizer) public onlyGovernance {}
 
     /**
      * @notice Set TenderFarm contract
      * @param _tenderFarm TenderFarm contract address
      * @dev only callable by owner(gov)
      */
-    function setTenderFarm(ITenderFarm _tenderFarm) public onlyGov {
+    function setTenderFarm(ITenderFarm _tenderFarm) public onlyGovernance {
         tenderFarm = _tenderFarm;
     }
 
     /**
      * @notice Set new Governance address
-     * @param _gov Governance address
+     * @param _governance Governance address
      * @dev only callable by owner(gov)
      */
-    function setGov(address _gov) public onlyGov {
-        require(_gov != address(0), "ZERO_ADDRESS");
-        gov = _gov;
+    function setGovernance(address _governance) public onlyGovernance {
+        require(_governance != address(0), "ZERO_ADDRESS");
+        governance = _governance;
     }
 
     /**
@@ -197,7 +198,7 @@ contract Controller is Initializable, ReentrancyGuard {
         address _target,
         uint256 _value,
         bytes calldata _data
-    ) public onlyGov {
+    ) public onlyGovernance {
         _execute(_target, _value, _data);
     }
 
@@ -213,7 +214,7 @@ contract Controller is Initializable, ReentrancyGuard {
         address[] calldata _targets,
         uint256[] calldata _values,
         bytes[] calldata _datas
-    ) public onlyGov {
+    ) public onlyGovernance {
         require(_targets.length == _values.length && _targets.length == _datas.length, "INVALID_ARGUMENTS");
         for (uint256 i = 0; i < _targets.length; i++) {
             _execute(_targets[i], _values[i], _datas[i]);
@@ -242,7 +243,7 @@ contract Controller is Initializable, ReentrancyGuard {
         uint256 amount = tenderizer.collectFees();
 
         // mint tenderToken to fee distributor (governance)
-        tenderToken.mint(gov, amount);
+        tenderToken.mint(governance, amount);
     }
 
     function _collectLiquidityFees() internal {

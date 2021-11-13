@@ -94,7 +94,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   const controller = await deploy('Controller', {
     from: deployer,
     log: true,
-    args: [process.env.TOKEN, tenderizer.address, tenderToken.address, esp.address],
+    args: [process.env.TOKEN, tenderizer.address, tenderToken.address, esp.address, deployer],
     proxy: {
       proxyContract: 'EIP173ProxyWithReceive',
       owner: deployer,
