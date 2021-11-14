@@ -86,14 +86,14 @@ describe('Controller', () => {
 
     account0 = await signers[0].getAddress()
 
-    controller = await upgrades.deployProxy(ControllerFactory, [steakMock.address, tenderizer, tenderTokenMock.address, esp])
+    controller = await upgrades.deployProxy(ControllerFactory, [steakMock.address, tenderizer, tenderTokenMock.address, esp, account0])
     await controller.deployed()
     await controller.setTenderFarm(tenderFarmMock.address)
   })
 
   describe('Constructor', () => {
-    it('Gov is initially deployer', async () => {
-      expect(await controller.gov()).to.eq(account0)
+    it('Governance is initially deployer', async () => {
+      expect(await controller.governance()).to.eq(account0)
     })
 
     it('Sets steak token', async () => {
@@ -183,7 +183,7 @@ describe('Controller', () => {
 
     it('sets gov successfully', async () => {
       await controller.setGovernance(newDummyGov)
-      expect(await controller.gov()).to.equal(newDummyGov)
+      expect(await controller.governance()).to.equal(newDummyGov)
     })
   })
 })

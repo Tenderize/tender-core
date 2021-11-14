@@ -12,7 +12,6 @@ module.exports = {
         'tenderizer/integrations/matic/IMatic.sol',
         'tenderizer/integrations/matic/MaticMock.sol',
         'liquidity/ElasticSupplyPool.sol',
-        'liquidity/TenderFarm.ts',
         'token/ITenderToken.sol',
     ]
   };
