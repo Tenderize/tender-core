@@ -1,7 +1,7 @@
 import hre, { ethers } from 'hardhat'
 
 import {
-  Controller, ElasticSupplyPool, TenderToken, IAudius, BPool, Audius, ERC20
+  Controller, ElasticSupplyPool, TenderToken, IAudius, BPool, Audius, ERC20, TenderFarm
 } from '../../typechain'
 
 import claimsManagerAbi from './abis/audius/ClaimsManager.json'
@@ -31,6 +31,7 @@ describe('Audius Mainnet Fork Test', () => {
   let TenderToken: TenderToken
   let Esp: ElasticSupplyPool
   let BPool: BPool
+  let TenderFarm: TenderFarm
 
   let Audius: {[name: string]: Deployment}
 
@@ -55,7 +56,7 @@ describe('Audius Mainnet Fork Test', () => {
   })
 
   const STEAK_AMOUNT = '100000'
-  const NODE = '0x0C3523357Fe79cC6348902A956d561be6039f462'
+  const NODE = '0x528D6Fe7dF9356C8EabEC850B0f908F53075B382'
 
   const delegateManagerAddr = '0x4d7968ebfD390D5E7926Cb3587C39eFf2F9FB225'
   const claimsManagerAddr = '0x44617F9dCEd9787C3B06a05B35B4C779a2AA1334'
@@ -118,6 +119,7 @@ describe('Audius Mainnet Fork Test', () => {
     TenderToken = (await ethers.getContractAt('TenderToken', Audius.TenderToken.address)) as TenderToken
     Esp = (await ethers.getContractAt('ElasticSupplyPool', Audius.ElasticSupplyPool.address)) as ElasticSupplyPool
     BPool = (await ethers.getContractAt('BPool', await Esp.bPool())) as BPool
+    TenderFarm = (await ethers.getContractAt('TenderFarm', Audius.TenderFarm.address)) as TenderFarm
     await Controller.batchExecute(
       [Tenderizer.address, Tenderizer.address],
       [0, 0],
@@ -162,6 +164,7 @@ describe('Audius Mainnet Fork Test', () => {
   describe('stake', () => {
     before(async () => {
       tx = await Controller.gulp()
+      await tx.wait()
     })
 
     it('bond succeeds', async () => {
@@ -175,6 +178,8 @@ describe('Audius Mainnet Fork Test', () => {
 
   describe('rebase', () => {
     let increase: BigNumber
+    let liquidityFees: BigNumber
+    let protocolFees: BigNumber
     describe('stake increased', () => {
       let newStakeMinusFees: BigNumber
       let newStake: BigNumber
@@ -203,8 +208,8 @@ describe('Audius Mainnet Fork Test', () => {
         tx = await Controller.rebase()
         const stakeAfter = await AudiusStaking.getTotalDelegatorStake(Tenderizer.address)
         increase = stakeAfter.sub(stakeBefore)
-        const liquidityFees = percOf2(increase, liquidityFeesPercent)
-        const protocolFees = percOf2(increase, protocolFeesPercent)
+        liquidityFees = percOf2(increase, liquidityFeesPercent)
+        protocolFees = percOf2(increase, protocolFeesPercent)
         newStake = deposit.add(initialStake).add(increase)
         newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
       })
@@ -266,6 +271,8 @@ describe('Audius Mainnet Fork Test', () => {
         )
 
         newStake = await AudiusStaking.getTotalDelegatorStake(Tenderizer.address)
+        // Subtract protocol fees from last +ve rebase
+        newStake = newStake.sub(liquidityFees.add(protocolFees))
         tx = await Controller.rebase()
       })
 
@@ -302,10 +309,14 @@ describe('Audius Mainnet Fork Test', () => {
   describe('collect fees', () => {
     let fees: BigNumber
     let ownerBalBefore: BigNumber
+    let otherAcc: SignerWithAddress
+    let otherAccBalBefore: BigNumber
 
     before(async () => {
+      otherAcc = signers[3]
       fees = await Tenderizer.pendingFees()
       ownerBalBefore = await TenderToken.balanceOf(deployer)
+      otherAccBalBefore = await TenderToken.balanceOf(otherAcc.address)
       tx = await Controller.collectFees()
     })
 
@@ -314,7 +325,12 @@ describe('Audius Mainnet Fork Test', () => {
     })
 
     it('should increase tenderToken balance of owner', async () => {
-      expect(await TenderToken.balanceOf(deployer)).to.eq(ownerBalBefore.add(fees))
+      expect((await TenderToken.balanceOf(deployer)).sub(ownerBalBefore.add(fees)).abs())
+        .to.lte(acceptableDelta)
+    })
+
+    it('should retain the balance for any other account', async () => {
+      expect((await TenderToken.balanceOf(otherAcc.address))).to.eq(otherAccBalBefore)
     })
 
     it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
@@ -325,12 +341,14 @@ describe('Audius Mainnet Fork Test', () => {
   describe('collect liquidity fees', () => {
     let fees: BigNumber
     let farmBalanceBefore: BigNumber
-    let mockTenderFarm : SignerWithAddress
+    let otherAcc: SignerWithAddress
+    let otherAccBalBefore: BigNumber
 
     before(async () => {
-      mockTenderFarm = signers[3]
+      otherAcc = signers[3]
       fees = await Tenderizer.pendingLiquidityFees()
-      farmBalanceBefore = await TenderToken.balanceOf(mockTenderFarm.address)
+      farmBalanceBefore = await TenderToken.balanceOf(TenderFarm.address)
+      otherAccBalBefore = await TenderToken.balanceOf(otherAcc.address)
       tx = await Controller.collectLiquidityFees()
     })
 
@@ -339,7 +357,12 @@ describe('Audius Mainnet Fork Test', () => {
     })
 
     it('should increase tenderToken balance of tenderFarm', async () => {
-      expect(await TenderToken.balanceOf(mockTenderFarm.address)).to.eq(farmBalanceBefore.add(fees))
+      expect((await TenderToken.balanceOf(TenderFarm.address)).sub(farmBalanceBefore.add(fees)).abs())
+        .to.lte(acceptableDelta)
+    })
+
+    it('should retain the balance for any other account', async () => {
+      expect((await TenderToken.balanceOf(otherAcc.address))).to.eq(otherAccBalBefore)
     })
 
     it('should emit ProtocolFeeCollected event from Tenderizer', async () => {

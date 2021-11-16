@@ -24,22 +24,12 @@ abstract contract Tenderizer is Initializable, ITenderizer {
 
     uint256 public protocolFee;
     uint256 public liquidityFee;
-    uint256 public pendingFees; // pending protocol fees since last distribution
-    uint256 public pendingLiquidityFees;
+    uint256 public override pendingFees; // pending protocol fees since last distribution
+    uint256 public override pendingLiquidityFees;
     uint256 public currentPrincipal; // Principal since last claiming earnings
 
     mapping(uint256 => UnstakeLock) public unstakeLocks;
     uint256 nextUnstakeLockID;
-
-    // Events
-    event Deposit(address indexed from, uint256 amount);
-    event Stake(address indexed node, uint256 amount);
-    event Unstake(address indexed from, address indexed node, uint256 amount, uint256 unstakeLockID);
-    event Withdraw(address indexed from, uint256 amount, uint256 unstakeLockID);
-    event RewardsClaimed(uint256 rewards, uint256 currentPrincipal, uint256 oldPrincipal);
-    event ProtocolFeeCollected(uint256 amount);
-    event LiquidityFeeCollected(uint256 amount);
-    event GovernanceUpdate(string _param);
 
     modifier onlyController() {
         require(msg.sender == controller);
@@ -66,8 +56,8 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         awaiting to be staked
      * @dev requires '_amount' to be approved by '_from'
      */
-    function deposit(address _from, uint256 _amount) external override onlyController returns (uint256 amountOut) {
-        amountOut = _deposit(_from, _amount);
+    function deposit(address _from, uint256 _amount) external override onlyController {
+        _deposit(_from, _amount);
     }
 
     /**
@@ -174,7 +164,13 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         return _totalStakedTokens();
     }
 
-    function _deposit(address _account, uint256 _amount) internal virtual returns (uint256);
+    /**
+     * @notice Returns the number of tenderTokens to be minted for amountIn deposit
+     * @dev used by controller to calculate tokens to be minted before depositing
+     */
+    function calcDepositOut(uint256 amountIn) override public virtual returns (uint256);
+
+    function _deposit(address _account, uint256 _amount) internal virtual;
 
     function _stake(address _account, uint256 _amount) internal virtual;
 
@@ -193,6 +189,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         // Controller will mint tenderToken and distribute it
         uint256 before = pendingFees;
         pendingFees = 0;
+        currentPrincipal += before;
         emit ProtocolFeeCollected(before);
         return before;
     }
@@ -202,6 +199,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         // Controller will mint tenderToken and distribute it
         uint256 before = pendingLiquidityFees;
         pendingLiquidityFees = 0;
+        currentPrincipal += before;
         emit LiquidityFeeCollected(before);
         return before;
     }

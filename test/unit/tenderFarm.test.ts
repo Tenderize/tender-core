@@ -9,7 +9,7 @@ import {
 
 import * as rpc from '../util/snapshot'
 
-import { smockit } from '@eth-optimism/smock'
+import { MockContract, smockit } from '@eth-optimism/smock'
 
 import { percOf } from '../util/helpers'
 import { SimpleToken, TenderFarm, TenderToken } from '../../typechain'
@@ -25,6 +25,7 @@ describe('TenderFarm', () => {
   let tenderToken: TenderToken
   let lpToken : SimpleToken
   let tenderFarm: any
+  let tenderizerMock: MockContract
 
   let signers: ethersTypes.Signer[]
 
@@ -44,6 +45,14 @@ describe('TenderFarm', () => {
     // 1
     signers = await ethers.getSigners()
     // 2
+    const TenderizerFactory = await ethers.getContractFactory(
+      'Livepeer',
+      signers[0]
+    )
+
+    const tenderizer = (await TenderizerFactory.deploy())
+    tenderizerMock = await smockit(tenderizer)
+
     const TenderTokenFactory = await ethers.getContractFactory(
       'TenderToken',
       signers[0]
@@ -64,7 +73,7 @@ describe('TenderFarm', () => {
     account2 = await signers[2].getAddress()
 
     lpToken = (await LPTokenFactory.deploy('LP token', 'LP', ethers.utils.parseEther('1000000000000000'))) as SimpleToken
-    tenderToken = (await TenderTokenFactory.deploy('Tender Token', 'Tender')) as TenderToken
+    tenderToken = (await TenderTokenFactory.deploy('Tender Token', 'Tender', tenderizerMock.address)) as TenderToken
     await lpToken.deployed()
     await tenderToken.deployed()
 
@@ -73,7 +82,7 @@ describe('TenderFarm', () => {
 
     const tenderSupply = ethers.utils.parseEther('1000000000000000')
     await tenderToken.mint(account0, tenderSupply)
-    await tenderToken.setTotalPooledTokens(tenderSupply)
+    tenderizerMock.smocked.totalStakedTokens.will.return.with(tenderSupply)
   })
 
   describe('Genesis', () => {

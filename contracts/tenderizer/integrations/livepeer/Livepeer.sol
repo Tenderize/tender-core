@@ -33,9 +33,13 @@ contract Livepeer is Tenderizer {
         livepeer = _livepeer;
     }
 
-    function _deposit(address _from, uint256 _amount) internal override returns (uint256 amountOut){
+    function calcDepositOut(uint256 amountIn) public pure override returns (uint256){
+        return amountIn;
+    }
+
+    function _deposit(address _from, uint256 _amount) internal override {
         currentPrincipal += _amount;
-        amountOut = _amount;
+
         emit Deposit(_from, _amount);
     }
 
@@ -137,7 +141,7 @@ contract Livepeer is Tenderizer {
 
         uint256 rewards;
         if (stake >= currentPrincipal_) {
-            rewards = stake - currentPrincipal_;
+            rewards = stake - currentPrincipal_ -  pendingFees - pendingLiquidityFees;
         }
 
         // withdraw fees

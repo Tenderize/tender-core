@@ -40,6 +40,4 @@ interface ITenderToken {
     function mint(address _recipient, uint256 _amount) external returns (bool);
 
     function burn(address _account, uint256 _amount) external returns (bool);
-
-    function setTotalPooledTokens(uint256 _newTotalPooledTokens) external;
 }

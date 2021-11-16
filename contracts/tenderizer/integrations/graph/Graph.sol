@@ -35,9 +35,14 @@ contract Graph is Tenderizer {
         resetDelegationTaxPercentage();
     }
 
-    function _deposit(address _from, uint256 _amount) internal override returns (uint256 amountOut){
-        amountOut = _amount - (uint256(delegationTaxPercentage) * _amount / MAX_PPM);
+    function calcDepositOut(uint256 amountIn) public view override returns (uint256){
+        return amountIn - (uint256(delegationTaxPercentage) * amountIn / MAX_PPM);
+    }
+
+    function _deposit(address _from, uint256 _amount) internal override{
+        uint256 amountOut = _amount - (uint256(delegationTaxPercentage) * _amount / MAX_PPM);
         currentPrincipal += amountOut;
+
         emit Deposit(_from, _amount);
     }
 
@@ -168,7 +173,7 @@ contract Graph is Tenderizer {
 
         uint256 rewards;
         if (stake >= currentPrincipal_) {
-            rewards = stake - currentPrincipal_;
+            rewards = stake - currentPrincipal_ - pendingFees - pendingLiquidityFees;
         }
 
         // Substract protocol fee amount and add it to pendingFees

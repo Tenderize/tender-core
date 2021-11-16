@@ -39,9 +39,13 @@ contract Matic is Tenderizer {
         emit GovernanceUpdate("NODE");
     }
 
-    function _deposit(address _from, uint256 _amount) internal override returns (uint256 amountOut){
+    function calcDepositOut(uint256 amountIn) public pure override returns (uint256){
+        return amountIn;
+    }
+
+    function _deposit(address _from, uint256 _amount) internal override{
         currentPrincipal += _amount;
-        amountOut = _amount;
+
         emit Deposit(_from, _amount);
     }
 
@@ -92,7 +96,7 @@ contract Matic is Tenderizer {
         // Sanity check. Controller already checks user deposits and withdrawals > 0
         if (_account != controller) require(amount > 0, "ZERO_AMOUNT");
         if (amount == 0) {
-            uint256 shares = matic.balanceOf(address(this));
+            uint256 shares = matic_.balanceOf(address(this));
             amount = (shares * fxRate) / exhangeRatePrecision;
             require(amount > 0, "ZERO_STAKE");
         }
@@ -147,7 +151,7 @@ contract Matic is Tenderizer {
         uint256 currentPrincipal_ = currentPrincipal;
 
         if (stake >= currentPrincipal_) {
-            rewards = stake - currentPrincipal_;
+            rewards = stake - currentPrincipal_ - pendingFees - pendingLiquidityFees;
         }
         // Substract protocol fee amount and add it to pendingFees
         uint256 _pendingFees = pendingFees + MathUtils.percOf(rewards, protocolFee);
