@@ -5,9 +5,8 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
-import "./libs/ReentrancyGuard.sol";
 import "./token/ITenderToken.sol";
 import "./tenderizer/ITenderizer.sol";
 import "./liquidity/IElasticSupplyPool.sol";
@@ -17,7 +16,7 @@ import "./liquidity/ITenderFarm.sol";
  * @title Controller contract for a Tenderizer
  */
 
-contract Controller is Initializable, ReentrancyGuard {
+contract Controller is Initializable, ReentrancyGuardUpgradeable {
     IERC20 public steak;
     ITenderizer public tenderizer;
     ITenderToken public tenderToken;
@@ -32,6 +31,7 @@ contract Controller is Initializable, ReentrancyGuard {
         ITenderToken _tenderToken,
         IElasticSupplyPool _esp
     ) public initializer {
+        __ReentrancyGuard_init_unchained();
         steak = _steak;
         tenderizer = _tenderizer;
         // TODO: consider deploying these contracts using factories and proxies
@@ -39,7 +39,6 @@ contract Controller is Initializable, ReentrancyGuard {
         tenderToken = _tenderToken;
         esp = _esp;
         gov = msg.sender;
-        _status = _NOT_ENTERED;
     }
 
     modifier onlyGov() {
