@@ -37,9 +37,9 @@ contract Livepeer is Tenderizer {
         return amountIn;
     }
 
-    function _deposit(address _from, uint256 _amount) internal override returns (uint256 amountOut){
+    function _deposit(address _from, uint256 _amount) internal override {
         currentPrincipal += _amount;
-        amountOut = _amount;
+
         emit Deposit(_from, _amount);
     }
 

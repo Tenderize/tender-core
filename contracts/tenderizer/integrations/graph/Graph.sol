@@ -39,9 +39,10 @@ contract Graph is Tenderizer {
         return amountIn - (uint256(delegationTaxPercentage) * amountIn / MAX_PPM);
     }
 
-    function _deposit(address _from, uint256 _amount) internal override returns (uint256 amountOut){
-        amountOut = _amount - (uint256(delegationTaxPercentage) * _amount / MAX_PPM);
+    function _deposit(address _from, uint256 _amount) internal override{
+        uint256 amountOut = _amount - (uint256(delegationTaxPercentage) * _amount / MAX_PPM);
         currentPrincipal += amountOut;
+
         emit Deposit(_from, _amount);
     }
 
