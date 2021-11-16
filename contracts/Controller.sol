@@ -62,8 +62,6 @@ contract Controller is Initializable, ReentrancyGuard {
         
         require(tenderToken.mint(msg.sender, amountOut), "TENDER_MINT_FAILED");
 
-        _updateTotalPooledTokens();
-
         // Transfer tokens to tenderizer
         require(steak.transferFrom(msg.sender, address(tenderizer), _amount), "STEAK_TRANSFERFROM_FAILED");
     }
@@ -83,9 +81,6 @@ contract Controller is Initializable, ReentrancyGuard {
 
         // Unstake tokens for pending withdrawal
         unstakeLockID = tenderizer.unstake(msg.sender, _amount);
-
-        // update total pooled tokens
-        _updateTotalPooledTokens();
     }
 
     /**
@@ -111,9 +106,6 @@ contract Controller is Initializable, ReentrancyGuard {
 
         // stake tokens
         gulp();
-
-        // update total pooled tokens
-        _updateTotalPooledTokens();
 
         // Collect governance fees
         _collectFees();
@@ -227,14 +219,6 @@ contract Controller is Initializable, ReentrancyGuard {
     ) internal {
         (bool success, bytes memory returnData) = _target.call{ value: _value }(_data);
         require(success, string(returnData));
-    }
-
-    function _updateTotalPooledTokens() internal {
-        // get total staked tokens
-        uint256 stakedTokens = tenderizer.totalStakedTokens();
-
-        // Set total pooled tokens, rebases tenderToken supply
-        tenderToken.setTotalPooledTokens(stakedTokens);
     }
 
     function _collectFees() internal {

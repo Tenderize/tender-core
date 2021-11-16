@@ -7,6 +7,7 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../libs/MathUtils.sol";
+import "../tenderizer/ITotalStakedReader.sol";
 import {ERC20, ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 
 /**
@@ -42,10 +43,21 @@ contract TenderToken is Ownable, ERC20Permit {
      */
     mapping(address => mapping(address => uint256)) private allowances;
 
-    constructor(string memory _name, string memory _symbol) 
+    /**
+     * @dev Tendeizer address, to pull totalStakedTokens
+     */
+    ITotalStakedReader tenderizer;
+
+    constructor(string memory _name, string memory _symbol, ITotalStakedReader _tenderizer) 
         ERC20(string(abi.encodePacked("tender ", _name)), string(abi.encodePacked("t", _symbol)))
         ERC20Permit(string(abi.encodePacked("tender ", _name)))
-    {}
+    {
+        tenderizer = _tenderizer;
+    }
+
+    function setTenderizer(ITotalStakedReader _tenderizer) public onlyOwner {
+        tenderizer = _tenderizer;
+    }
 
     /**
      * @notice The number of decimals the TenderToken uses
@@ -256,7 +268,6 @@ contract TenderToken is Ownable, ERC20Permit {
             uint256 _sharesToMint = tokensToShares(_amount);
             _mintShares(_recipient, _sharesToMint);
         }
-        _setTotalPooledTokens(totalPooledTokens + _amount);
         return true;
     }
 
@@ -273,17 +284,7 @@ contract TenderToken is Ownable, ERC20Permit {
     function burn(address _account, uint256 _amount) public onlyOwner returns (bool) {
         uint256 _sharesToburn = tokensToShares(_amount);
         _burnShares(_account, _sharesToburn);
-        _setTotalPooledTokens(totalPooledTokens - _amount);
         return true;
-    }
-
-    /**
-     * @notice Sets the total amount of pooled tokens controlled by the Tenderizer
-     * @param _newTotalPooledTokens new amount of total tokens controlled by the Tenderizer
-     * @dev Only callable by contract owner
-     */
-    function setTotalPooledTokens(uint256 _newTotalPooledTokens) public onlyOwner {
-        _setTotalPooledTokens(_newTotalPooledTokens);
     }
 
     /**
@@ -292,14 +293,7 @@ contract TenderToken is Ownable, ERC20Permit {
      * @dev This function is required to be implemented in a derived contract.
      */
     function _getTotalPooledTokens() internal view returns (uint256) {
-        return totalPooledTokens;
-    }
-
-    /**
-     * @dev update the total amount (in 10e18) of Tokens controlled by the protocol.
-     */
-    function _setTotalPooledTokens(uint256 _newTotalPooledTokens) internal {
-        totalPooledTokens = _newTotalPooledTokens;
+        return tenderizer.totalStakedTokens();
     }
 
     /**
