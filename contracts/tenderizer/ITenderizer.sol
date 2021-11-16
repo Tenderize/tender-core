@@ -23,6 +23,8 @@ interface ITenderizer {
 
     function totalStakedTokens() external view returns (uint256);
 
+    function calcDepositOut(uint256 amountIn) external returns (uint256);
+
     // Governance
 
     function setController(address _controller) external;

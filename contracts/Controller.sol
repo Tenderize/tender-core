@@ -57,10 +57,14 @@ contract Controller is Initializable, ReentrancyGuard {
     function deposit(uint256 _amount) public {
         require(_amount > 0, "ZERO_AMOUNT");
 
-        uint256 amountOut = tenderizer.deposit(msg.sender, _amount);
-        // mint tenderTokens
+        // Calculate tenderTokens to be minted
+        uint256 amountOut = tenderizer.calcDepositOut(_amount);
         
+        // mint tenderTokens
         require(tenderToken.mint(msg.sender, amountOut), "TENDER_MINT_FAILED");
+
+        // deposit tokens
+        tenderizer.deposit(msg.sender, _amount);
 
         // Transfer tokens to tenderizer
         require(steak.transferFrom(msg.sender, address(tenderizer), _amount), "STEAK_TRANSFERFROM_FAILED");

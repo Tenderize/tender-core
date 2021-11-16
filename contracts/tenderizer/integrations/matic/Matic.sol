@@ -39,6 +39,10 @@ contract Matic is Tenderizer {
         emit GovernanceUpdate("NODE");
     }
 
+    function calcDepositOut(uint256 amountIn) public pure override returns (uint256){
+        return amountIn;
+    }
+    
     function _deposit(address _from, uint256 _amount) internal override returns (uint256 amountOut){
         currentPrincipal += _amount;
         amountOut = _amount;

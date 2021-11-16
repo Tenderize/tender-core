@@ -174,6 +174,12 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         return _totalStakedTokens();
     }
 
+    /**
+     * @notice Returns the number of tenderTokens to be minted for amountIn deposit
+     * @dev used by controller to calculate tokens to be minted before depositing
+     */
+    function calcDepositOut(uint256 amountIn) override public virtual returns (uint256);
+
     function _deposit(address _account, uint256 _amount) internal virtual returns (uint256);
 
     function _stake(address _account, uint256 _amount) internal virtual;
