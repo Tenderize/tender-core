@@ -349,6 +349,46 @@ library SwapUtils {
         return dy;
     }
 
+    /**
+     * @notice Calculate the dy, the amount of selected token that user receives and
+     * the fee of withdrawing in one token
+     * @param tokenAmount the amount to withdraw in the pool's precision
+     * @param tokenReceive which token will be withdrawn
+     * @param tokenCounterpart the token we need to swap for
+     * @param amplificationParams amplification parameters for the pool
+     * @param feeParams fee parameters for the pool
+     * @param lpToken liquidity pool token
+     * @return the amount of token user will receive
+     */
+    function calculateWithdrawOneToken(
+        uint256 tokenAmount,
+        PooledToken storage tokenReceive,
+        PooledToken storage tokenCounterpart,
+        Amplification storage amplificationParams,
+        FeeParams storage feeParams,
+        LiquidityPoolToken lpToken
+    ) internal view returns (uint256) {
+        (uint256 availableAmount, ) = _calculateWithdrawOneToken(
+            tokenAmount,
+            tokenReceive,
+            tokenCounterpart,
+            lpToken.totalSupply(),
+            amplificationParams,
+            feeParams
+        );
+        return availableAmount;
+    }
+    /**
+     * @notice Calculate the dy, the amount of selected token that user receives and
+     * the fee of withdrawing in one token
+     * @param tokenAmount the amount to withdraw in the pool's precision
+     * @param tokenReceive which token will be withdrawn
+     * @param tokenCounterpart the token we need to swap for
+     * @param totalSupply total supply of LP tokens
+     * @param amplificationParams amplification parameters for the pool
+     * @param feeParams fee parameters for the pool
+     * @return the amount of token user will receive
+     */
     function _calculateWithdrawOneToken(
         uint256 tokenAmount,
         PooledToken storage tokenReceive,
@@ -526,6 +566,38 @@ library SwapUtils {
         dy = (dy - dyFee) / tokenTo.precisionMultiplier;
     }
 
+    /**
+     * @notice A simple method to calculate amount of each underlying
+     * tokens that is returned upon burning given amount of
+     * LP tokens
+     *
+     * @param amount the amount of LP tokens that would to be burned on
+     * withdrawal
+     * @param tokens the tokens of the pool in their cardinality [token0, token1]
+     * @param lpToken Liquidity pool token
+     * @return array of amounts of tokens user will receive
+     */
+    function calculateRemoveLiquidity(
+            uint256 amount,
+            PooledToken[2] calldata tokens,
+            LiquidityPoolToken lpToken
+        ) external view returns (uint256[2] memory) {
+        uint256 totalSupply = lpToken.totalSupply();
+        uint256[2] memory amounts = _calculateRemoveLiquidity(amount, tokens, totalSupply);
+        return amounts;
+    }
+
+    /**
+     * @notice A simple method to calculate amount of each underlying
+     * tokens that is returned upon burning given amount of
+     * LP tokens
+     *
+     * @param amount the amount of LP tokens that would to be burned on
+     * withdrawal
+     * @param tokens the tokens of the pool in their cardinality [token0, token1]
+     * @param totalSupply total supply of the LP token
+     * @return array of amounts of tokens user will receive
+     */
     function _calculateRemoveLiquidity(
         uint256 amount,
         PooledToken[2] calldata tokens,
