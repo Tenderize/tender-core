@@ -300,6 +300,43 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             );
         }
     }
+
+    /*** ADMIN FUNCTIONS ***/
+
+    /**
+     * @notice Update the admin fee. Admin fee takes portion of the swap fee.
+     * @param newAdminFee new admin fee to be applied on future transactions
+     */
+    function setAdminFee(uint256 newAdminFee) external onlyOwner {
+        feeParams.setAdminFee(newAdminFee);
+    }
+
+    /**
+     * @notice Update the swap fee to be applied on swaps
+     * @param newSwapFee new swap fee to be applied on future transactions
+     */
+    function setSwapFee(uint256 newSwapFee) external onlyOwner {
+        feeParams.setSwapFee(newSwapFee);
+    }
+
+    /**
+     * @notice Start ramping up or down A parameter towards given futureA and futureTime
+     * Checks if the change is too rapid, and commits the new A value only when it falls under
+     * the limit range.
+     * @param futureA the new A to ramp towards
+     * @param futureTime timestamp when the new A should be reached
+     */
+    function rampA(uint256 futureA, uint256 futureTime) external onlyOwner {
+        amplificationParams.rampA(futureA, futureTime);
+    }
+
+    /**
+     * @notice Stop ramping A immediately. Reverts if ramp A is already stopped.
+     */
+    function stopRampA() external onlyOwner {
+        amplificationParams.stopRampA();
+    }
+
     /*** INTERNAL FUNCTIONS ***/
 
     function _deadlineCheck(uint256 _deadline) internal view {

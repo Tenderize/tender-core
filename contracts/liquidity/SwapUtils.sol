@@ -11,9 +11,16 @@ pragma solidity 0.8.4;
 library SwapUtils {
     using MathUtils for uint256;
     using SafeERC20 for IERC20;
+
+    // =============================================
+    //                   EVENTS
+    // =============================================
+
+    event NewAdminFee(uint256 newAdminFee);
+    event NewSwapFee(uint256 newSwapFee);
     
     // =============================================
-    //             SWAP LOGIC
+    //                 SWAP LOGIC
     // =============================================
 
     // the precision all pools tokens will be converted to
@@ -649,7 +656,7 @@ library SwapUtils {
         uint256 futureATime;
     }
 
-        event RampA(
+    event RampA(
         uint256 oldA,
         uint256 newA,
         uint256 initialTime,
@@ -795,5 +802,35 @@ library SwapUtils {
 
     function _getTokenBalance(IERC20 _token) internal view returns (uint256) {
         return _token.balanceOf(address(this));
+    }
+
+    // =============================================
+    //            FEE MANAGEMENT
+    // =============================================
+    
+    /**
+     * @notice Sets the admin fee
+     * @dev adminFee cannot be higher than 100% of the swap fee
+     * @param self Swap struct to update
+     * @param newAdminFee new admin fee to be applied on future transactions
+     */
+    function setAdminFee(FeeParams storage self, uint256 newAdminFee) external {
+        require(newAdminFee <= MAX_ADMIN_FEE, "Fee is too high");
+        self.adminFee = newAdminFee;
+
+        emit NewAdminFee(newAdminFee);
+    }
+
+    /**
+     * @notice update the swap fee
+     * @dev fee cannot be higher than 1% of each swap
+     * @param self Swap struct to update
+     * @param newSwapFee new swap fee to be applied on future transactions
+     */
+    function setSwapFee(FeeParams storage self, uint256 newSwapFee) external {
+        require(newSwapFee <= MAX_SWAP_FEE, "Fee is too high");
+        self.swapFee = newSwapFee;
+
+        emit NewSwapFee(newSwapFee);
     }
 }
