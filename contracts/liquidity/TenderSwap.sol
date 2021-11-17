@@ -194,6 +194,55 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         return SwapUtils.calculateSwap(token1, token0, _dx, amplificationParams, feeParams);
     }
 
+    /**
+     * @notice A simple method to calculate amount of each underlying
+     * tokens that is returned upon burning given amount of LP tokens
+     * @param amount the amount of LP tokens that would be burned on withdrawal
+     * @return array of token balances that the user will receive
+     */
+    function calculateRemoveLiquidity(uint256 amount)
+        external
+        view
+        virtual
+        returns (uint256[2] memory)
+    {
+        SwapUtils.PooledToken[2] memory tokens_ = [token0, token1];
+        return SwapUtils.calculateRemoveLiquidity(amount, tokens_, lpToken);
+    }
+
+    /**
+     * @notice Calculate the amount of underlying token available to withdraw
+     * when withdrawing via only single token
+     * @param tokenAmount the amount of LP token to burn
+     * @param tokenReceive index of which token will be withdrawn
+     * @return availableTokenAmount calculated amount of underlying token
+     * available to withdraw
+     */
+    function calculateRemoveLiquidityOneToken(
+        uint256 tokenAmount,
+        IERC20 tokenReceive
+    ) external view virtual returns (uint256 availableTokenAmount) {
+        return tokenReceive == token0.token ? 
+                SwapUtils.calculateWithdrawOneToken(
+                    tokenAmount,
+                    token0,
+                    token1, 
+                    amplificationParams,
+                    feeParams,
+                    lpToken
+                )
+            :
+                 SwapUtils.calculateWithdrawOneToken(
+                     tokenAmount,
+                     token1,
+                     token0,
+                     amplificationParams,
+                     feeParams,
+                     lpToken
+                )
+        ;
+    }
+
     /*** STATE MODIFYING FUNCTIONS ***/
 
     /**
