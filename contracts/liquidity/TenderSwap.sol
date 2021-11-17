@@ -9,11 +9,11 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts/proxy/Clones.sol";
 
 import "./LiquidityPoolToken.sol";
-import "../token/ITenderToken.sol";
 import "./SwapUtils.sol";
 
 // TODO: Ownership
 // TODO: Pausable if upgradeable ? 
+// TODO: flat withdraw LP token fee ?
 
 
 interface IERC20Decimals is IERC20 {
@@ -22,7 +22,6 @@ interface IERC20Decimals is IERC20 {
 
 contract TenderSwap is ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
-    using SafeERC20 for ITenderToken;
     using SwapUtils for SwapUtils.Amplification;
     using SwapUtils for SwapUtils.PooledToken;
     using SwapUtils for SwapUtils.FeeParams;
@@ -30,11 +29,12 @@ contract TenderSwap is ReentrancyGuardUpgradeable {
     // fee calculation
     SwapUtils.FeeParams feeParams;
 
-    SwapUtils.Amplification amplifactionParams;
+    SwapUtils.Amplification amplificationParams;
 
     // Pool Tokens
-    SwapUtils.PooledToken tenderToken;
-    SwapUtils.PooledToken token;
+    mapping (IERC20 => SwapUtils.PooledToken) tokens;
+    SwapUtils.PooledToken token0;
+    SwapUtils.PooledToken token1;
 
     // Liquidity pool shares
     LiquidityPoolToken lpToken;
@@ -56,8 +56,8 @@ contract TenderSwap is ReentrancyGuardUpgradeable {
      * LP positions. The owner of LPToken will be this contract - which means
      * only this contract is allowed to mint/burn tokens.
      *
-     * @param _tenderToken Elastic supply tenderToken derivative this pool will accept
-     * @param _token Standard ERC-20 token for the underlying tenderToken this pool will accept
+     * @param _token0 Elastic supply tenderToken derivative this pool will accept
+     * @param _token1 Standard ERC-20 token for the underlying tenderToken this pool will accept
      * @param lpTokenName the long-form name of the token to be deployed
      * @param lpTokenSymbol the short symbol for the token to be deployed
      * @param _a the amplification coefficient * n * (n - 1). See the
@@ -67,8 +67,8 @@ contract TenderSwap is ReentrancyGuardUpgradeable {
      * @param lpTokenTargetAddress the address of an existing LPToken contract to use as a target
      */
     function initialize(
-        ITenderToken _tenderToken,
-        IERC20 _token,
+        IERC20 _token0,
+        IERC20 _token1,
         string memory lpTokenName,
         string memory lpTokenSymbol,
         uint256 _a,
@@ -79,29 +79,29 @@ contract TenderSwap is ReentrancyGuardUpgradeable {
         __ReentrancyGuard_init();
 
         // Check token addresses are different and not 0
-        require(address(_tenderToken) != address(_token));
-        require(address(_tenderToken) != address(0));
-        require(address(_token) != address(0));
+        require(_token0 != _token1);
+        require(address(_token0) != address(0));
+        require(address(_token1) != address(0));
 
         // Set precision multipliers
-        uint8 _tenderTokenDecimals = _tenderToken.decimals();
+        uint8 _tenderTokenDecimals = IERC20Decimals(address(_token0)).decimals();
         require(_tenderTokenDecimals > 0);
-        tenderToken = SwapUtils.PooledToken({
-            token: IERC20(address(_tenderToken)),
+        token0 = SwapUtils.PooledToken({
+            token: _token0,
             precisionMultiplier: 10 ** (SwapUtils.POOL_PRECISION_DECIMALS - _tenderTokenDecimals)
         });
 
-        uint8 _tokenDecimals = IERC20Decimals(address(_token)).decimals();
+        uint8 _tokenDecimals = IERC20Decimals(address(_token1)).decimals();
         require(_tokenDecimals > 0);
-        token = SwapUtils.PooledToken({
-            token: IERC20(address(_token)),
+        token1 = SwapUtils.PooledToken({
+            token: _token1,
             precisionMultiplier: 10 ** (SwapUtils.POOL_PRECISION_DECIMALS - _tokenDecimals)
         });
 
         // Check _a and Set Amplifaction Parameters
         require(_a < SwapUtils.MAX_A, "_a exceeds maximum");
-        amplifactionParams.initialA = _a * SwapUtils.A_PRECISION;
-        amplifactionParams.futureA = _a * SwapUtils.A_PRECISION;
+        amplificationParams.initialA = _a * SwapUtils.A_PRECISION;
+        amplificationParams.futureA = _a * SwapUtils.A_PRECISION;
 
           // Check _fee, _adminFee and set fee parameters
         require(_fee < SwapUtils.MAX_SWAP_FEE, "_fee exceeds maximum");
@@ -131,7 +131,7 @@ contract TenderSwap is ReentrancyGuardUpgradeable {
      * @return A parameter
      */
     function getA() external view virtual returns (uint256) {
-        return amplifactionParams.getA();
+        return amplificationParams.getA();
     }
 
     /**
@@ -140,31 +140,23 @@ contract TenderSwap is ReentrancyGuardUpgradeable {
      * @return A parameter in its raw precision form
      */
     function getAPrecise() external view virtual returns (uint256) {
-        return amplifactionParams.getAPrecise();
-    }
-
-    function getTenderToken() external view virtual returns (ITenderToken) {
-        return ITenderToken(address(tenderToken.token));
+        return amplificationParams.getAPrecise();
     }
 
     /**
-     * @notice Return current balance of the pooled tenderToken derivative
-     * @return current balance of the pooled TenderToken derivative
+     * @notice Return current balance of token0 in the pool
+     * @return current balance of the pooled token
      */
-    function getTenderTokenBalance() external view virtual returns (uint256) {
-        return tenderToken.getTokenBalance();
-    }
-
-    function getToken() external view virtual returns (IERC20) {
-        return token.token;
+    function getToken0Balance() external view virtual returns (uint256) {
+        return token0.getTokenBalance();
     }
 
     /**
-     * @notice Return current balance of the underlying token
-     * @return current balance of the underlying pooled token
+     * @notice Return current balance of token1 in the pool
+     * @return current balance of the pooled token
      */
-    function getTokenBalance(IERC20 _token) external view virtual returns (uint256) {
-        return token.getTokenBalance();
+    function getToken1Balance() external view virtual returns (uint256) {
+        return token1.getTokenBalance();
     }
 
     /*** STATE MODIFYING FUNCTIONS ***/
@@ -172,14 +164,12 @@ contract TenderSwap is ReentrancyGuardUpgradeable {
     /**
      * @notice Swap two tokens using this pool
      * @param _tokenFrom the token the user wants to swap from
-     * @param _tokenTo the token the user wants to swap to
      * @param _dx the amount of tokens the user wants to swap from
      * @param _minDy the min amount the user would like to receive, or revert.
      * @param _deadline latest timestamp to accept this transaction
      */
     function swap(
         IERC20 _tokenFrom,
-        IERC20 _tokenTo,
         uint256 _dx,
         uint256 _minDy,
         uint256 _deadline
@@ -191,31 +181,123 @@ contract TenderSwap is ReentrancyGuardUpgradeable {
         returns (uint256)
     {
         // TODO: emit event
-        if (_tokenFrom == tenderToken.token) {
-            return SwapUtils.swap(tenderToken, token, _dx, _minDy, amplifactionParams, feeParams);
+        if (_tokenFrom == token0.token) {
+            return SwapUtils.swap(token0, token1, _dx, _minDy, amplificationParams, feeParams);
         }
-        return SwapUtils.swap(token, tenderToken, _dx, _minDy, amplifactionParams, feeParams);
+        return SwapUtils.swap(token1, token0, _dx, _minDy, amplificationParams, feeParams);
     }
 
     /**
      * @notice Calculate amount of tokens you receive on swap
      * @param _tokenFrom the token the user wants to sell
-     * @param _tokenTo the token the user wants to buy
      * @param _dx the amount of tokens the user wants to sell. If the token charges
      * a fee on transfers, use the amount that gets transferred after the fee.
      * @return amount of tokens the user will receive
      */
     function calculateSwap(
         IERC20 _tokenFrom,
-        IERC20 _tokenTo,
         uint256 _dx
     ) external view virtual returns (uint256) {
-        if (_tokenFrom == tenderToken.token) {
-            return SwapUtils.calculateSwap(tenderToken, token, _dx, amplifactionParams, feeParams);
+        if (_tokenFrom == token0.token) {
+            return SwapUtils.calculateSwap(token0, token1, _dx, amplificationParams, feeParams);
         }
-        return SwapUtils.calculateSwap(token, tenderToken, _dx, amplifactionParams, feeParams);
+        return SwapUtils.calculateSwap(token1, token0, _dx, amplificationParams, feeParams);
     }
 
+    /**
+     * @notice Add liquidity to the pool with the given amounts of tokens
+     * @param _amounts the amounts of each token to add, in their native precision 
+     *          according to the cardinality of the pool [token0, token1]
+     * @param _minToMint the minimum LP tokens adding this amount of liquidity
+     * should mint, otherwise revert. Handy for front-running mitigation
+     * @param _deadline latest timestamp to accept this transaction
+     * @return amount of LP token user minted and received
+     */
+    function addLiquidity(
+        uint256[2] calldata _amounts,
+        uint256 _minToMint,
+        uint256 _deadline
+    )
+        external
+        virtual
+        nonReentrant
+        deadlineCheck(_deadline)
+        returns (uint256)
+    {   
+        SwapUtils.PooledToken[2] memory tokens_ = [token0, token1];
+        
+        return SwapUtils.addLiquidity(tokens_, _amounts, _minToMint, amplificationParams, feeParams, lpToken);
+    }
+
+    /**
+     * @notice Burn LP tokens to remove liquidity from the pool.
+     * @dev Liquidity can always be removed, even when the pool is paused.
+     * @param amount the amount of LP tokens to burn
+     * @param minAmounts the minimum amounts of each token in the pool
+     *        acceptable for this burn. Useful as a front-running mitigation
+     *        according to the cardinality of the pool [token0, token1]
+     * @param deadline latest timestamp to accept this transaction
+     * @return amounts of tokens user received
+     */
+    function removeLiquidity(
+        uint256 amount,
+        uint256[2] calldata minAmounts,
+        uint256 deadline
+    )
+        external
+        virtual
+        nonReentrant
+        deadlineCheck(deadline)
+        returns (uint256[2] memory)
+    {
+        SwapUtils.PooledToken[2] memory tokens_ = [token0, token1];
+
+        return SwapUtils.removeLiquidity(amount, tokens_, minAmounts, lpToken);
+    }
+
+    /**
+     * @notice Remove liquidity from the pool all in one token.
+     * @param _tokenAmount the amount of the token you want to receive
+     * @param _tokenReceive the  token you want to receive
+     * &param _tokenSwap the token you want to swap for
+     * @param _minAmount the minimum amount to withdraw, otherwise revert
+     * @param _deadline latest timestamp to accept this transaction
+     * @return amount of chosen token user received
+     */
+    function removeLiquidityOneToken(
+        uint256 _tokenAmount,
+        IERC20 _tokenReceive,
+        uint256 _minAmount,
+        uint256 _deadline
+    )
+        external
+        virtual
+        nonReentrant
+        deadlineCheck(_deadline)
+        returns (uint256)
+    {
+        if (_tokenReceive == token0.token) {
+            return SwapUtils.removeLiquidityOneToken(
+                _tokenAmount,
+                token0,
+                token1,
+                _minAmount,
+                amplificationParams,
+                feeParams,
+                lpToken
+            );
+        } else {
+            return SwapUtils.removeLiquidityOneToken(
+                _tokenAmount,
+                token1,
+                token0,
+                _minAmount,
+                amplificationParams,
+                feeParams,
+                lpToken
+            );
+        }
+    }
     /*** INTERNAL FUNCTIONS ***/
 
     function _deadlineCheck(uint256 _deadline) internal view {
