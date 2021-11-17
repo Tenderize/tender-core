@@ -121,6 +121,35 @@ library SwapUtils {
     }
 
     /**
+     * @notice Get the virtual price, to help calculate profit
+     * @param token0 token0 in the pool
+     * @param token1 token1 in the pool
+     * @param amplificationParams amplification parameters for the pool
+     * @param lpToken Liquidity pool token
+     * @return the virtual price, scaled to precision of POOL_PRECISION_DECIMALS
+     */
+    function getVirtualPrice(
+        PooledToken storage token0,
+        PooledToken storage token1,
+        Amplification storage amplificationParams,
+        LiquidityPoolToken lpToken
+        )
+        external
+        view
+        returns (uint256)
+    {
+        uint256 xp0 = _xp(_getTokenBalance(token0.token), token0.precisionMultiplier);
+        uint256 xp1 = _xp(_getTokenBalance(token1.token), token1.precisionMultiplier);
+
+        uint256 d = getD(xp1, xp1, _getAPrecise(amplificationParams));
+        uint256 supply = lpToken.totalSupply();
+        if (supply > 0) {
+            return d * (10**POOL_PRECISION_DECIMALS) / supply;
+        }
+        return 0;
+    }
+
+    /**
      * @notice Externally calculates a swap between two tokens.
      * @param tokenFrom the token to sell
      * @param tokenTo the token to buy
