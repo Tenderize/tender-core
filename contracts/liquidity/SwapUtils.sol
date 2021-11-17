@@ -15,7 +15,38 @@ library SwapUtils {
     // =============================================
     //                   EVENTS
     // =============================================
-
+    event Swap(
+        address indexed buyer,
+        IERC20  tokenSold,
+        uint256 amountSold,
+        uint256 amountReceived
+    );
+    event AddLiquidity(
+        address indexed provider,
+        uint256[] tokenAmounts,
+        uint256[] fees,
+        uint256 invariant,
+        uint256 lpTokenSupply
+    );
+    event RemoveLiquidity(
+        address indexed provider,
+        uint256[] tokenAmounts,
+        uint256 lpTokenSupply
+    );
+    event RemoveLiquidityOne(
+        address indexed provider,
+        uint256 lpTokenAmount,
+        uint256 lpTokenSupply,
+        IERC20 tokenReceived,
+        uint256 receivedAmount
+    );
+    event RemoveLiquidityImbalance(
+        address indexed provider,
+        uint256[] tokenAmounts,
+        uint256[] fees,
+        uint256 invariant,
+        uint256 lpTokenSupply
+    );
     event NewAdminFee(uint256 newAdminFee);
     event NewSwapFee(uint256 newSwapFee);
     
@@ -116,6 +147,8 @@ library SwapUtils {
         // TODO: Need to handle keeping track of admin fees or transfer them instantly
 
         tokenTo.token.safeTransfer(msg.sender, dy);
+
+        emit Swap(msg.sender, tokenFrom.token, dx, dy);
 
         return dy;
     }
@@ -239,9 +272,9 @@ library SwapUtils {
         v.d2 = v.d1;
 
         // first entrant doesn't pay fees
+        uint256[] memory fees;
         if (v.totalSupply != 0) {
             uint256 feePerToken = _feePerToken(feeParams.swapFee);
-            uint256[] memory fees;
 
             for (uint256 i=0; i < tokens.length; i++) {
                 uint256 idealBal = v.d1 * v.oldBalances[i] / v.d0;
@@ -270,6 +303,14 @@ library SwapUtils {
 
         // mint the user's LP tokens
         v.lpToken.mint(msg.sender, toMint);
+
+        emit AddLiquidity(
+            msg.sender,
+            amounts,
+            fees,
+            v.d1,
+            v.totalSupply.add(toMint)
+        );
 
         return toMint;
     }
@@ -300,6 +341,8 @@ library SwapUtils {
             require(amounts[i] >= minAmounts[i], "amounts[i] < minAmounts[i]");
             tokens[i].token.safeTransfer(msg.sender, amounts[i]);
         }
+
+        emit RemoveLiquidity(msg.sender, amounts, totalSupply.sub(amount));
 
         return amounts;
     }
@@ -345,6 +388,14 @@ library SwapUtils {
 
         // Burn LP tokens
         lpToken.burnFrom(msg.sender, tokenAmount);
+
+        emit RemoveLiquidityOne(
+            msg.sender,
+            tokenAmount,
+            totalSupply,
+            tokenReceive,
+            dy
+        );
 
         return dy;
     }
@@ -472,6 +523,70 @@ library SwapUtils {
         dy = (dy - 1) / tokenReceive.precisionMultiplier;
 
         return (dy, v.newY, xpR);
+    }
+
+    /**
+     * @notice A simple method to calculate prices from deposits or
+     * withdrawals, excluding fees but including slippage. This is
+     * helpful as an input into the various "min" parameters on calls
+     * to fight front-running
+     *
+     * @dev This shouldn't be used outside frontends for user estimates.
+     *
+     * @param tokens Array of tokens in the pool
+     *          according to pool cardinality [token0, token1]
+     * @param amounts an array of token amounts to deposit or withdrawal,
+     * corresponding to tokens. The amount should be in each
+     * pooled token's native precision.
+     * @param deposit whether this is a deposit or a withdrawal
+     * @param amplificationParams amplification parameters for the pool
+     * @param lpToken liquidity pool token
+     * @return if deposit was true, total amount of lp token that will be minted and if
+     * deposit was false, total amount of lp token that will be burned
+     */
+    function calculateTokenAmount(
+        PooledToken[2] memory tokens,
+        uint256[] calldata amounts,
+        bool deposit,
+        Amplification storage amplificationParams,
+        LiquidityPoolToken lpToken
+    ) external view returns (uint256) {
+        uint256 a = _getAPrecise(amplificationParams);
+
+        uint256 xp0;
+        uint256 xp0_;
+        {
+            uint256 prec0 = tokens[0].precisionMultiplier;
+            uint256 bal0 = _getTokenBalance(tokens[0].token);
+            xp0 = _xp(bal0, prec0);
+            xp0_ = _xp(
+                deposit ? bal0 + amounts[0] : bal0 - amounts[0],
+                prec0
+            );
+        }
+
+        uint256 xp1; 
+        uint256 xp1_;
+        {
+            uint256 prec1 = tokens[1].precisionMultiplier;
+            uint256 bal1 = _getTokenBalance(tokens[1].token);
+            xp0 = _xp(bal1, prec1);
+            xp1_ = _xp(
+                deposit ? bal1 + amounts[1] : bal1 - amounts[1],
+                prec1
+            );
+        }
+
+        uint256 d0 = getD(xp0, xp1, a);
+        uint256 d1 = getD(xp0_, xp1_, a);
+
+        uint256 totalSupply = lpToken.totalSupply();
+
+        if (deposit) {
+            return (d1 - d0) * totalSupply / d0;
+        } else {
+            return (d0 - d1) * totalSupply / d0;
+        }
     }
 
     /**

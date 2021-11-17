@@ -170,7 +170,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         return token1.getTokenBalance();
     }
 
-        /**
+    /**
      * @notice Get the virtual price, to help calculate profit
      * @return the virtual price, scaled to the POOL_PRECISION_DECIMALS
      */
@@ -242,6 +242,29 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
                      lpToken
                 )
         ;
+    }
+
+    /**
+     * @notice A simple method to calculate prices from deposits or
+     * withdrawals, excluding fees but including slippage. This is
+     * helpful as an input into the various "min" parameters on calls
+     * to fight front-running
+     *
+     * @dev This shouldn't be used outside frontends for user estimates.
+     *
+     * @param amounts an array of token amounts to deposit or withdrawal,
+     * corresponding to pool cardinality of [token0, token1]. The amount should be in each
+     * pooled token's native precision. 
+     * @param deposit whether this is a deposit or a withdrawal
+     * @return token amount the user will receive
+     */
+    function calculateTokenAmount(
+        uint256[] calldata amounts,
+        bool deposit
+    ) external view virtual returns (uint256) {
+        SwapUtils.PooledToken[2] memory tokens_ = [token0, token1];
+
+        return SwapUtils.calculateTokenAmount(tokens_, amounts, deposit, amplificationParams, lpToken);
     }
 
     /*** STATE MODIFYING FUNCTIONS ***/
