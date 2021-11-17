@@ -7,6 +7,7 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./LiquidityPoolToken.sol";
 import "./SwapUtils.sol";
@@ -20,7 +21,7 @@ interface IERC20Decimals is IERC20 {
     function decimals() external view returns (uint8);
 }
 
-contract TenderSwap is ReentrancyGuardUpgradeable {
+contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
     using SwapUtils for SwapUtils.Amplification;
     using SwapUtils for SwapUtils.PooledToken;
@@ -76,6 +77,7 @@ contract TenderSwap is ReentrancyGuardUpgradeable {
         uint256 _adminFee,
         address lpTokenTargetAddress
     ) public virtual initializer {
+        __Ownable_init();
         __ReentrancyGuard_init();
 
         // Check token addresses are different and not 0
