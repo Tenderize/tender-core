@@ -82,9 +82,9 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         __ReentrancyGuard_init_unchained();
 
         // Check token addresses are different and not 0
-        require(_token0 != _token1);
-        require(address(_token0) != address(0));
-        require(address(_token1) != address(0));
+        require(_token0 != _token1, "DUPLICATE_TOKENS");
+        require(address(_token0) != address(0), "TOKEN0_ZEROADDRESS");
+        require(address(_token1) != address(0), "TOKEN1_ZEROADDRESS");
 
         // Set precision multipliers
         uint8 _tenderTokenDecimals = IERC20Decimals(address(_token0)).decimals();
