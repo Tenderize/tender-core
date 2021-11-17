@@ -6,7 +6,6 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "./ITenderSwap.sol";
 
 contract LiquidityPoolToken is OwnableUpgradeable, ERC20BurnableUpgradeable {
 
@@ -39,20 +38,4 @@ contract LiquidityPoolToken is OwnableUpgradeable, ERC20BurnableUpgradeable {
         require(amount != 0, "LPToken: cannot mint 0");
         _mint(recipient, amount);
     }
-
-        /**
-     * @dev Overrides ERC20._beforeTokenTransfer() which get called on every transfers including
-     * minting and burning. This ensures that Swap.updateUserWithdrawFees are called everytime.
-     * This assumes the owner is set to a Swap contract's address.
-     */
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal virtual override(ERC20Upgradeable) {
-        super._beforeTokenTransfer(from, to, amount);
-        require(to != address(this), "LPToken: cannot send to itself");
-        ITenderSwap(owner()).updateUserWithdrawFee(to, amount);
-    }
-
 }   

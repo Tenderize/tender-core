@@ -23,14 +23,14 @@ library SwapUtils {
     );
     event AddLiquidity(
         address indexed provider,
-        uint256[] tokenAmounts,
-        uint256[] fees,
+        uint256[2] tokenAmounts,
+        uint256[2] fees,
         uint256 invariant,
         uint256 lpTokenSupply
     );
     event RemoveLiquidity(
         address indexed provider,
-        uint256[] tokenAmounts,
+        uint256[2] tokenAmounts,
         uint256 lpTokenSupply
     );
     event RemoveLiquidityOne(
@@ -42,8 +42,8 @@ library SwapUtils {
     );
     event RemoveLiquidityImbalance(
         address indexed provider,
-        uint256[] tokenAmounts,
-        uint256[] fees,
+        uint256[2] tokenAmounts,
+        uint256[2] fees,
         uint256 invariant,
         uint256 lpTokenSupply
     );
@@ -272,7 +272,7 @@ library SwapUtils {
         v.d2 = v.d1;
 
         // first entrant doesn't pay fees
-        uint256[] memory fees;
+        uint256[2] memory fees;
         if (v.totalSupply != 0) {
             uint256 feePerToken = _feePerToken(feeParams.swapFee);
 
@@ -309,7 +309,7 @@ library SwapUtils {
             amounts,
             fees,
             v.d1,
-            v.totalSupply.add(toMint)
+            v.totalSupply + toMint
         );
 
         return toMint;
@@ -342,7 +342,7 @@ library SwapUtils {
             tokens[i].token.safeTransfer(msg.sender, amounts[i]);
         }
 
-        emit RemoveLiquidity(msg.sender, amounts, totalSupply.sub(amount));
+        emit RemoveLiquidity(msg.sender, amounts, totalSupply - amount);
 
         return amounts;
     }
@@ -393,7 +393,7 @@ library SwapUtils {
             msg.sender,
             tokenAmount,
             totalSupply,
-            tokenReceive,
+            tokenReceive.token,
             dy
         );
 
