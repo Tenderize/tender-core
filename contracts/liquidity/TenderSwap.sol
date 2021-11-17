@@ -77,8 +77,9 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 _adminFee,
         address lpTokenTargetAddress
     ) public virtual initializer {
-        __Ownable_init();
-        __ReentrancyGuard_init();
+        __Context_init_unchained();
+        __Ownable_init_unchained();
+        __ReentrancyGuard_init_unchained();
 
         // Check token addresses are different and not 0
         require(_token0 != _token1);
