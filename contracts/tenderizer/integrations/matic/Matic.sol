@@ -96,7 +96,7 @@ contract Matic is Tenderizer {
         // Sanity check. Controller already checks user deposits and withdrawals > 0
         if (_account != controller) require(amount > 0, "ZERO_AMOUNT");
         if (amount == 0) {
-            uint256 shares = matic.balanceOf(address(this));
+            uint256 shares = matic_.balanceOf(address(this));
             amount = (shares * fxRate) / exhangeRatePrecision;
             require(amount > 0, "ZERO_STAKE");
         }

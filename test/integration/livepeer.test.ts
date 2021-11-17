@@ -426,23 +426,14 @@ describe('Livepeer Integration Test', () => {
       expect(LivepeerMock.smocked.unbond.calls[0]._amount).to.eq(withdrawAmount)
     })
 
-    it('Gov unbond() reverts if no pending stake', async () => {
-      const txData = Tenderizer.interface.encodeFunctionData('unstake', [Controller.address, ethers.utils.parseEther('0')])
-      LivepeerMock.smocked.pendingStake.will.return.with(ethers.constants.Zero)
-      await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_STAKE')
-    })
-
-    it('Gov unbond() succeeds', async () => {
-      const txData = Tenderizer.interface.encodeFunctionData('unstake', [Controller.address, ethers.utils.parseEther('0')])
-      LivepeerMock.smocked.pendingStake.will.return.with(withdrawAmount)
-      await Controller.execute(Tenderizer.address, 0, txData)
-      expect(LivepeerMock.smocked.unbond.calls.length).to.eq(1)
-      expect(LivepeerMock.smocked.unbond.calls[0]._amount).to.eq(withdrawAmount)
-    })
-
     it('reduces TenderToken Balance', async () => {
       // lte to account for any roundoff error in tokenToShare calcualtion during burn
       expect(await TenderToken.balanceOf(deployer)).to.lte(acceptableDelta)
+    })
+
+    it('TenderToken balance of other account stays the same', async () => {
+      const balOtherAcc = await TenderToken.balanceOf(signers[2].address)
+      expect(balOtherAcc.sub(secondDeposit).abs()).to.lte(acceptableDelta)
     })
 
     it('should create unstakeLock', async () => {
@@ -453,6 +444,65 @@ describe('Livepeer Integration Test', () => {
 
     it('should emit Unstake event from Tenderizer', async () => {
       expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(deployer, NODE, withdrawAmount, lockID)
+    })
+
+    describe('Gov unbond', async () => {
+      it('Gov unbond() reverts if no pending stake', async () => {
+        const txData = Tenderizer.interface.encodeFunctionData('unstake', [Controller.address, ethers.utils.parseEther('0')])
+        LivepeerMock.smocked.pendingStake.will.return.with(ethers.constants.Zero)
+        await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_STAKE')
+      })
+
+      describe('Gov partial(half) unbond', async () => {
+        let govWithdrawAmount: BigNumber
+        let poolBalBefore: BigNumber
+        let otherAccBalBefore: BigNumber
+        before('perform partial unbond', async () => {
+          poolBalBefore = await TenderToken.balanceOf(BPool.address)
+          otherAccBalBefore = await TenderToken.balanceOf(signers[2].address)
+          const totalStaked = await Tenderizer.totalStakedTokens()
+          govWithdrawAmount = totalStaked.div(2)
+          const txData = Tenderizer.interface.encodeFunctionData('unstake', [Controller.address, govWithdrawAmount])
+          LivepeerMock.smocked.pendingStake.will.return.with(totalStaked)
+          await Controller.execute(Tenderizer.address, 0, txData)
+        })
+
+        it('Gov unbond() succeeds', async () => {
+          expect(LivepeerMock.smocked.unbond.calls.length).to.eq(1)
+          expect(LivepeerMock.smocked.unbond.calls[0]._amount).to.eq(govWithdrawAmount)
+        })
+
+        it('TenderToken balance of other account halves', async () => {
+          expect(await TenderToken.balanceOf(signers[2].address)).to.eq(otherAccBalBefore.div(2))
+        })
+
+        it('TenderToken balance of BPool account halves', async () => {
+          expect(await TenderToken.balanceOf(BPool.address)).to.eq(poolBalBefore.div(2))
+        })
+      })
+
+      describe('Gov full unbond', async () => {
+        let govWithdrawAmount: BigNumber
+        before('perform full unbond', async () => {
+          const txData = Tenderizer.interface.encodeFunctionData('unstake', [Controller.address, ethers.utils.parseEther('0')])
+          govWithdrawAmount = (await Tenderizer.totalStakedTokens())
+          LivepeerMock.smocked.pendingStake.will.return.with(govWithdrawAmount)
+          await Controller.execute(Tenderizer.address, 0, txData)
+        })
+
+        it('Gov unbond() succeeds', async () => {
+          expect(LivepeerMock.smocked.unbond.calls.length).to.eq(1)
+          expect(LivepeerMock.smocked.unbond.calls[0]._amount).to.eq(govWithdrawAmount)
+        })
+
+        it('TenderToken balance of other account becomes 0', async () => {
+          expect(await TenderToken.balanceOf(signers[2].address)).to.eq(0)
+        })
+
+        it('TenderToken balance of BPool account becomes 0', async () => {
+          expect(await TenderToken.balanceOf(BPool.address)).to.eq(0)
+        })
+      })
     })
   })
 
@@ -478,11 +528,6 @@ describe('Livepeer Integration Test', () => {
 
     it('increases LPT balance', async () => {
       expect(await LivepeerToken.balanceOf(deployer)).to.eq(lptBalBefore.add(withdrawAmount))
-    })
-
-    it('TenderToken balance of other account stays the same', async () => {
-      const balOtherAcc = await TenderToken.balanceOf(signers[2].address)
-      expect(balOtherAcc.sub(secondDeposit).abs()).to.lte(acceptableDelta)
     })
 
     it('should delete unstakeLock', async () => {

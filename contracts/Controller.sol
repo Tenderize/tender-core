@@ -80,6 +80,7 @@ contract Controller is Initializable, ReentrancyGuard {
      */
     function unlock(uint256 _amount) public nonReentrant returns (uint256 unstakeLockID) {
         require(_amount > 0, "ZERO_AMOUNT");
+
         // Burn tenderTokens
         require(tenderToken.burn(msg.sender, _amount), "TENDER_BURN_FAILED");
 

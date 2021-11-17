@@ -415,25 +415,14 @@ describe('Matic Integration Test', () => {
       expect(MaticMock.smocked.sellVoucher_new.calls[0]._maximumSharesToBurn).to.eq(maxSharesToBurn)
     })
 
-    it('Gov sellVoucher() reverts if no pending stake', async () => {
-      const txData = Tenderizer.interface.encodeFunctionData('unstake', [Controller.address, ethers.utils.parseEther('0')])
-      MaticMock.smocked.balanceOf.will.return.with(ethers.constants.Zero)
-      MaticMock.smocked.exchangeRate.will.return.with(fxRate)
-      await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_STAKE')
-    })
-
-    it('Gov sellVoucher() succeeds', async () => {
-      const txData = Tenderizer.interface.encodeFunctionData('unstake', [Controller.address, ethers.utils.parseEther('0')])
-      MaticMock.smocked.balanceOf.will.return.with(withdrawAmount)
-      MaticMock.smocked.exchangeRate.will.return.with(fxRate)
-      await Controller.execute(Tenderizer.address, 0, txData)
-      expect(MaticMock.smocked.sellVoucher_new.calls.length).to.eq(1)
-      expect(MaticMock.smocked.sellVoucher_new.calls[0]._claimAmount).to.eq(withdrawAmount)
-    })
-
     it('reduces TenderToken Balance', async () => {
       // lte to account for any roundoff error in tokenToShare calcualtion during burn
       expect(await TenderToken.balanceOf(deployer)).to.lte(acceptableDelta)
+    })
+
+    it('TenderToken balance of other account stays the same', async () => {
+      const balOtherAcc = await TenderToken.balanceOf(signers[2].address)
+      expect(balOtherAcc.sub(secondDeposit).abs()).to.lte(acceptableDelta)
     })
 
     it('should create unstakeLock', async () => {
@@ -444,6 +433,70 @@ describe('Matic Integration Test', () => {
 
     it('should emit Unstake event from Tenderizer', async () => {
       expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(deployer, NODE, withdrawAmount, lockID)
+    })
+
+    describe('Gov unbond', async () => {
+      it('Gov unbond() reverts if no pending stake', async () => {
+        const txData = Tenderizer.interface.encodeFunctionData('unstake', [Controller.address, ethers.utils.parseEther('0')])
+        MaticMock.smocked.balanceOf.will.return.with(0)
+        MaticMock.smocked.exchangeRate.will.return.with(fxRate)
+        await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_STAKE')
+      })
+
+      describe('Gov partial(half) unbond', async () => {
+        let govWithdrawAmount: BigNumber
+        let poolBalBefore: BigNumber
+        let otherAccBalBefore: BigNumber
+        before('perform partial unbond', async () => {
+          poolBalBefore = await TenderToken.balanceOf(BPool.address)
+          otherAccBalBefore = await TenderToken.balanceOf(signers[2].address)
+          const totalStaked = await Tenderizer.totalStakedTokens()
+          govWithdrawAmount = totalStaked.div(2)
+          const txData = Tenderizer.interface.encodeFunctionData('unstake', [Controller.address, govWithdrawAmount])
+          MaticMock.smocked.balanceOf.will.return.with(totalStaked)
+          MaticMock.smocked.exchangeRate.will.return.with(fxRate)
+          await Controller.execute(Tenderizer.address, 0, txData)
+        })
+
+        it('Gov sellVoucher_new() succeeds', async () => {
+          expect(MaticMock.smocked.sellVoucher_new.calls.length).to.eq(1)
+          expect(MaticMock.smocked.sellVoucher_new.calls[0]._claimAmount).to.eq(govWithdrawAmount)
+        })
+
+        it('TenderToken balance of other account halves', async () => {
+          expect(await TenderToken.balanceOf(signers[2].address)).to.eq(otherAccBalBefore.div(2))
+        })
+
+        it('TenderToken balance of BPool account halves', async () => {
+          // Accpetable delta of 30 gwei
+          expect((await TenderToken.balanceOf(BPool.address)).sub(poolBalBefore.div(2)).abs())
+            .to.lte(acceptableDelta * 15)
+        })
+      })
+
+      describe('Gov full sellVoucher_new', async () => {
+        let govWithdrawAmount: BigNumber
+        before('perform full unbond', async () => {
+          const txData = Tenderizer.interface.encodeFunctionData('unstake', [Controller.address, ethers.utils.parseEther('0')])
+          govWithdrawAmount = (await Tenderizer.totalStakedTokens())
+          MaticMock.smocked.balanceOf.will.return.with(govWithdrawAmount)
+          MaticMock.smocked.exchangeRate.will.return.with(fxRate)
+          await Controller.execute(Tenderizer.address, 0, txData)
+        })
+
+        it('Gov sellVoucher_new() succeeds', async () => {
+          expect(MaticMock.smocked.sellVoucher_new.calls.length).to.eq(1)
+          expect(MaticMock.smocked.sellVoucher_new.calls[0]._claimAmount).to.eq(govWithdrawAmount)
+        })
+
+        it('TenderToken balance of other account becomes 0', async () => {
+          expect(await TenderToken.balanceOf(signers[2].address)).to.eq(0)
+        })
+
+        it('TenderToken balance of BPool account becomes 0', async () => {
+          expect(await TenderToken.balanceOf(BPool.address)).to.eq(0)
+        })
+      })
     })
   })
 
@@ -469,11 +522,6 @@ describe('Matic Integration Test', () => {
 
     it('increases LPT balance', async () => {
       expect(await MaticToken.balanceOf(deployer)).to.eq(matBalBefore.add(withdrawAmount))
-    })
-
-    it('TenderToken balance of other account stays the same', async () => {
-      const balOtherAcc = await TenderToken.balanceOf(signers[2].address)
-      expect(balOtherAcc.sub(secondDeposit).abs()).to.lte(acceptableDelta)
     })
 
     it('should delete unstakeLock', async () => {
