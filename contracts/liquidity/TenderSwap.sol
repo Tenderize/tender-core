@@ -145,6 +145,14 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         return amplificationParams.getAPrecise();
     }
 
+    function getToken0() external view virtual returns (IERC20) {
+        return token0.token;
+    }
+
+    function getToken1() external view virtual returns (IERC20) {
+        return token1.token;
+    }
+
     /**
      * @notice Return current balance of token0 in the pool
      * @return current balance of the pooled token
@@ -159,6 +167,31 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      */
     function getToken1Balance() external view virtual returns (uint256) {
         return token1.getTokenBalance();
+    }
+
+        /**
+     * @notice Get the virtual price, to help calculate profit
+     * @return the virtual price, scaled to the POOL_PRECISION_DECIMALS
+     */
+    function getVirtualPrice() external view virtual returns (uint256) {
+        return SwapUtils.getVirtualPrice(token0, token1, amplificationParams, lpToken);
+    }
+
+    /**
+     * @notice Calculate amount of tokens you receive on swap
+     * @param _tokenFrom the token the user wants to sell
+     * @param _dx the amount of tokens the user wants to sell. If the token charges
+     * a fee on transfers, use the amount that gets transferred after the fee.
+     * @return amount of tokens the user will receive
+     */
+    function calculateSwap(
+        IERC20 _tokenFrom,
+        uint256 _dx
+    ) external view virtual returns (uint256) {
+        if (_tokenFrom == token0.token) {
+            return SwapUtils.calculateSwap(token0, token1, _dx, amplificationParams, feeParams);
+        }
+        return SwapUtils.calculateSwap(token1, token0, _dx, amplificationParams, feeParams);
     }
 
     /*** STATE MODIFYING FUNCTIONS ***/
@@ -187,23 +220,6 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             return SwapUtils.swap(token0, token1, _dx, _minDy, amplificationParams, feeParams);
         }
         return SwapUtils.swap(token1, token0, _dx, _minDy, amplificationParams, feeParams);
-    }
-
-    /**
-     * @notice Calculate amount of tokens you receive on swap
-     * @param _tokenFrom the token the user wants to sell
-     * @param _dx the amount of tokens the user wants to sell. If the token charges
-     * a fee on transfers, use the amount that gets transferred after the fee.
-     * @return amount of tokens the user will receive
-     */
-    function calculateSwap(
-        IERC20 _tokenFrom,
-        uint256 _dx
-    ) external view virtual returns (uint256) {
-        if (_tokenFrom == token0.token) {
-            return SwapUtils.calculateSwap(token0, token1, _dx, amplificationParams, feeParams);
-        }
-        return SwapUtils.calculateSwap(token1, token0, _dx, amplificationParams, feeParams);
     }
 
     /**
