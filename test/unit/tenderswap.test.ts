@@ -4,18 +4,18 @@ import { constants, Signer, BigNumber } from 'ethers'
 import { solidity } from 'ethereum-waffle'
 import { ethers } from 'hardhat'
 
-import { ITenderSwap, SimpleToken, LiquidityPoolToken, TestSwapReturnValues, IERC20 } from '../../../typechain'
+import { ITenderSwap, SimpleToken, LiquidityPoolToken, TestSwapReturnValues, IERC20 } from '../../typechain'
 import chai from 'chai'
-import * as rpc from '../../util/snapshot'
+import * as rpc from '../util/snapshot'
 import {
   getCurrentBlockTimestamp,
   setNextTimestamp,
   setTimestamp,
   forceAdvanceOneBlock
-} from '../../util/evm'
+} from '../util/evm'
 import {
   asyncForEach
-} from '../../util/helpers'
+} from '../util/helpers'
 
 chai.use(solidity)
 const { expect } = chai
