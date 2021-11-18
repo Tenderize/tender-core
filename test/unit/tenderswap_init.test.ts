@@ -2,7 +2,7 @@ import { constants } from 'ethers'
 import { solidity } from 'ethereum-waffle'
 import { ethers } from 'hardhat'
 
-import { TenderSwap, SimpleToken, LiquidityPoolToken } from '../../../typechain'
+import { TenderSwap, SimpleToken, LiquidityPoolToken } from '../../typechain'
 import chai from 'chai'
 
 chai.use(solidity)
