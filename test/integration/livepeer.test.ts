@@ -3,7 +3,7 @@ import hre, { ethers } from 'hardhat'
 import { MockContract, smockit } from '@eth-optimism/smock'
 
 import {
-  SimpleToken, Controller, ElasticSupplyPool, TenderToken, ILivepeer, BPool, EIP173Proxy, Livepeer, ISwapRouterWithWETH, IWETH
+  SimpleToken, Controller, ElasticSupplyPool, TenderToken, ILivepeer, BPool, EIP173Proxy, Livepeer, ISwapRouterWithWETH, IWETH, TenderFarm
 } from '../../typechain/'
 
 import chai from 'chai'
@@ -31,6 +31,7 @@ describe('Livepeer Integration Test', () => {
   let Controller: Controller
   let Tenderizer: Livepeer
   let TenderToken: TenderToken
+  let TenderFarm: TenderFarm
   let Esp: ElasticSupplyPool
   let BPool: BPool
 
@@ -115,6 +116,7 @@ describe('Livepeer Integration Test', () => {
     TenderToken = (await ethers.getContractAt('TenderToken', Livepeer.TenderToken.address)) as TenderToken
     Esp = (await ethers.getContractAt('ElasticSupplyPool', Livepeer.ElasticSupplyPool.address)) as ElasticSupplyPool
     BPool = (await ethers.getContractAt('BPool', await Esp.bPool())) as BPool
+    TenderFarm = (await ethers.getContractAt('TenderFarm', Livepeer.TenderFarm.address)) as TenderFarm
     UniswapRouterMock.smocked.WETH9.will.return.with(WethMock.address)
     await Controller.batchExecute(
       [Tenderizer.address, Tenderizer.address, Tenderizer.address],
@@ -272,19 +274,29 @@ describe('Livepeer Integration Test', () => {
       // The decrease will offset the increase from the previous test
       const newStake = deposit.add(initialStake)
       let totalShares: BigNumber
-      let oldPrinciple: BigNumber
 
       let feesBefore: BigNumber = ethers.constants.Zero
+
+      let expectedCP: BigNumber
+
+      // calculate stake before rebase minus fees
+      const increase = ethers.BigNumber.from('10000000000')
+      const swappedLPTRewards = ethers.BigNumber.from('100000000')
+      const liquidityFees = percOf2(increase.add(swappedLPTRewards), liquidityFeesPercent)
+      const protocolFees = percOf2(increase.add(swappedLPTRewards), protocolFeesPercent)
+      const oldStake = deposit.add(initialStake).add(increase)
+      const oldStakeMinusFees = oldStake.add(swappedLPTRewards).sub(liquidityFees).sub(protocolFees)
 
       before(async () => {
         feesBefore = await Tenderizer.pendingFees()
         LivepeerMock.smocked.pendingStake.will.return.with(newStake)
-        oldPrinciple = await Tenderizer.currentPrincipal()
+
+        expectedCP = newStake.sub(protocolFees).sub(liquidityFees)
         tx = await Controller.rebase()
       })
 
       it('updates currentPrincipal', async () => {
-        expect(await Tenderizer.currentPrincipal()).to.eq(newStake)
+        expect(await Tenderizer.currentPrincipal()).to.eq(expectedCP)
       })
 
       it('decreases tendertoken balances when slashed', async () => {
@@ -312,7 +324,7 @@ describe('Livepeer Integration Test', () => {
       })
 
       it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
-        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs('0', newStake, oldPrinciple)
+        await expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs('0', expectedCP, oldStakeMinusFees)
       })
     })
   })
@@ -327,7 +339,7 @@ describe('Livepeer Integration Test', () => {
       ownerBalBefore = await TenderToken.balanceOf(deployer)
       otherAccBalBefore = await TenderToken.balanceOf(signers[2].address)
       tx = await Controller.collectFees()
-      await Controller.rebase()
+      await tx.wait()
     })
 
     it('should reset pendingFees', async () => {
@@ -335,7 +347,7 @@ describe('Livepeer Integration Test', () => {
     })
 
     it('should increase tenderToken balance of owner', async () => {
-      expect(await TenderToken.balanceOf(deployer)).to.eq(ownerBalBefore.add(fees))
+      expect(await TenderToken.balanceOf(deployer)).to.eq(ownerBalBefore.add(fees).sub(1))
     })
 
     it('should not change balance of other account', async () => {
@@ -343,7 +355,7 @@ describe('Livepeer Integration Test', () => {
     })
 
     it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
-      expect(tx).to.emit(Tenderizer, 'ProtocolFeeCollected').withArgs(fees)
+      await expect(tx).to.emit(Tenderizer, 'ProtocolFeeCollected').withArgs(fees)
     })
   })
 
@@ -354,7 +366,6 @@ describe('Livepeer Integration Test', () => {
     let acc0BalBefore: BigNumber
 
     before(async () => {
-      mockTenderFarm = signers[3]
       fees = await Tenderizer.pendingLiquidityFees()
       farmBalanceBefore = await TenderToken.balanceOf(mockTenderFarm.address)
       acc0BalBefore = await TenderToken.balanceOf(deployer)
@@ -366,7 +377,7 @@ describe('Livepeer Integration Test', () => {
     })
 
     it('should increase tenderToken balance of tenderFarm', async () => {
-      expect(await TenderToken.balanceOf(mockTenderFarm.address)).to.eq(farmBalanceBefore.add(fees))
+      expect(await TenderToken.balanceOf(TenderFarm.address)).to.eq(farmBalanceBefore.add(fees).sub(1))
     })
 
     it('should not change balance of other account', async () => {
@@ -374,7 +385,7 @@ describe('Livepeer Integration Test', () => {
     })
 
     it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
-      expect(tx).to.emit(Tenderizer, 'LiquidityFeeCollected').withArgs(fees)
+      await expect(tx).to.emit(Tenderizer, 'LiquidityFeeCollected').withArgs(fees)
     })
   })
 
