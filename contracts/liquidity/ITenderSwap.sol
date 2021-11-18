@@ -20,14 +20,14 @@ interface ITenderSwap {
     );
     event AddLiquidity(
         address indexed provider,
-        uint256[] tokenAmounts,
-        uint256[] fees,
+        uint256[2] tokenAmounts,
+        uint256[2] fees,
         uint256 invariant,
         uint256 lpTokenSupply
     );
     event RemoveLiquidity(
         address indexed provider,
-        uint256[] tokenAmounts,
+        uint256[2] tokenAmounts,
         uint256 lpTokenSupply
     );
     event RemoveLiquidityOne(
@@ -39,8 +39,8 @@ interface ITenderSwap {
     );
     event RemoveLiquidityImbalance(
         address indexed provider,
-        uint256[] tokenAmounts,
-        uint256[] fees,
+        uint256[2] tokenAmounts,
+        uint256[2] fees,
         uint256 invariant,
         uint256 lpTokenSupply
     );
@@ -71,6 +71,7 @@ interface ITenderSwap {
     function getToken0() external view returns (IERC20);
     function getToken1() external view returns (IERC20);
     function getToken0Balance() external view returns (uint256);
+    function getToken1Balance() external view returns (uint256);
     function getVirtualPrice() external view returns (uint256);
 
     function calculateSwap(

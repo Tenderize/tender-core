@@ -11,6 +11,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./LiquidityPoolToken.sol";
 import "./SwapUtils.sol";
+import "./ITenderSwap.sol";
 
 // TODO: Ownership
 // TODO: Pausable if upgradeable ? 
@@ -21,24 +22,23 @@ interface IERC20Decimals is IERC20 {
     function decimals() external view returns (uint8);
 }
 
-contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSwap {
     using SafeERC20 for IERC20;
     using SwapUtils for SwapUtils.Amplification;
     using SwapUtils for SwapUtils.PooledToken;
     using SwapUtils for SwapUtils.FeeParams;
 
     // fee calculation
-    SwapUtils.FeeParams feeParams;
+    SwapUtils.FeeParams public feeParams;
 
-    SwapUtils.Amplification amplificationParams;
+    SwapUtils.Amplification public amplificationParams;
 
     // Pool Tokens
-    mapping (IERC20 => SwapUtils.PooledToken) tokens;
-    SwapUtils.PooledToken token0;
-    SwapUtils.PooledToken token1;
+    SwapUtils.PooledToken private token0;
+    SwapUtils.PooledToken private token1;
 
     // Liquidity pool shares
-    LiquidityPoolToken lpToken;
+    LiquidityPoolToken public lpToken;
 
     /*** MODIFIERS ***/
 
@@ -76,7 +76,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 _fee,
         uint256 _adminFee,
         address lpTokenTargetAddress
-    ) public virtual initializer {
+    ) public override initializer {
         __Context_init_unchained();
         __Ownable_init_unchained();
         __ReentrancyGuard_init_unchained();
@@ -133,7 +133,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      * @dev See the StableSwap paper for details
      * @return A parameter
      */
-    function getA() external view virtual returns (uint256) {
+    function getA() external view override returns (uint256) {
         return amplificationParams.getA();
     }
 
@@ -142,15 +142,15 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      * @dev See the StableSwap paper for details
      * @return A parameter in its raw precision form
      */
-    function getAPrecise() external view virtual returns (uint256) {
+    function getAPrecise() external view override returns (uint256) {
         return amplificationParams.getAPrecise();
     }
 
-    function getToken0() external view virtual returns (IERC20) {
+    function getToken0() external view override returns (IERC20) {
         return token0.token;
     }
 
-    function getToken1() external view virtual returns (IERC20) {
+    function getToken1() external view override returns (IERC20) {
         return token1.token;
     }
 
@@ -158,7 +158,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      * @notice Return current balance of token0 in the pool
      * @return current balance of the pooled token
      */
-    function getToken0Balance() external view virtual returns (uint256) {
+    function getToken0Balance() external view override returns (uint256) {
         return token0.getTokenBalance();
     }
 
@@ -166,15 +166,15 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      * @notice Return current balance of token1 in the pool
      * @return current balance of the pooled token
      */
-    function getToken1Balance() external view virtual returns (uint256) {
+    function getToken1Balance() external view override returns (uint256) {
         return token1.getTokenBalance();
     }
 
     /**
-     * @notice Get the virtual price, to help calculate profit
-     * @return the virtual price, scaled to the POOL_PRECISION_DECIMALS
+     * @notice Get the override price, to help calculate profit
+     * @return the override price, scaled to the POOL_PRECISION_DECIMALS
      */
-    function getVirtualPrice() external view virtual returns (uint256) {
+    function getVirtualPrice() external view override returns (uint256) {
         return SwapUtils.getVirtualPrice(token0, token1, amplificationParams, lpToken);
     }
 
@@ -188,7 +188,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function calculateSwap(
         IERC20 _tokenFrom,
         uint256 _dx
-    ) external view virtual returns (uint256) {
+    ) external view override returns (uint256) {
         if (_tokenFrom == token0.token) {
             return SwapUtils.calculateSwap(token0, token1, _dx, amplificationParams, feeParams);
         }
@@ -204,7 +204,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function calculateRemoveLiquidity(uint256 amount)
         external
         view
-        virtual
+        override
         returns (uint256[2] memory)
     {
         SwapUtils.PooledToken[2] memory tokens_ = [token0, token1];
@@ -222,7 +222,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function calculateRemoveLiquidityOneToken(
         uint256 tokenAmount,
         IERC20 tokenReceive
-    ) external view virtual returns (uint256 availableTokenAmount) {
+    ) external view override returns (uint256 availableTokenAmount) {
         return tokenReceive == token0.token ? 
                 SwapUtils.calculateWithdrawOneToken(
                     tokenAmount,
@@ -261,7 +261,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function calculateTokenAmount(
         uint256[] calldata amounts,
         bool deposit
-    ) external view virtual returns (uint256) {
+    ) external view override returns (uint256) {
         SwapUtils.PooledToken[2] memory tokens_ = [token0, token1];
 
         return SwapUtils.calculateTokenAmount(tokens_, amounts, deposit, amplificationParams, lpToken);
@@ -283,7 +283,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 _deadline
     )
         external
-        virtual
+        override
         nonReentrant
         deadlineCheck(_deadline)
         returns (uint256)
@@ -310,7 +310,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 _deadline
     )
         external
-        virtual
+        override
         nonReentrant
         deadlineCheck(_deadline)
         returns (uint256)
@@ -336,7 +336,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 deadline
     )
         external
-        virtual
+        override
         nonReentrant
         deadlineCheck(deadline)
         returns (uint256[2] memory)
@@ -362,7 +362,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 _deadline
     )
         external
-        virtual
+        override
         nonReentrant
         deadlineCheck(_deadline)
         returns (uint256)
@@ -396,7 +396,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      * @notice Update the admin fee. Admin fee takes portion of the swap fee.
      * @param newAdminFee new admin fee to be applied on future transactions
      */
-    function setAdminFee(uint256 newAdminFee) external onlyOwner {
+    function setAdminFee(uint256 newAdminFee) external override onlyOwner {
         feeParams.setAdminFee(newAdminFee);
     }
 
@@ -404,7 +404,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      * @notice Update the swap fee to be applied on swaps
      * @param newSwapFee new swap fee to be applied on future transactions
      */
-    function setSwapFee(uint256 newSwapFee) external onlyOwner {
+    function setSwapFee(uint256 newSwapFee) external override onlyOwner {
         feeParams.setSwapFee(newSwapFee);
     }
 
@@ -415,14 +415,14 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable {
      * @param futureA the new A to ramp towards
      * @param futureTime timestamp when the new A should be reached
      */
-    function rampA(uint256 futureA, uint256 futureTime) external onlyOwner {
+    function rampA(uint256 futureA, uint256 futureTime) external override onlyOwner {
         amplificationParams.rampA(futureA, futureTime);
     }
 
     /**
      * @notice Stop ramping A immediately. Reverts if ramp A is already stopped.
      */
-    function stopRampA() external onlyOwner {
+    function stopRampA() external override onlyOwner {
         amplificationParams.stopRampA();
     }
 

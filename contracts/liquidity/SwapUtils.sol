@@ -5,6 +5,7 @@
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../libs/MathUtils.sol";
 import "./LiquidityPoolToken.sol";
+import "hardhat/console.sol";
 
 pragma solidity 0.8.4;
 
@@ -129,9 +130,10 @@ library SwapUtils {
         Amplification storage amplificationParams,
         FeeParams storage feeParams
     ) external returns (uint256) {
-        // transfer tokens
-        tokenFrom.token.safeTransferFrom(msg.sender, address(this), dx);
-
+        require(
+                dx <= tokenFrom.token.balanceOf(msg.sender),
+                'ERC20: transfer amount exceeds balance'
+        );
         uint256 dy;
         uint256 dyFee;
         (dy, dyFee) = _calculateSwap(
@@ -141,11 +143,14 @@ library SwapUtils {
             amplificationParams,
             feeParams
         );
+
         require(dy >= minDy, "Swap didn't result in min tokens");
 
         uint256 dyAdminFee = dyFee * feeParams.adminFee / FEE_DENOMINATOR / tokenTo.precisionMultiplier;
         // TODO: Need to handle keeping track of admin fees or transfer them instantly
 
+        // transfer tokens
+        tokenFrom.token.safeTransferFrom(msg.sender, address(this), dx);
         tokenTo.token.safeTransfer(msg.sender, dy);
 
         emit Swap(msg.sender, tokenFrom.token, dx, dy);
@@ -508,6 +513,8 @@ library SwapUtils {
         v.d0 = getD(xpC, xpR, v.preciseA);
         v.d1 = v.d0 - (tokenAmount * v.d0 / totalSupply);
 
+        require(tokenAmount <= xpR, "AMOUNT_EXCEEDS_AVAILABLE");
+
         v.newY = getYD(v.preciseA, xpR, v.d1);
 
         v.feePerToken = _feePerToken(swapFee);
@@ -515,7 +522,7 @@ library SwapUtils {
         // For xpR => dxExpected = xpR * d1 / d0 - newY
         // For xpC => dxExpected = xpC - (xpC * d1 / d0)
         // xpReduced -= dxExpected * fee / FEE_DENOMINATOR
-        uint256 xpRReduced = xpR - (xpR * v.d1 / v.d0 - v.newY) * v.feePerToken / FEE_DENOMINATOR;
+        uint256 xpRReduced = xpR - (xpR * v.d1 /  v.d0 - v.newY) * v.feePerToken / FEE_DENOMINATOR;
         uint256 xpCReduced = xpC - (xpC - (xpC * v.d1 / v.d0)) * v.feePerToken / FEE_DENOMINATOR;
 
         uint256 dy = xpRReduced - getYD(v.preciseA, xpR, v.d1);
@@ -559,6 +566,7 @@ library SwapUtils {
             uint256 prec0 = tokens[0].precisionMultiplier;
             uint256 bal0 = _getTokenBalance(tokens[0].token);
             xp0 = _xp(bal0, prec0);
+            if (!deposit && bal0 < amounts[0]) revert("AMOUNT_EXCEEDS_SUPPLY");
             xp0_ = _xp(
                 deposit ? bal0 + amounts[0] : bal0 - amounts[0],
                 prec0
@@ -570,7 +578,8 @@ library SwapUtils {
         {
             uint256 prec1 = tokens[1].precisionMultiplier;
             uint256 bal1 = _getTokenBalance(tokens[1].token);
-            xp0 = _xp(bal1, prec1);
+            xp1 = _xp(bal1, prec1);
+            if (!deposit && bal1 < amounts[1]) revert("AMOUNT_EXCEEDS_SUPPLY");
             xp1_ = _xp(
                 deposit ? bal1 + amounts[1] : bal1 - amounts[1],
                 prec1
@@ -790,12 +799,14 @@ library SwapUtils {
             for (uint256 i = 0; i < MAX_LOOP_LIMIT; i++) {
                 uint256 dP = d;
 
+                // dP = dP.mul(d).div(xp[j].mul(numTokens));
+
                 dP = dP * d / ( fromXp * NUM_TOKENS);
                 dP = dP * d / ( toXp * NUM_TOKENS);
 
                 prevD = d;
 
-                uint256 num = nA * s / A_PRECISION + (dP * NUM_TOKENS) * d;
+                uint256 num = (nA * s / A_PRECISION + (dP * NUM_TOKENS)) * d;
                 uint denom = (nA - A_PRECISION) * d / A_PRECISION + (NUM_TOKENS + 1) * dP;
                 d = num / denom;
                 // d = nA
