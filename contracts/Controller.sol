@@ -112,11 +112,6 @@ contract Controller is Initializable, ReentrancyGuard {
         // stake tokens
         gulp();
 
-        // Collect governance fees
-        _collectFees();
-        // Collect LP fees
-        _collectLiquidityFees();
-
         // Resync weight for tenderToken
         try esp.resyncWeight(address(tenderToken)) {} catch {
             // No-op
@@ -227,20 +222,19 @@ contract Controller is Initializable, ReentrancyGuard {
     }
 
     function _collectFees() internal {
-        // collect fees and get amount
-        uint256 amount = tenderizer.collectFees();
-
         // mint tenderToken to fee distributor (governance)
-        tenderToken.mint(gov, amount);
+        tenderToken.mint(gov, tenderizer.pendingFees());
+        tenderizer.collectFees();
     }
 
     function _collectLiquidityFees() internal {
         if (tenderFarm.nextTotalStake() == 0) return;
-        // collect fees and get amount
-        uint256 amount = tenderizer.collectLiquidityFees();
 
         // mint tenderToken and transfer to tenderFarm
+        uint256 amount = tenderizer.pendingLiquidityFees();
         tenderToken.mint(address(this), amount);
+        tenderizer.collectLiquidityFees();
+
         tenderToken.approve(address(tenderFarm), amount);
         tenderFarm.addRewards(amount);
     }
