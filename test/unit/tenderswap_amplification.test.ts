@@ -14,11 +14,11 @@ import {
   asyncForEach
 } from '../util/helpers'
 
-enum TIME {
-    SECONDS = 1,
-    DAYS = 86400,
-    WEEKS = 604800,
-  }
+const TIME = {
+  SECONDS: 1,
+  DAYS: 86400,
+  WEEKS: 604800
+}
 
 chai.use(solidity)
 const { expect } = chai

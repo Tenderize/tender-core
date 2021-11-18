@@ -9,9 +9,7 @@ import chai from 'chai'
 import * as rpc from '../util/snapshot'
 import {
   getCurrentBlockTimestamp,
-  setNextTimestamp,
-  setTimestamp,
-  forceAdvanceOneBlock
+  setNextTimestamp
 } from '../util/evm'
 import {
   asyncForEach
@@ -21,19 +19,6 @@ chai.use(solidity)
 const { expect } = chai
 
 // Contract calls
-
-async function getPoolBalances (
-  swap: ITenderSwap,
-  numOfTokens: number
-): Promise<BigNumber[]> {
-  const balances = []
-
-  for (let i = 0; i < numOfTokens; i++) {
-    balances.push(await swap.getTokenBalance(i))
-  }
-  return balances
-}
-
 async function getUserTokenBalances (
   address: string | Signer,
   tokens: IERC20[]
@@ -51,16 +36,6 @@ async function getUserTokenBalances (
   return balanceArray
 }
 
-async function getUserTokenBalance (
-  address: string | Signer,
-  token: IERC20
-): Promise<BigNumber> {
-  if (address instanceof Signer) {
-    address = await address.getAddress()
-  }
-  return token.balanceOf(address)
-}
-
 describe('TenderSwap', () => {
   let snapshotId: any
   let signers: Array<Signer>
@@ -73,9 +48,7 @@ describe('TenderSwap', () => {
   let owner: Signer
   let user1: Signer
   let user2: Signer
-  let ownerAddress: string
   let user1Address: string
-  let user2Address: string
 
   // Test Values
   const INITIAL_A_VALUE = 50
@@ -96,9 +69,7 @@ describe('TenderSwap', () => {
     owner = signers[0]
     user1 = signers[1]
     user2 = signers[2]
-    ownerAddress = await owner.getAddress()
     user1Address = await user1.getAddress()
-    user2Address = await user2.getAddress()
 
     // Deploy dummy tokens
     const erc20Factory = await ethers.getContractFactory('SimpleToken')
