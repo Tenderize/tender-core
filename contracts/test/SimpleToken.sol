@@ -24,4 +24,15 @@ contract SimpleToken is ERC20 {
     ) ERC20(name, symbol) {
         _mint(msg.sender, initialSupply);
     }
+
+    /**
+     * @notice Mints the given amount of LPToken to the recipient.
+     * @dev only owner can call this mint function
+     * @param recipient address of account to receive the tokens
+     * @param amount amount of tokens to mint
+     */
+    function mint(address recipient, uint256 amount) external {
+        require(amount != 0, "LPToken: cannot mint 0");
+        _mint(recipient, amount);
+    }
 }

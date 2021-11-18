@@ -26,3 +26,12 @@ export function percOf (amount: BigNumber, fracNum:BigNumber, fracDenom:BigNumbe
 export function percOf2 (amount:BigNumber, fracNum:BigNumber): BigNumber {
   return amount.mul(fracNum).div(PERC_DIVISOR)
 }
+
+export async function asyncForEach<T> (
+  array: Array<T>,
+  callback: (item: T, index: number) => void
+): Promise<void> {
+  for (let index = 0; index < array.length; index++) {
+    await callback(array[index], index)
+  }
+}
