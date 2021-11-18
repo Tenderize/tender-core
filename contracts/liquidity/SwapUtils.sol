@@ -114,12 +114,10 @@ library SwapUtils {
      * @notice swap two tokens in the pool
      * @param tokenFrom the token to sell
      * @param tokenTo the token to buy
-     * @param dx the number of tokens to sell. If the token charges a fee on transfers,
-     * use the amount that gets transferred after the fee.
+     * @param dx the number of tokens to sell
+     * @param minDy the min amount the user would like to receive (revert if not met)
      * @param amplificationParams amplification parameters for the pool
      * @param feeParams fee parameters for the pool
-     * @param dx the amount of tokens the user wants to sell
-     * @param minDy the min amount the user would like to receive, or revert.
      * @return amount of token user received on swap
      */
     function swap(
@@ -191,8 +189,7 @@ library SwapUtils {
      * @notice Externally calculates a swap between two tokens.
      * @param tokenFrom the token to sell
      * @param tokenTo the token to buy
-     * @param dx the number of tokens to sell. If the token charges a fee on transfers,
-     * use the amount that gets transferred after the fee.
+     * @param dx the number of tokens to sell
      * @param amplificationParams amplification parameters for the pool
      * @param feeParams fee parameters for the pool
      * @return dy the number of tokens the user will get
@@ -215,8 +212,9 @@ library SwapUtils {
 
     /**
      * @notice Add liquidity to the pool
-     * @param tokens Swap struct to read from and write to
+     * @param tokens Array of [token0, token1]
      * @param amounts the amounts of each token to add, in their native precision
+     * according to the cardinality of 'tokens'
      * @param minToMint the minimum LP tokens adding this amount of liquidity
      * should mint, otherwise revert. Handy for front-running mitigation
      * allowed addresses. If the pool is not in the guarded launch phase, this parameter will be ignored.
@@ -324,11 +322,13 @@ library SwapUtils {
      * @notice Burn LP tokens to remove liquidity from the pool.
      * @dev Liquidity can always be removed, even when the pool is paused.
      * @param amount the amount of LP tokens to burn
-     * @param tokens Swap struct to read from and write to
+     * @param tokens Array of [token0, token1]
      * @param minAmounts the minimum amounts of each token in the pool
-     * acceptable for this burn. Useful as a front-running mitigation
+     * acceptable for this burn. Useful as a front-running mitigation.
+     * Should be according to the cardinality of 'tokens'
      * @param lpToken Liquidity pool token contract
-     * @return amounts of tokens the user received
+     * @return amounts of tokens the user receives for each token in the pool
+     * according to [token0, token1] cardinality
      */
     function removeLiquidity(
         uint256 amount,
@@ -651,8 +651,7 @@ library SwapUtils {
      *
      * @param tokenFrom the token to sell
      * @param tokenTo the token to buy
-     * @param dx the number of tokens to sell. If the token charges a fee on transfers,
-     * use the amount that gets transferred after the fee.
+     * @param dx the number of tokens to sell
      * @param amplificationParams amplification parameters for the pool
     * @param feeParams fee parameters for the pool
      * @return dy the number of tokens the user will get

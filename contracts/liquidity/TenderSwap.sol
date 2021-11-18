@@ -1,5 +1,4 @@
 // SPDX-FileCopyrightText: 2021 Tenderize <info@tenderize.me>
-
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.8.4;
@@ -13,7 +12,6 @@ import "./LiquidityPoolToken.sol";
 import "./SwapUtils.sol";
 import "./ITenderSwap.sol";
 
-// TODO: Ownership
 // TODO: Pausable if upgradeable ? 
 // TODO: flat withdraw LP token fee ?
 
@@ -22,15 +20,26 @@ interface IERC20Decimals is IERC20 {
     function decimals() external view returns (uint8);
 }
 
+/**
+ * @title TenderSwap
+ * @dev TenderSwap is a light-weight StableSwap implementation for two assets.
+        * See the Curve StableSwap paper for more details (https://curve.fi/files/stableswap-paper.pdf).
+        * that trade 1:1 with eachother (e.g. USD stablecoins or tenderToken derivatives vs their underlying assets).
+        * It supports Elastic Supply ERC20 tokens,
+        * which are tokens of which the balances can change 
+        * as the total supply of the token 'rebases'.
+ */
+
 contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSwap {
     using SafeERC20 for IERC20;
     using SwapUtils for SwapUtils.Amplification;
     using SwapUtils for SwapUtils.PooledToken;
     using SwapUtils for SwapUtils.FeeParams;
 
-    // fee calculation
+    // Fee parameters
     SwapUtils.FeeParams public feeParams;
 
+    // Amplification coefficient parameters
     SwapUtils.Amplification public amplificationParams;
 
     // Pool Tokens
@@ -57,15 +66,15 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
      * LP positions. The owner of LPToken will be this contract - which means
      * only this contract is allowed to mint/burn tokens.
      *
-     * @param _token0 Elastic supply tenderToken derivative this pool will accept
-     * @param _token1 Standard ERC-20 token for the underlying tenderToken this pool will accept
+     * @param _token0 First token in the pool
+     * @param _token1 Second token in the pool
      * @param lpTokenName the long-form name of the token to be deployed
      * @param lpTokenSymbol the short symbol for the token to be deployed
      * @param _a the amplification coefficient * n * (n - 1). See the
      * StableSwap paper for details
      * @param _fee default swap fee to be initialized with
      * @param _adminFee default adminFee to be initialized with
-     * @param lpTokenTargetAddress the address of an existing LPToken contract to use as a target
+     * @param lpTokenTargetAddress the address of an existing LiquidityPoolToken contract to use as a target
      */
     function initialize(
         IERC20 _token0,
@@ -146,10 +155,20 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
         return amplificationParams.getAPrecise();
     }
 
+    /**
+     * @notice Returns the contract address for token0
+     * @dev EVM return type is IERC20
+     * @return token0 contract address
+     */
     function getToken0() external view override returns (IERC20) {
         return token0.token;
     }
 
+    /**
+     * @notice Returns the contract address for token1
+     * @dev EVM return type is IERC20
+     * @return token1 contract address
+     */
     function getToken1() external view override returns (IERC20) {
         return token1.token;
     }
@@ -189,10 +208,11 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
         IERC20 _tokenFrom,
         uint256 _dx
     ) external view override returns (uint256) {
-        if (_tokenFrom == token0.token) {
-            return SwapUtils.calculateSwap(token0, token1, _dx, amplificationParams, feeParams);
-        }
-        return SwapUtils.calculateSwap(token1, token0, _dx, amplificationParams, feeParams);
+        return _tokenFrom == token0.token ?             
+                SwapUtils.calculateSwap(token0, token1, _dx, amplificationParams, feeParams)
+            :
+                SwapUtils.calculateSwap(token1, token0, _dx, amplificationParams, feeParams)
+            ;
     }
 
     /**
@@ -215,7 +235,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
      * @notice Calculate the amount of underlying token available to withdraw
      * when withdrawing via only single token
      * @param tokenAmount the amount of LP token to burn
-     * @param tokenReceive index of which token will be withdrawn
+     * @param tokenReceive the token to receive
      * @return availableTokenAmount calculated amount of underlying token
      * available to withdraw
      */
@@ -271,9 +291,10 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
 
     /**
      * @notice Swap two tokens using this pool
-     * @param _tokenFrom the token the user wants to swap from
+     * @dev revert is token being sold is not in the pool
+     * @param _tokenFrom the token the user wants to sell
      * @param _dx the amount of tokens the user wants to swap from
-     * @param _minDy the min amount the user would like to receive, or revert.
+     * @param _minDy the min amount the user would like to receive, or revert
      * @param _deadline latest timestamp to accept this transaction
      */
     function swap(
@@ -288,11 +309,13 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
         deadlineCheck(_deadline)
         returns (uint256)
     {
-        // TODO: emit event
         if (_tokenFrom == token0.token) {
             return SwapUtils.swap(token0, token1, _dx, _minDy, amplificationParams, feeParams);
+        } else if (_tokenFrom == token1.token) {
+            return SwapUtils.swap(token1, token0, _dx, _minDy, amplificationParams, feeParams);
+        } else {
+            revert("BAD_TOKEN_FROM");
         }
-        return SwapUtils.swap(token1, token0, _dx, _minDy, amplificationParams, feeParams);
     }
 
     /**
@@ -350,7 +373,6 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
      * @notice Remove liquidity from the pool all in one token.
      * @param _tokenAmount the amount of the token you want to receive
      * @param _tokenReceive the  token you want to receive
-     * &param _tokenSwap the token you want to swap for
      * @param _minAmount the minimum amount to withdraw, otherwise revert
      * @param _deadline latest timestamp to accept this transaction
      * @return amount of chosen token user received
