@@ -51,7 +51,7 @@ describe('Controller', () => {
       signers[0]
     )
 
-    const tenderToken = (await TenderTokenFactory.deploy('tender-TestToken', 't-TEST')) as TenderToken
+    const tenderToken = (await TenderTokenFactory.deploy('tender-TestToken', 't-TEST', tenderizer)) as TenderToken
     tenderTokenMock = await smockit(tenderToken)
   })
 
