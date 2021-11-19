@@ -320,11 +320,14 @@ describe('Livepeer Integration Test', () => {
   describe('collect fees', () => {
     let fees: BigNumber
     let ownerBalBefore: BigNumber
+    let otherAccBalBefore: BigNumber
 
     before(async () => {
       fees = await Tenderizer.pendingFees()
       ownerBalBefore = await TenderToken.balanceOf(deployer)
+      otherAccBalBefore = await TenderToken.balanceOf(signers[2].address)
       tx = await Controller.collectFees()
+      await Controller.rebase()
     })
 
     it('should reset pendingFees', async () => {
@@ -333,6 +336,10 @@ describe('Livepeer Integration Test', () => {
 
     it('should increase tenderToken balance of owner', async () => {
       expect(await TenderToken.balanceOf(deployer)).to.eq(ownerBalBefore.add(fees))
+    })
+
+    it('should not change balance of other account', async () => {
+      expect(await TenderToken.balanceOf(signers[2].address)).to.eq(otherAccBalBefore)
     })
 
     it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
@@ -344,11 +351,13 @@ describe('Livepeer Integration Test', () => {
     let fees: BigNumber
     let farmBalanceBefore: BigNumber
     let mockTenderFarm : SignerWithAddress
+    let acc0BalBefore: BigNumber
 
     before(async () => {
       mockTenderFarm = signers[3]
       fees = await Tenderizer.pendingLiquidityFees()
       farmBalanceBefore = await TenderToken.balanceOf(mockTenderFarm.address)
+      acc0BalBefore = await TenderToken.balanceOf(deployer)
       tx = await Controller.collectLiquidityFees()
     })
 
@@ -358,6 +367,10 @@ describe('Livepeer Integration Test', () => {
 
     it('should increase tenderToken balance of tenderFarm', async () => {
       expect(await TenderToken.balanceOf(mockTenderFarm.address)).to.eq(farmBalanceBefore.add(fees))
+    })
+
+    it('should not change balance of other account', async () => {
+      expect(await TenderToken.balanceOf(deployer)).to.eq(acc0BalBefore)
     })
 
     it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
