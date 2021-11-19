@@ -1,7 +1,7 @@
 import hre, { ethers } from 'hardhat'
 
 import {
-  Controller, ElasticSupplyPool, TenderToken, ILivepeer, BPool, Livepeer, ERC20
+  Controller, ElasticSupplyPool, TenderToken, ILivepeer, BPool, Livepeer, ERC20, TenderFarm
 } from '../../typechain'
 
 import bondingManagerAbi from './abis/livepeer/BondingManager.json'
@@ -33,6 +33,7 @@ describe('Livepeer Mainnet Fork Test', () => {
   let TenderToken: TenderToken
   let Esp: ElasticSupplyPool
   let BPool: BPool
+  let TenderFarm: TenderFarm
 
   let Livepeer: {[name: string]: Deployment}
 
@@ -116,6 +117,7 @@ describe('Livepeer Mainnet Fork Test', () => {
     TenderToken = (await ethers.getContractAt('TenderToken', Livepeer.TenderToken.address)) as TenderToken
     Esp = (await ethers.getContractAt('ElasticSupplyPool', Livepeer.ElasticSupplyPool.address)) as ElasticSupplyPool
     BPool = (await ethers.getContractAt('BPool', await Esp.bPool())) as BPool
+    TenderFarm = (await ethers.getContractAt('TenderFarm', Livepeer.TenderFarm.address)) as TenderFarm
     await Controller.batchExecute(
       [Tenderizer.address, Tenderizer.address, Tenderizer.address],
       [0, 0, 0],
@@ -176,9 +178,10 @@ describe('Livepeer Mainnet Fork Test', () => {
   })
 
   describe('rebase', () => {
+    let newStakeMinusFees: BigNumber
+    let newPrinciple: BigNumber
     describe('stake increased', () => {
       let increase: BigNumber
-      let newStakeMinusFees: BigNumber
       let newStake: BigNumber
       let totalShares: BigNumber = ethers.utils.parseEther('1')
 
@@ -238,11 +241,13 @@ describe('Livepeer Mainnet Fork Test', () => {
         newStake = deposit.add(initialStake).add(increase)
         newStakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
         tx = await Controller.rebase()
+        console.log((await bondingManager.pendingStake(Tenderizer.address, MAX_ROUND)).toString())
       })
 
       it('updates currentPrincipal', async () => {
         // Account for any slippage in the swap
-        expect((await Tenderizer.currentPrincipal()).sub(newStakeMinusFees).abs())
+        newPrinciple = await Tenderizer.currentPrincipal()
+        expect(newPrinciple.sub(newStakeMinusFees).abs())
           .to.lt(ethers.utils.parseEther(acceptableDelta.toString()))
       })
 
@@ -272,6 +277,30 @@ describe('Livepeer Mainnet Fork Test', () => {
         expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
       })
     })
+
+    describe('stake stays the same', () => {
+      let feesBefore: BigNumber
+      before(async () => {
+        feesBefore = await Tenderizer.pendingFees()
+        console.log((await bondingManager.pendingStake(Tenderizer.address, MAX_ROUND)).toString())
+        await Controller.rebase()
+        console.log((await bondingManager.pendingStake(Tenderizer.address, MAX_ROUND)).toString())
+      })
+
+      it('currentPrincipal stays the same', async () => {
+        // Account for any slippage in the swap
+        // expect((await Tenderizer.currentPrincipal()).sub(newStakeMinusFees).abs())
+        //   .to.lte(ethers.utils.parseEther(acceptableDelta.toString()))
+        expect(await Tenderizer.currentPrincipal()).to.eq(newPrinciple)
+      })
+
+      it('pending fees stay the same', async () => {
+        // Account for any slippage in the swap
+        // expect((await Tenderizer.pendingFees()).sub(feesBefore).abs())
+        //   .to.lte(ethers.utils.parseEther(acceptableDelta.toString()))
+        expect(await Tenderizer.pendingFees()).to.eq(feesBefore)
+      })
+    })
   })
 
   describe('collect fees', () => {
@@ -289,7 +318,8 @@ describe('Livepeer Mainnet Fork Test', () => {
     })
 
     it('should increase tenderToken balance of owner', async () => {
-      expect(await TenderToken.balanceOf(deployer)).to.eq(ownerBalBefore.add(fees))
+      expect((await TenderToken.balanceOf(deployer)).sub(ownerBalBefore.add(fees)).abs())
+        .to.lte(acceptableDelta)
     })
 
     it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
@@ -300,12 +330,10 @@ describe('Livepeer Mainnet Fork Test', () => {
   describe('collect liquidity fees', () => {
     let fees: BigNumber
     let farmBalanceBefore: BigNumber
-    let mockTenderFarm : SignerWithAddress
 
     before(async () => {
-      mockTenderFarm = signers[3]
       fees = await Tenderizer.pendingLiquidityFees()
-      farmBalanceBefore = await TenderToken.balanceOf(mockTenderFarm.address)
+      farmBalanceBefore = await TenderToken.balanceOf(TenderFarm.address)
       tx = await Controller.collectLiquidityFees()
     })
 
@@ -314,7 +342,8 @@ describe('Livepeer Mainnet Fork Test', () => {
     })
 
     it('should increase tenderToken balance of tenderFarm', async () => {
-      expect(await TenderToken.balanceOf(mockTenderFarm.address)).to.eq(farmBalanceBefore.add(fees))
+      expect((await TenderToken.balanceOf(TenderFarm.address)).sub(farmBalanceBefore.add(fees)).abs())
+        .to.lte(acceptableDelta)
     })
 
     it('should emit ProtocolFeeCollected event from Tenderizer', async () => {

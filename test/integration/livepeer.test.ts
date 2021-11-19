@@ -216,13 +216,16 @@ describe('Livepeer Integration Test', () => {
   })
 
   describe('rebase', () => {
+    let newStake: BigNumber
+    let newStakeMinusFees: BigNumber
+    let swappedLPTRewards: BigNumber
     describe('stake increased', () => {
       const increase = ethers.BigNumber.from('10000000000')
-      const swappedLPTRewards = ethers.BigNumber.from('100000000')
+      swappedLPTRewards = ethers.BigNumber.from('100000000')
       const liquidityFees = percOf2(increase.add(swappedLPTRewards), liquidityFeesPercent)
       const protocolFees = percOf2(increase.add(swappedLPTRewards), protocolFeesPercent)
-      const newStake = deposit.add(initialStake).add(increase)
-      const newStakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
+      newStake = deposit.add(initialStake).add(increase)
+      newStakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
       let totalShares: BigNumber = ethers.utils.parseEther('1')
 
       before(async () => {
@@ -235,6 +238,7 @@ describe('Livepeer Integration Test', () => {
       })
 
       it('updates currentPrincipal', async () => {
+        console.log('newStakeMinusFees', newStakeMinusFees.toString())
         expect(await Tenderizer.currentPrincipal()).to.eq(newStakeMinusFees)
       })
 
@@ -258,16 +262,37 @@ describe('Livepeer Integration Test', () => {
         expect(await BPool.getNormalizedWeight(TenderToken.address)).to.be.eq(ethers.utils.parseEther('1').div(2))
       })
 
-      it('does not withdraw fees is less than threshold', async () => {
-        LivepeerMock.smocked.pendingFees.will.return.with(ethers.constants.Zero)
-        await Controller.rebase()
-        expect(LivepeerMock.smocked.withdrawFees.calls.length).to.eq(0)
-      })
-
       it('should emit RewardsClaimed event from Tenderizer', async () => {
         expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
           .withArgs(increase.add(swappedLPTRewards), newStakeMinusFees, deposit.add(initialStake))
       })
+    })
+
+    describe('stake stays the same', () => {
+      let feesBefore: BigNumber
+      before(async () => {
+        LivepeerMock.smocked.pendingStake.will.return.with(newStake.add(swappedLPTRewards))
+        LivepeerMock.smocked.pendingFees.will.return.with(ethers.constants.Zero)
+        feesBefore = await Tenderizer.pendingFees()
+        await Controller.rebase()
+      })
+
+      it('currentPrincipal stays the same', async () => {
+        expect(await Tenderizer.currentPrincipal()).to.eq(newStakeMinusFees)
+      })
+
+      it('pending fees stay the same', async () => {
+        expect(await Tenderizer.pendingFees()).to.eq(feesBefore)
+      })
+
+      it('does not withdraw fees since less than threshold', async () => {
+        expect(LivepeerMock.smocked.withdrawFees.calls.length).to.eq(0)
+      })
+
+      // it('should emit RewardsClaimed event from Tenderizer', async () => {
+      //   expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
+      //     .withArgs(0, newStake.add(swappedLPTRewards), newStake.add(swappedLPTRewards))
+      // })
     })
 
     describe('stake decrease', () => {
@@ -290,7 +315,7 @@ describe('Livepeer Integration Test', () => {
       before(async () => {
         feesBefore = await Tenderizer.pendingFees()
         LivepeerMock.smocked.pendingStake.will.return.with(newStake)
-
+        LivepeerMock.smocked.pendingFees.will.return.with(ethers.constants.Zero)
         expectedCP = newStake.sub(protocolFees).sub(liquidityFees)
         tx = await Controller.rebase()
       })
@@ -362,12 +387,11 @@ describe('Livepeer Integration Test', () => {
   describe('collect liquidity fees', () => {
     let fees: BigNumber
     let farmBalanceBefore: BigNumber
-    let mockTenderFarm : SignerWithAddress
     let acc0BalBefore: BigNumber
 
     before(async () => {
       fees = await Tenderizer.pendingLiquidityFees()
-      farmBalanceBefore = await TenderToken.balanceOf(mockTenderFarm.address)
+      farmBalanceBefore = await TenderToken.balanceOf(TenderFarm.address)
       acc0BalBefore = await TenderToken.balanceOf(deployer)
       tx = await Controller.collectLiquidityFees()
     })
