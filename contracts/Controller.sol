@@ -12,6 +12,7 @@ import "./token/ITenderToken.sol";
 import "./tenderizer/ITenderizer.sol";
 import "./liquidity/IElasticSupplyPool.sol";
 import "./liquidity/ITenderFarm.sol";
+import "hardhat/console.sol";
 
 /**
  * @title Controller contract for a Tenderizer
@@ -237,11 +238,13 @@ contract Controller is Initializable, ReentrancyGuard {
     function _collectLiquidityFees() internal {
         if (tenderFarm.nextTotalStake() == 0) return;
         // collect fees and get amount
-        uint256 amount = tenderizer.collectLiquidityFees();
-
+        uint256 amount = tenderizer.pendingLiquidityFees();
+        console.log("sjares %s", tenderToken.tokensToShares(amount));
         // mint tenderToken and transfer to tenderFarm
         tenderToken.mint(address(this), amount);
+        tenderizer.collectLiquidityFees();
         tenderToken.approve(address(tenderFarm), amount);
+        console.log("sjares %s", tenderToken.tokensToShares(amount));
         tenderFarm.addRewards(amount);
     }
 }

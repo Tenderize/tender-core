@@ -38,4 +38,6 @@ interface ITenderizer {
     function setLiquidityFee(uint256 _liquidityFee) external;
 
     function setStakingContract(address _stakingContract) external;
+
+    function pendingLiquidityFees() external view returns (uint256);
 }

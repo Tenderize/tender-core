@@ -25,7 +25,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     uint256 public protocolFee;
     uint256 public liquidityFee;
     uint256 public pendingFees; // pending protocol fees since last distribution
-    uint256 public pendingLiquidityFees;
+    uint256 public override pendingLiquidityFees;
     uint256 public currentPrincipal; // Principal since last claiming earnings
 
     mapping(uint256 => UnstakeLock) public unstakeLocks;
@@ -207,6 +207,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         // set pendingFees to 0
         // Controller will mint tenderToken and distribute it
         uint256 before = pendingLiquidityFees;
+        currentPrincipal += before;
         pendingLiquidityFees = 0;
         emit LiquidityFeeCollected(before);
         return before;
