@@ -332,10 +332,12 @@ describe('Livepeer Integration Test', () => {
   describe('collect fees', () => {
     let fees: BigNumber
     let ownerBalBefore: BigNumber
+    let otherAccBalBefore: BigNumber
 
     before(async () => {
       fees = await Tenderizer.pendingFees()
       ownerBalBefore = await TenderToken.balanceOf(deployer)
+      otherAccBalBefore = await TenderToken.balanceOf(signers[2].address)
       tx = await Controller.collectFees()
       await tx.wait()
     })
@@ -348,6 +350,10 @@ describe('Livepeer Integration Test', () => {
       expect(await TenderToken.balanceOf(deployer)).to.eq(ownerBalBefore.add(fees).sub(1))
     })
 
+    it('should not change balance of other account', async () => {
+      expect(await TenderToken.balanceOf(signers[2].address)).to.eq(otherAccBalBefore)
+    })
+
     it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
       await expect(tx).to.emit(Tenderizer, 'ProtocolFeeCollected').withArgs(fees)
     })
@@ -356,10 +362,12 @@ describe('Livepeer Integration Test', () => {
   describe('collect liquidity fees', () => {
     let fees: BigNumber
     let farmBalanceBefore: BigNumber
+    let acc0BalBefore: BigNumber
 
     before(async () => {
       fees = await Tenderizer.pendingLiquidityFees()
-      farmBalanceBefore = await TenderToken.balanceOf(TenderFarm.address)
+      farmBalanceBefore = await TenderToken.balanceOf(mockTenderFarm.address)
+      acc0BalBefore = await TenderToken.balanceOf(deployer)
       tx = await Controller.collectLiquidityFees()
     })
 
@@ -369,6 +377,10 @@ describe('Livepeer Integration Test', () => {
 
     it('should increase tenderToken balance of tenderFarm', async () => {
       expect(await TenderToken.balanceOf(TenderFarm.address)).to.eq(farmBalanceBefore.add(fees).sub(1))
+    })
+
+    it('should not change balance of other account', async () => {
+      expect(await TenderToken.balanceOf(deployer)).to.eq(acc0BalBefore)
     })
 
     it('should emit ProtocolFeeCollected event from Tenderizer', async () => {

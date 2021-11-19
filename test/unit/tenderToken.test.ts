@@ -59,6 +59,16 @@ describe('TenderToken', () => {
     // 1
     signers = await ethers.getSigners()
     // 2
+    const TenderizerFactory = await ethers.getContractFactory(
+      'Livepeer',
+      signers[0]
+    )
+
+    const tenderizer = (await TenderizerFactory.deploy()) as Livepeer
+    tenderizerMock = await smockit(tenderizer)
+  })
+
+  beforeEach('Deploy TenderToken', async () => {
     const TokenFactory = await ethers.getContractFactory(
       'TenderToken',
       signers[0]
