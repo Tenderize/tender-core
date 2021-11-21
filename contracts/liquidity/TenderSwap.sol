@@ -412,6 +412,39 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
         }
     }
 
+    /**
+     * @notice Remove liquidity from the pool, weighted differently than the
+     * pool's current balances. Withdraw fee that decays linearly
+     * over period of 4 weeks since last deposit will apply.
+     * @param _amounts how much of each token to withdraw
+     * @param _maxBurnAmount the max LP token provider is willing to pay to
+     * remove liquidity. Useful as a front-running mitigation.
+     * @param _deadline latest timestamp to accept this transaction
+     * @return amount of LP tokens burned
+     */
+    function removeLiquidityImbalance(
+        uint256[2] calldata _amounts,
+        uint256 _maxBurnAmount,
+        uint256 _deadline
+    )
+        external
+        override
+        nonReentrant
+        deadlineCheck(_deadline)
+        returns (uint256)
+    {
+        SwapUtils.PooledToken[2] memory tokens_ = [token0, token1];
+
+        return SwapUtils.removeLiquidityImbalance(
+            tokens_,
+            _amounts,
+            _maxBurnAmount,
+            amplificationParams,
+            feeParams,
+            lpToken
+        );
+    }
+
     /*** ADMIN FUNCTIONS ***/
 
     /**

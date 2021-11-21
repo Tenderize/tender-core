@@ -112,6 +112,30 @@ contract TestSwapReturnValues {
         }
     }
 
+    function test_removeLiquidityImbalance(
+        uint256[2] calldata amounts,
+        uint256 maxBurnAmount
+    ) public {
+        uint256 balanceBefore = lpToken.balanceOf(address(this));
+        uint256 returnValue = swap.removeLiquidityImbalance(
+            amounts,
+            maxBurnAmount,
+            MAX_INT
+        );
+        uint256 balanceAfter = lpToken.balanceOf(address(this));
+
+        console.log(
+            "removeLiquidityImbalance: Expected %s, got %s",
+            balanceBefore - balanceAfter,
+            returnValue
+        );
+
+        require(
+            returnValue == balanceBefore - balanceAfter,
+            "removeLiquidityImbalance()'s return value does not match burned lpToken amount"
+        );
+    }
+
     function test_removeLiquidityOneToken(
         uint256 tokenAmount,
         IERC20 tokenReceive,
