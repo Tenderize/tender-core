@@ -131,6 +131,13 @@ interface ITenderSwap {
         external
         returns (uint256);
 
+        function removeLiquidityImbalance(
+        uint256[2] calldata _amounts,
+        uint256 _maxBurnAmount,
+        uint256 _deadline
+    )
+        external returns(uint256);
+
     /*** ADMIN FUNCTIONALITY ***/
     function setAdminFee(uint256 newAdminFee) external;
     function setSwapFee(uint256 newSwapFee) external;

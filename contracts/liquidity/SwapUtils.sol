@@ -5,7 +5,6 @@
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../libs/MathUtils.sol";
 import "./LiquidityPoolToken.sol";
-import "hardhat/console.sol";
 
 pragma solidity 0.8.4;
 
@@ -403,6 +402,108 @@ library SwapUtils {
         );
 
         return dy;
+    }
+
+    /**
+     * @notice Remove liquidity from the pool, weighted differently than the
+     * pool's current balances.
+     *
+     * @param tokens Array of [token0, token1]
+     * @param amounts how much of each token to withdraw according to cardinality of pooled tokens
+     * @param maxBurnAmount the max LP token provider is willing to pay to
+     * remove liquidity. Useful as a front-running mitigation.
+     * @param amplificationParams amplification parameters for the pool
+     * @param feeParams fee parameters for the pool
+     * @param lpToken Liquidity pool token contract
+     * @return actual amount of LP tokens burned in the withdrawal
+     */
+    function removeLiquidityImbalance(
+        PooledToken[2] memory tokens,
+        uint256[2] memory amounts,
+        uint256 maxBurnAmount,
+        Amplification storage amplificationParams,
+        FeeParams storage feeParams,
+        LiquidityPoolToken lpToken
+    ) public returns (uint256) {
+        ManageLiquidityInfo memory v = ManageLiquidityInfo({
+            d0: 0,
+            d1: 0,
+            d2: 0,
+            preciseA: _getAPrecise(amplificationParams),
+            lpToken: lpToken,
+            totalSupply: 0,
+            tokens: tokens,
+            oldBalances: [uint256(0), uint256(0)],
+            newBalances: [uint256(0), uint256(0)]
+        });
+
+        v.totalSupply = v.lpToken.totalSupply();
+
+        // Get the current pool invariant d0
+        if (v.totalSupply != 0) {
+            uint256 _bal0 = _getTokenBalance(tokens[0].token);
+            uint256 _bal1 = _getTokenBalance(tokens[1].token);
+            v.oldBalances = [_bal0, _bal1];
+            uint256 xp0 = _xp(_bal0, tokens[0].precisionMultiplier);
+            uint256 xp1 = _xp(_bal1, tokens[1].precisionMultiplier);
+            v.d0 = getD(xp0, xp1, v.preciseA);
+        }
+
+        // calculate pool invariant after balance changes d1
+        {   
+            require(v.oldBalances[0] >= amounts[0], "AMOUNT_EXCEEDS_BALANCE");
+            require(v.oldBalances[1] >= amounts[1], "AMOUNT_EXCEEDS_BALANCE");
+
+            uint256 _bal0 = v.oldBalances[0] - amounts[0];
+            uint256 _bal1 = v.oldBalances[1] - amounts[1];
+            v.newBalances = [_bal0, _bal1];
+            uint256 _xp0 = _xp(_bal0, tokens[0].precisionMultiplier);
+            uint256 _xp1 = _xp(_bal1, tokens[1].precisionMultiplier);
+            v.d1 = getD(_xp0, _xp1, v.preciseA);
+        }
+
+        // calculate swap fees
+        v.d2 = v.d1;
+
+        // first entrant doesn't pay fees
+        uint256[2] memory fees;
+        uint256 feePerToken = _feePerToken(feeParams.swapFee);
+
+        for (uint256 i=0; i < tokens.length; i++) {
+            uint256 idealBal = v.d1 * v.oldBalances[i] / v.d0;
+            feePerToken * idealBal.difference(v.newBalances[i]) / FEE_DENOMINATOR;
+            fees[i] = feePerToken * idealBal.difference(v.newBalances[i]) / FEE_DENOMINATOR;
+            v.newBalances[i] = v.newBalances[i] - fees[i];
+            // TODO: handle admin fee
+        }
+
+        // calculate invariant after subtracting fees, d2
+        {
+            uint256 _xp0 = _xp(v.newBalances[0], tokens[0].precisionMultiplier);
+            uint256 _xp1 = _xp(v.newBalances[1], tokens[1].precisionMultiplier);
+            v.d2 = getD(_xp0, _xp1, v.preciseA);
+        }
+        
+        uint256 tokenAmount = (v.d0 - v.d2) * v.totalSupply / v.d0;
+        require(tokenAmount != 0, "Burnt amount cannot be zero");
+
+        require(tokenAmount <= maxBurnAmount, "tokenAmount > maxBurnAmount");
+
+        v.lpToken.burnFrom(msg.sender, tokenAmount);
+
+        for (uint256 i = 0; i < tokens.length; i++) {
+            tokens[i].token.safeTransfer(msg.sender, amounts[i]);
+        }
+
+        emit RemoveLiquidityImbalance(
+            msg.sender,
+            amounts,
+            fees,
+            v.d1,
+            v.totalSupply - tokenAmount
+        );
+
+        return tokenAmount;
     }
 
     /**
