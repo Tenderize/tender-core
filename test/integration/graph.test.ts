@@ -3,7 +3,7 @@ import hre, { ethers } from 'hardhat'
 import { MockContract, smockit } from '@eth-optimism/smock'
 
 import {
-  SimpleToken, Controller, Tenderizer, ElasticSupplyPool, TenderToken, IGraph, BPool, EIP173Proxy
+  SimpleToken, Controller, Tenderizer, ElasticSupplyPool, TenderToken, IGraph, BPool, EIP173Proxy, TenderFarm
 } from '../../typechain/'
 
 import { sharesToTokens, percOf2 } from '../util/helpers'
@@ -31,6 +31,7 @@ describe('Graph Integration Test', () => {
   let TenderToken: TenderToken
   let Esp: ElasticSupplyPool
   let BPool: BPool
+  let TenderFarm: TenderFarm
 
   let Graph: {[name: string]: Deployment}
 
@@ -95,6 +96,7 @@ describe('Graph Integration Test', () => {
     TenderToken = (await ethers.getContractAt('TenderToken', Graph.TenderToken.address)) as TenderToken
     Esp = (await ethers.getContractAt('ElasticSupplyPool', Graph.ElasticSupplyPool.address)) as ElasticSupplyPool
     BPool = (await ethers.getContractAt('BPool', await Esp.bPool())) as BPool
+    TenderFarm = (await ethers.getContractAt('TenderFarm', Graph.TenderFarm.address)) as TenderFarm
     await Controller.execute(
       Tenderizer.address,
       0,
@@ -164,12 +166,12 @@ describe('Graph Integration Test', () => {
   })
 
   describe('rebase', () => {
+    const increase = ethers.BigNumber.from('10000000000')
+    const liquidityFees = percOf2(increase, liquidityFeesPercent)
+    const protocolFees = percOf2(increase, protocolFeesPercent)
+    const newStake = supplyAfterTax.add(increase)
+    const newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
     describe('stake increased', () => {
-      const increase = ethers.BigNumber.from('10000000000')
-      const liquidityFees = percOf2(increase, liquidityFeesPercent)
-      const protocolFees = percOf2(increase, protocolFeesPercent)
-      const newStake = supplyAfterTax.add(increase)
-      const newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
       let totalShares: BigNumber = ethers.utils.parseEther('1')
       let tx: ContractTransaction
 
@@ -222,6 +224,22 @@ describe('Graph Integration Test', () => {
       })
     })
 
+    describe('stake stays the same', () => {
+      let feesBefore: BigNumber
+      before(async () => {
+        feesBefore = await Tenderizer.pendingFees()
+        await Controller.rebase()
+      })
+
+      it('currentPrincipal increases by swappedLPTRewards', async () => {
+        expect(await Tenderizer.currentPrincipal()).to.eq(newStakeMinusFees)
+      })
+
+      it('pending fees stay the same', async () => {
+        expect(await Tenderizer.pendingFees()).to.eq(feesBefore)
+      })
+    })
+
     describe('stake decrease', () => {
       // The decrease will offset the increase from the previous test
       const newStake = supplyAfterTax
@@ -230,6 +248,9 @@ describe('Graph Integration Test', () => {
 
       let feesBefore: BigNumber = ethers.constants.Zero
       let tx: ContractTransaction
+
+      // calculate stake before rebase - fees
+      const expectedCP = newStake.sub(liquidityFees).sub(protocolFees)
 
       before(async () => {
         feesBefore = await Tenderizer.pendingFees()
@@ -253,7 +274,7 @@ describe('Graph Integration Test', () => {
       })
 
       it('updates currentPrincipal', async () => {
-        expect(await Tenderizer.currentPrincipal()).to.eq(newStake)
+        expect(await Tenderizer.currentPrincipal()).to.eq(expectedCP)
       })
 
       it('decreases tendertoken balances when slashed', async () => {
@@ -281,7 +302,7 @@ describe('Graph Integration Test', () => {
       })
 
       it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
-        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs('0', newStake, oldPrinciple)
+        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs('0', expectedCP, oldPrinciple)
       })
     })
   })
@@ -290,11 +311,14 @@ describe('Graph Integration Test', () => {
     let fees: BigNumber
     let ownerBalBefore: BigNumber
     let tx: ContractTransaction
+    let otherAccBalBefore: BigNumber
 
     before(async () => {
       fees = await Tenderizer.pendingFees()
       ownerBalBefore = await TenderToken.balanceOf(deployer)
+      otherAccBalBefore = await TenderToken.balanceOf(signers[2].address)
       tx = await Controller.collectFees()
+      await tx.wait()
     })
 
     it('should reset pendingFees', async () => {
@@ -305,8 +329,41 @@ describe('Graph Integration Test', () => {
       expect(await TenderToken.balanceOf(deployer)).to.eq(ownerBalBefore.add(fees))
     })
 
+    it('should not change balance of other account', async () => {
+      expect(await TenderToken.balanceOf(signers[2].address)).to.eq(otherAccBalBefore)
+    })
+
     it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
       expect(tx).to.emit(Tenderizer, 'ProtocolFeeCollected').withArgs(fees)
+    })
+  })
+
+  describe('collect liquidity fees', () => {
+    let fees: BigNumber
+    let farmBalanceBefore: BigNumber
+    let acc0BalBefore: BigNumber
+
+    before(async () => {
+      fees = await Tenderizer.pendingLiquidityFees()
+      farmBalanceBefore = await TenderToken.balanceOf(TenderFarm.address)
+      acc0BalBefore = await TenderToken.balanceOf(deployer)
+      tx = await Controller.collectLiquidityFees()
+    })
+
+    it('should reset pendingFees', async () => {
+      expect(await Tenderizer.pendingLiquidityFees()).to.eq(ethers.constants.Zero)
+    })
+
+    it('should increase tenderToken balance of tenderFarm', async () => {
+      expect((await TenderToken.balanceOf(TenderFarm.address)).sub(farmBalanceBefore.add(fees)).abs()).to.lte(acceptableDelta)
+    })
+
+    it('should not change balance of other account', async () => {
+      expect(await TenderToken.balanceOf(deployer)).to.eq(acc0BalBefore)
+    })
+
+    it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
+      expect(tx).to.emit(Tenderizer, 'LiquidityFeeCollected').withArgs(fees)
     })
   })
 

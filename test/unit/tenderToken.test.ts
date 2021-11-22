@@ -2,6 +2,7 @@ import hre, {
   ethers
 } from 'hardhat'
 import ethersTypes, { BigNumber } from 'ethers'
+import { MockContract, smockit } from '@eth-optimism/smock'
 import chai from 'chai'
 import {
   solidity
@@ -15,6 +16,7 @@ import * as rpc from '../util/snapshot'
 import { getSignature, getDomainSeparator } from '../util/eip_712'
 
 import { sharesToTokens, tokensToShares } from '../util/helpers'
+import { Livepeer } from '../../typechain/Livepeer'
 
 chai.use(solidity)
 const {
@@ -25,6 +27,7 @@ describe('TenderToken', () => {
   let snapshotId: any
 
   let tenderToken: TenderToken
+  let tenderizerMock: MockContract
   let signers: ethersTypes.Signer[]
 
   let account0: string
@@ -39,10 +42,33 @@ describe('TenderToken', () => {
     await rpc.revert(snapshotId)
   })
 
+  beforeEach('Deploy Tenderizer Mock', async () => {
+    // 1
+    signers = await ethers.getSigners()
+    // 2
+    const TenderizerFactory = await ethers.getContractFactory(
+      'Livepeer',
+      signers[0]
+    )
+
+    const tenderizer = (await TenderizerFactory.deploy()) as Livepeer
+    tenderizerMock = await smockit(tenderizer)
+  })
+
   beforeEach('Deploy TenderToken', async () => {
     // 1
     signers = await ethers.getSigners()
     // 2
+    const TenderizerFactory = await ethers.getContractFactory(
+      'Livepeer',
+      signers[0]
+    )
+
+    const tenderizer = (await TenderizerFactory.deploy()) as Livepeer
+    tenderizerMock = await smockit(tenderizer)
+  })
+
+  beforeEach('Deploy TenderToken', async () => {
     const TokenFactory = await ethers.getContractFactory(
       'TenderToken',
       signers[0]
@@ -52,7 +78,7 @@ describe('TenderToken', () => {
     account1 = await signers[1].getAddress()
     account2 = await signers[2].getAddress()
 
-    tenderToken = (await TokenFactory.deploy('Mock', 'MCK')) as TenderToken
+    tenderToken = (await TokenFactory.deploy('Mock', 'MCK', tenderizerMock.address)) as TenderToken
     await tenderToken.deployed()
   })
 
@@ -70,6 +96,10 @@ describe('TenderToken', () => {
     })
 
     describe('Test initial state with zero supply', async () => {
+      before(async () => {
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(0)
+      })
+
       it('initial total supply is correct', async () => {
         expect(await tenderToken.totalSupply()).to.eq(ethers.utils.parseEther('0'))
       })
@@ -136,7 +166,7 @@ describe('TenderToken', () => {
       it('balances aren\'t changed even if total pooled ether increased', async () => {
         const amount = ethers.utils.parseEther('1')
         const to = await signers[1].getAddress()
-        await tenderToken.setTotalPooledTokens(amount)
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(amount)
 
         expect(await tenderToken.totalSupply()).to.eq(amount)
         expect(await tenderToken.balanceOf(to)).to.eq(ethers.constants.Zero)
@@ -148,6 +178,7 @@ describe('TenderToken', () => {
 
       beforeEach(async () => {
         await tenderToken.mint(account0, initialAmount)
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(initialAmount)
       })
 
       afterEach(async () => {
@@ -389,7 +420,7 @@ describe('TenderToken', () => {
 
       const divisor = ethers.constants.Two
       const newSupply = totalSupply.div(divisor)
-      await tenderToken.setTotalPooledTokens(newSupply)
+      tenderizerMock.smocked.totalStakedTokens.will.return.with(newSupply)
 
       expect(await tenderToken.balanceOf(account0)).to.eq(acc0Balance.div(divisor))
       expect(await tenderToken.balanceOf(account2)).to.eq(acc2Balance.div(divisor))
@@ -445,7 +476,7 @@ describe('TenderToken', () => {
 
         // totalSupply == totalPooledTokens
         await tenderToken.mint(account0, mint0)
-        await tenderToken.setTotalPooledTokens(mint0)
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(mint0)
 
         expect(await tenderToken.totalSupply()).to.eq(mint0)
         expect(await tenderToken.getTotalShares()).to.eq(mint0)
@@ -457,9 +488,10 @@ describe('TenderToken', () => {
         expect(await tenderToken.sharesOf(account2)).to.eq(ethers.constants.Zero)
 
         // shares > totalPooledTokens
+        // 100 shares > 50 pooledTokens
         const multiplier = ethers.BigNumber.from(2)
         await tenderToken.mint(account1, mint0)
-        await tenderToken.setTotalPooledTokens(mint0)
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(mint0)
 
         expect(await tenderToken.totalSupply()).to.eq(mint0)
         expect(await tenderToken.getTotalShares()).to.eq(mint0.mul(multiplier))
@@ -472,7 +504,7 @@ describe('TenderToken', () => {
 
         // shares < totalPooledTokens
         const mint1 = ethers.utils.parseEther('200')
-        await tenderToken.setTotalPooledTokens(mint1)
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(mint1)
 
         expect(await tenderToken.totalSupply()).to.eq(mint1)
         expect(await tenderToken.getTotalShares()).to.eq(mint0.mul(multiplier))
@@ -485,6 +517,7 @@ describe('TenderToken', () => {
 
         // Mint for someone
         await tenderToken.mint(account2, mint1)
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(mint1.add(mint1))
         expect(await tenderToken.balanceOf(account2)).to.eq(mint1)
       })
 
@@ -493,14 +526,20 @@ describe('TenderToken', () => {
         await tenderToken.mint(account2, acc2Balance)
 
         const multiplier = BigNumber.from(2)
-        await tenderToken.setTotalPooledTokens(totalSupply.mul(multiplier))
 
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(totalSupply.mul(multiplier))
         const mint0 = ethers.utils.parseEther('10')
         const mint1 = ethers.utils.parseEther('20')
         const mint2 = ethers.utils.parseEther('30')
         await tenderToken.mint(account0, mint0)
+
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(totalSupply.mul(multiplier).add(mint0))
         await tenderToken.mint(account1, mint1)
+
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(totalSupply.mul(multiplier).add(mint0).add(mint1))
         await tenderToken.mint(account2, mint2)
+
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(totalSupply.mul(multiplier).add(mint0).add(mint1).add(mint2))
 
         expect(await tenderToken.balanceOf(account0)).to.eq(acc0Balance.mul(multiplier).add(mint0))
         expect(await tenderToken.balanceOf(account1)).to.eq(mint1)
@@ -521,6 +560,7 @@ describe('TenderToken', () => {
       beforeEach(async () => {
         await tenderToken.mint(account0, acc0Balance)
         await tenderToken.mint(account1, acc1Balance)
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(totalSupply)
       })
 
       it('reverts if msg.sender is not owner', async () => {
@@ -557,6 +597,7 @@ describe('TenderToken', () => {
         const tokensToBurn = acc1Balance.div(ethers.BigNumber.from(2))
         const zero = ethers.constants.Zero
         await tenderToken.burn(account1, tokensToBurn)
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(totalSupply.sub(tokensToBurn))
 
         expect(await tenderToken.totalSupply()).to.eq(totalSupply.sub(tokensToBurn))
         expect(await tenderToken.balanceOf(account0)).to.eq(acc0Balance)
@@ -572,7 +613,7 @@ describe('TenderToken', () => {
       it('burning after a rebase burns the correct amount of shares', async () => {
         // Burning after rebase yield correct amount of shares burnt
         const multiplier = ethers.BigNumber.from(2)
-        await tenderToken.setTotalPooledTokens(totalSupply.mul(multiplier))
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(totalSupply.mul(multiplier))
 
         expect(await tenderToken.balanceOf(account0)).to.eq(acc0Balance.mul(2))
 
@@ -580,6 +621,8 @@ describe('TenderToken', () => {
         // After the rebase account0's balance is acc0Balance*multiplier (so double)
         const tokensToBurn = acc0Balance.div(multiplier)
         await tenderToken.burn(account0, tokensToBurn)
+
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(totalSupply.mul(multiplier).sub(tokensToBurn))
 
         expect(await tenderToken.totalSupply()).to.eq(totalSupply.mul(multiplier).sub(tokensToBurn))
         expect(await tenderToken.balanceOf(account0)).to.eq(acc0Balance.mul(multiplier).sub(tokensToBurn))
@@ -593,7 +636,7 @@ describe('TenderToken', () => {
 
         const tokensToBurn = acc1Balance.div(ethers.BigNumber.from(2))
         await tenderToken.burn(account0, tokensToBurn)
-
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(totalSupply.sub(tokensToBurn))
         expect(await tenderToken.balanceOf(account0)).eq(acc1Balance.sub(tokensToBurn))
         expect(await tenderToken.allowance(account0, account1)).to.eq(approveAmount)
 
@@ -656,6 +699,7 @@ describe('TenderToken', () => {
         await tenderToken.mint(account0, acc0Balance)
         await tenderToken.mint(account1, acc1Balance)
         await tenderToken.mint(account2, acc2Balance)
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(totalSupply)
       })
 
       it('getTotalSupply', async () => {
@@ -701,7 +745,7 @@ describe('TenderToken', () => {
         const newTotalPooledTokens = totalSupply.add(additionalAmount)
 
         beforeEach(async () => {
-          await tenderToken.setTotalPooledTokens(newTotalPooledTokens)
+          tenderizerMock.smocked.totalStakedTokens.will.return.with(newTotalPooledTokens)
         })
 
         it('getTotalSupply', async () => {
@@ -753,6 +797,7 @@ describe('TenderToken', () => {
         await tenderToken.mint(account0, acc0Balance)
         await tenderToken.mint(account1, acc1Balance)
         await tenderToken.mint(account2, acc2Balance)
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(totalSupply)
       })
 
       it('getTotalSupply', async () => {
@@ -798,7 +843,7 @@ describe('TenderToken', () => {
         const newTotalPooledTokens = totalSupply.add(additionalAmount)
 
         beforeEach(async () => {
-          await tenderToken.setTotalPooledTokens(newTotalPooledTokens)
+          tenderizerMock.smocked.totalStakedTokens.will.return.with(newTotalPooledTokens)
         })
 
         it('getTotalSupply', async () => {
@@ -858,6 +903,7 @@ describe('TenderToken', () => {
 
     beforeEach(async () => {
       await tenderToken.mint(account0, initialAmount)
+      tenderizerMock.smocked.totalStakedTokens.will.return.with(initialAmount)
     })
 
     it('initial nonce is 0', async function () {

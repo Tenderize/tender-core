@@ -7,7 +7,19 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface ITenderizer {
-    function deposit(address _from, uint256 _amount) external returns (uint256 amountOut) ;
+
+    // Events
+    event Deposit(address indexed from, uint256 amount);
+    event Stake(address indexed node, uint256 amount);
+    event Unstake(address indexed from, address indexed node, uint256 amount, uint256 unstakeLockID);
+    event Withdraw(address indexed from, uint256 amount, uint256 unstakeLockID);
+    event RewardsClaimed(uint256 rewards, uint256 currentPrincipal, uint256 oldPrincipal);
+    event ProtocolFeeCollected(uint256 amount);
+    event LiquidityFeeCollected(uint256 amount);
+    event GovernanceUpdate(string _param);
+
+    
+    function deposit(address _from, uint256 _amount) external;
 
     function stake(address _node, uint256 _amount) external;
 
@@ -22,6 +34,13 @@ interface ITenderizer {
     function collectLiquidityFees() external returns (uint256);
 
     function totalStakedTokens() external view returns (uint256);
+
+    function calcDepositOut(uint256 amountIn) external returns (uint256);
+
+    function pendingFees() external view returns (uint256);
+
+    function pendingLiquidityFees() external view returns (uint256);
+
 
     // Governance
 

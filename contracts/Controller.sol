@@ -56,12 +56,14 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
     function deposit(uint256 _amount) public {
         require(_amount > 0, "ZERO_AMOUNT");
 
-        uint256 amountOut = tenderizer.deposit(msg.sender, _amount);
-        // mint tenderTokens
+        // Calculate tenderTokens to be minted
+        uint256 amountOut = tenderizer.calcDepositOut(_amount);
         
+        // mint tenderTokens
         require(tenderToken.mint(msg.sender, amountOut), "TENDER_MINT_FAILED");
 
-        _updateTotalPooledTokens();
+        // deposit tokens
+        tenderizer.deposit(msg.sender, _amount);
 
         // Transfer tokens to tenderizer
         require(steak.transferFrom(msg.sender, address(tenderizer), _amount), "STEAK_TRANSFERFROM_FAILED");
@@ -77,14 +79,12 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
      */
     function unlock(uint256 _amount) public nonReentrant returns (uint256 unstakeLockID) {
         require(_amount > 0, "ZERO_AMOUNT");
+
         // Burn tenderTokens
         require(tenderToken.burn(msg.sender, _amount), "TENDER_BURN_FAILED");
 
         // Unstake tokens for pending withdrawal
         unstakeLockID = tenderizer.unstake(msg.sender, _amount);
-
-        // update total pooled tokens
-        _updateTotalPooledTokens();
     }
 
     /**
@@ -110,14 +110,6 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
 
         // stake tokens
         gulp();
-
-        // update total pooled tokens
-        _updateTotalPooledTokens();
-
-        // Collect governance fees
-        _collectFees();
-        // Collect LP fees
-        _collectLiquidityFees();
 
         // Resync weight for tenderToken
         try esp.resyncWeight(address(tenderToken)) {} catch {
@@ -228,29 +220,20 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
         require(success, string(returnData));
     }
 
-    function _updateTotalPooledTokens() internal {
-        // get total staked tokens
-        uint256 stakedTokens = tenderizer.totalStakedTokens();
-
-        // Set total pooled tokens, rebases tenderToken supply
-        tenderToken.setTotalPooledTokens(stakedTokens);
-    }
-
     function _collectFees() internal {
-        // collect fees and get amount
-        uint256 amount = tenderizer.collectFees();
-
         // mint tenderToken to fee distributor (governance)
-        tenderToken.mint(gov, amount);
+        tenderToken.mint(gov, tenderizer.pendingFees());
+        tenderizer.collectFees();
     }
 
     function _collectLiquidityFees() internal {
         if (tenderFarm.nextTotalStake() == 0) return;
-        // collect fees and get amount
-        uint256 amount = tenderizer.collectLiquidityFees();
 
         // mint tenderToken and transfer to tenderFarm
+        uint256 amount = tenderizer.pendingLiquidityFees();
         tenderToken.mint(address(this), amount);
+        tenderizer.collectLiquidityFees();
+
         tenderToken.approve(address(tenderFarm), amount);
         tenderFarm.addRewards(amount);
     }

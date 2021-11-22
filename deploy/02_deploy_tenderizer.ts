@@ -46,7 +46,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   const tenderToken = await deploy('TenderToken', {
     from: deployer,
-    args: [NAME, SYMBOL],
+    args: [NAME, SYMBOL, tenderizer.address],
     log: true // display the address and gas used in the console (not when run in test though)
   })
 
