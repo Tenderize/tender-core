@@ -15,6 +15,10 @@ import "./liquidity/ITenderSwap.sol";
 
 /**
  * @title Controller contract for a Tenderizer
+ * @notice Entry point for all contract interactions and dependency manager; making required internal transactions
+ * to underlying contracts like the Tenderizer operations (user deposits, staking, unstaking etc),
+ * minting/burning TenderTokens etc
+ * @dev Set as owner of TenderFarm, TenderToken, Tenderizer 
  */
 
 contract Controller is Initializable, ReentrancyGuardUpgradeable {

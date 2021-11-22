@@ -10,6 +10,11 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "../libs/MathUtils.sol";
 import "../token/ITenderToken.sol";
 
+/**
+ * @title TenderFarm
+ * @notice TenderFarm is responsible for incetivizing liquidity providers, by accepting LP Tokens 
+ * and a proportionaly rewarding them with TenderTokens over time
+ */
 contract TenderFarm is Initializable {
     event Farm(address indexed account, uint256 amount);
     event Unfarm(address indexed account, uint256 amount);

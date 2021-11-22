@@ -9,6 +9,12 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 import "./ITenderizer.sol";
 
+/**
+ * @title Tenderizer is the base contract to be implemented
+ * @notice Tenderizer is responsible for all Protocol interactions (staking, unstaking, claiming rewards)
+ * while also keeping track of user depsotis/withdrawals and protocol fees
+ * @dev New implementations are required to inherit this contract and override any required internal functions
+ */
 abstract contract Tenderizer is Initializable, ITenderizer {
     struct UnstakeLock {
         uint256 amount;
@@ -120,6 +126,15 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         _claimRewards();
     }
 
+    /**
+     * @notice Total Staked Tokens returns the total amount of underlying tokens staked by this Tenderizer
+     * @return total amount staked by this Tenderizer
+     */
+    function totalStakedTokens() external view override returns (uint256) {
+        return _totalStakedTokens();
+    }
+
+    // Setter functions
     function setController(address _controller) external override onlyController {
         require(_controller != address(0), "ZERO_ADDRESS");
         controller = _controller;
@@ -152,10 +167,23 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         _setStakingContract(_stakingContract);
     }
 
+    // Fee collection
+    /**
+     * @notice Collect fees pulls any pending governance fees from the Tenderizer to the governance treasury
+     * @return Amount of protocol fees collected
+     * @dev Resets pendingFees
+     * @dev Fees claimed are added to total staked
+     */
     function collectFees() external override onlyController returns (uint256) {
         return _collectFees();
     }
 
+    /**
+     * @notice Collect Liquidity fees pulls any pending LP fees from the Tenderizer to TenderFarm
+     * @return Amount of liquidity fees collected
+     * @dev Resets pendingFees
+     * @dev Fees claimed are added to total staked
+     */
     function collectLiquidityFees() external override onlyController returns (uint256) {
         return _collectLiquidityFees();
     }
@@ -206,6 +234,5 @@ abstract contract Tenderizer is Initializable, ITenderizer {
 
     function _totalStakedTokens() internal view virtual returns (uint256);
 
-    // Internal governance functions
     function _setStakingContract(address _stakingContract) internal virtual;
 }
