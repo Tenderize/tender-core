@@ -12,7 +12,6 @@ import "./LiquidityPoolToken.sol";
 import "./SwapUtils.sol";
 import "./ITenderSwap.sol";
 
-// TODO: Pausable if upgradeable ? 
 // TODO: flat withdraw LP token fee ?
 
 
