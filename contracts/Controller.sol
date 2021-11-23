@@ -6,11 +6,12 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/Clones.sol";
 
 import "./token/ITenderToken.sol";
 import "./tenderizer/ITenderizer.sol";
-import "./liquidity/IElasticSupplyPool.sol";
 import "./liquidity/ITenderFarm.sol";
+import "./liquidity/ITenderSwap.sol";
 
 /**
  * @title Controller contract for a Tenderizer
@@ -20,16 +21,26 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
     IERC20 public steak;
     ITenderizer public tenderizer;
     ITenderToken public tenderToken;
-    IElasticSupplyPool public esp;
+    ITenderSwap public tenderSwap;
     ITenderFarm public tenderFarm;
 
     address public gov;
+
+    struct TenderSwapConfig {
+        address tenderSwapTarget;
+        address lpTokenTarget;
+        string lpTokenName;
+        string lpTokenSymbol; // e.g. tLPT-LPT-SWAP
+        uint256 amplifier;
+        uint256 fee;
+        uint256 adminFee;
+    }
 
     function initialize(
         IERC20 _steak,
         ITenderizer _tenderizer,
         ITenderToken _tenderToken,
-        IElasticSupplyPool _esp
+        TenderSwapConfig calldata _tenderSwapConfig
     ) public initializer {
         __ReentrancyGuard_init_unchained();
         steak = _steak;
@@ -37,8 +48,24 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
         // TODO: consider deploying these contracts using factories and proxies
         // from the constructutor so that deploying a new system is only deploying a single contract
         tenderToken = _tenderToken;
-        esp = _esp;
         gov = msg.sender;
+
+        // Clone an existing LP token deployment in an immutable way
+        // see https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.2.0/contracts/proxy/Clones.sol
+        tenderSwap = ITenderSwap(Clones.clone(_tenderSwapConfig.tenderSwapTarget));
+        require(
+            tenderSwap.initialize(
+                IERC20(address(_tenderToken)),
+                _steak,
+                _tenderSwapConfig.lpTokenName,
+                _tenderSwapConfig.lpTokenSymbol,
+                _tenderSwapConfig.amplifier,
+                _tenderSwapConfig.fee,
+                _tenderSwapConfig.adminFee,
+                _tenderSwapConfig.lpTokenTarget
+            ),
+            "FAIL_INIT_TENDERSWAP"
+        );
     }
 
     modifier onlyGov() {
@@ -110,11 +137,6 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
 
         // stake tokens
         gulp();
-
-        // Resync weight for tenderToken
-        try esp.resyncWeight(address(tenderToken)) {} catch {
-            // No-op
-        }
     }
 
     /**
@@ -144,16 +166,6 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
      */
     function collectLiquidityFees() public onlyGov {
         _collectLiquidityFees();
-    }
-
-    /**
-     * @notice Set Elastic Supply Pool contract
-     * @param _esp Elastic Supply Pool contract address
-     * @dev only callable by owner(gov)
-     */
-    function setEsp(IElasticSupplyPool _esp) public onlyGov {
-        require(address(_esp) != address(0), "ZERO_ADDRESS");
-        esp = _esp;
     }
 
     function migrateToNewTenderizer(ITenderizer _tenderizer) public onlyGov {}

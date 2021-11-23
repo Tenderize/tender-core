@@ -3,7 +3,7 @@ import hre, { ethers } from 'hardhat'
 import { MockContract, smockit } from '@eth-optimism/smock'
 
 import {
-  SimpleToken, Controller, Tenderizer, ElasticSupplyPool, TenderToken, IAudius, BPool, EIP173Proxy, TenderFarm
+  SimpleToken, Controller, TenderToken, IAudius, EIP173Proxy, Audius, TenderFarm, TenderSwap, LiquidityPoolToken
 } from '../../typechain/'
 
 import { sharesToTokens, percOf2 } from '../util/helpers'
@@ -16,6 +16,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Deployment } from 'hardhat-deploy/dist/types'
 import { BigNumber } from '@ethersproject/bignumber'
 import { ContractTransaction } from '@ethersproject/contracts'
+import { getCurrentBlockTimestamp } from '../util/evm'
 
 chai.use(solidity)
 const {
@@ -27,11 +28,11 @@ describe('Audius Integration Test', () => {
   let AudiusMock: MockContract
   let AudiusToken: SimpleToken
   let Controller: Controller
-  let Tenderizer: Tenderizer
+  let Tenderizer: Audius
   let TenderToken: TenderToken
-  let Esp: ElasticSupplyPool
-  let BPool: BPool
   let TenderFarm: TenderFarm
+  let TenderSwap: TenderSwap
+  let LpToken: LiquidityPoolToken
 
   let Audius: {[name: string]: Deployment}
 
@@ -79,6 +80,12 @@ describe('Audius Integration Test', () => {
 
   const STEAK_AMOUNT = '100000'
   const NODE = '0xf4e8Ef0763BCB2B1aF693F5970a00050a6aC7E1B'
+  const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
+
+  const deposit = ethers.utils.parseEther('100')
+  const secondDeposit = ethers.utils.parseEther('10')
+
+  const ONE = ethers.utils.parseEther('1')
 
   before('deploy Audius Tenderizer', async () => {
     process.env.NAME = 'Audius'
@@ -93,27 +100,36 @@ describe('Audius Integration Test', () => {
       keepExistingDeployments: false
     })
     Controller = (await ethers.getContractAt('Controller', Audius.Controller.address)) as Controller
-    Tenderizer = (await ethers.getContractAt('Tenderizer', Audius.Audius.address)) as Tenderizer
+    Tenderizer = (await ethers.getContractAt('Tenderizer', Audius.Audius.address)) as Audius
     TenderToken = (await ethers.getContractAt('TenderToken', Audius.TenderToken.address)) as TenderToken
-    Esp = (await ethers.getContractAt('ElasticSupplyPool', Audius.ElasticSupplyPool.address)) as ElasticSupplyPool
-    BPool = (await ethers.getContractAt('BPool', await Esp.bPool())) as BPool
+    TenderSwap = (await ethers.getContractAt('TenderSwap', await Controller.tenderSwap())) as TenderSwap
     TenderFarm = (await ethers.getContractAt('TenderFarm', Audius.TenderFarm.address)) as TenderFarm
-    await Controller.execute(
-      Tenderizer.address,
-      0,
-      Tenderizer.interface.encodeFunctionData('setProtocolFee', [protocolFeesPercent])
+    LpToken = (await ethers.getContractAt('LiquidityPoolToken', await TenderSwap.lpToken())) as LiquidityPoolToken
+
+    await Controller.batchExecute(
+      [Tenderizer.address, Tenderizer.address],
+      [0, 0],
+      [
+        Tenderizer.interface.encodeFunctionData('setProtocolFee', [protocolFeesPercent]),
+        Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent])
+      ]
     )
-    await Controller.execute(
-      Tenderizer.address,
-      0,
-      Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent])
-    )
+
+    // Deposit initial stake
+    await AudiusToken.approve(Controller.address, initialStake)
+    await Controller.deposit(initialStake, { gasLimit: 500000 })
+    await Controller.gulp()
+    // Add initial liquidity
+    await AudiusToken.approve(TenderSwap.address, initialStake)
+    await TenderToken.approve(TenderSwap.address, initialStake)
+    const lpTokensOut = await TenderSwap.calculateTokenAmount([initialStake, initialStake], true)
+    await TenderSwap.addLiquidity([initialStake, initialStake], lpTokensOut, (await getCurrentBlockTimestamp()) + 1000)
+    console.log('added liquidity')
+    console.log('calculated', lpTokensOut.toString(), 'actual', (await LpToken.balanceOf(deployer)).toString())
+    await LpToken.approve(TenderFarm.address, lpTokensOut)
+    await TenderFarm.farm(lpTokensOut)
+    console.log('farmed LP tokens')
   })
-
-  const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
-
-  const deposit = ethers.utils.parseEther('100')
-  const secondDeposit = ethers.utils.parseEther('10')
 
   describe('deposit', () => {
     it('reverts because transfer amount exceeds allowance', async () => {
@@ -207,11 +223,14 @@ describe('Audius Integration Test', () => {
     const protocolFees = percOf2(increase, protocolFeesPercent)
     const newStake = deposit.add(initialStake).add(increase)
     const newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
+    let dyBefore: BigNumber
+
     describe('stake increased', () => {
-      let totalShares: BigNumber = ethers.utils.parseEther('1')
+      let totalShares: BigNumber = ONE
       let tx: ContractTransaction
 
       before(async () => {
+        dyBefore = await TenderSwap.calculateSwap(TenderToken.address, ONE)
         totalShares = await TenderToken.getTotalShares()
         AudiusMock.smocked.getTotalDelegatorStake.will.return.with(newStake)
         tx = await Controller.rebase()
@@ -225,20 +244,20 @@ describe('Audius Integration Test', () => {
         // account 0
         const shares = await TenderToken.sharesOf(deployer)
         totalShares = await TenderToken.getTotalShares()
-        expect(await TenderToken.balanceOf(deployer)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+        expect(await TenderToken.balanceOf(deployer)).to.eq(sharesToTokens(shares, totalShares, newStakeMinusFees))
       })
 
       it('increases the tenderToken balance of the AMM', async () => {
-        const shares = await TenderToken.sharesOf(BPool.address)
-        expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+        const shares = await TenderToken.sharesOf(TenderSwap.address)
+        expect(await TenderToken.balanceOf(TenderSwap.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
       })
 
       it('steak balance stays the same', async () => {
-        expect(await AudiusToken.balanceOf(BPool.address)).to.eq(initialStake)
+        expect(await AudiusToken.balanceOf(TenderSwap.address)).to.eq(initialStake)
       })
 
-      it('weights of the AMM stay 50-50', async () => {
-        expect(await BPool.getNormalizedWeight(TenderToken.address)).to.be.eq(ethers.utils.parseEther('1').div(2))
+      it('tenderToken price slightly decreases vs underlying', async () => {
+        expect(await TenderSwap.calculateSwap(TenderToken.address, ONE)).to.be.lt(dyBefore)
       })
 
       it('should emit RewardsClaimed event from Tenderizer', async () => {
@@ -275,7 +294,10 @@ describe('Audius Integration Test', () => {
       const oldStake = deposit.add(initialStake)
       const expectedCP = oldStake.sub(liquidityFees).sub(protocolFees)
 
+      let dyBefore: BigNumber
+
       before(async () => {
+        dyBefore = await TenderSwap.calculateSwap(TenderToken.address, ONE)
         feesBefore = await Tenderizer.pendingFees()
         oldPrinciple = await Tenderizer.currentPrincipal()
         AudiusMock.smocked.getTotalDelegatorStake.will.return.with(newStake)
@@ -298,16 +320,16 @@ describe('Audius Integration Test', () => {
       })
 
       it('decreases the tenderToken balance of the AMM', async () => {
-        const shares = await TenderToken.sharesOf(BPool.address)
-        expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+        const shares = await TenderToken.sharesOf(TenderSwap.address)
+        expect(await TenderToken.balanceOf(TenderSwap.address)).to.eq(sharesToTokens(shares, totalShares, expectedCP))
       })
 
       it('steak balance stays the same', async () => {
-        expect(await AudiusToken.balanceOf(BPool.address)).to.eq(initialStake)
+        expect(await AudiusToken.balanceOf(TenderSwap.address)).to.eq(initialStake)
       })
 
-      it('weights of the AMM stay 50-50', async () => {
-        expect(await BPool.getNormalizedWeight(TenderToken.address)).to.be.eq(ethers.utils.parseEther('1').div(2))
+      it('price of the TenderTokens increases vs the underlying', async () => {
+        expect(await TenderSwap.calculateSwap(AudiusToken.address, ONE)).to.be.gt(dyBefore)
       })
 
       it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
@@ -380,36 +402,22 @@ describe('Audius Integration Test', () => {
     })
   })
 
-  describe('swap against ESP', () => {
+  describe('swap against TenderSwap', () => {
     it('swaps tenderToken for Token', async () => {
       const amount = deposit.div(2)
-      const lptBalBefore = await AudiusToken.balanceOf(deployer)
+      const balBefore = await AudiusToken.balanceOf(deployer)
 
-      const tenderBal = await BPool.getBalance(TenderToken.address)
-      const lptBal = await BPool.getBalance(AudiusToken.address)
-      const tenderWeight = await BPool.getDenormalizedWeight(TenderToken.address)
-      const lptWeight = await BPool.getDenormalizedWeight(AudiusToken.address)
-      const swapFee = await BPool.getSwapFee()
-      const expOut = await BPool.calcOutGivenIn(
-        tenderBal,
-        tenderWeight,
-        lptBal,
-        lptWeight,
-        amount,
-        swapFee
-      )
-
-      await TenderToken.approve(BPool.address, amount)
-      await BPool.swapExactAmountIn(
+      const dy = await TenderSwap.calculateSwap(TenderToken.address, amount)
+      await TenderToken.approve(TenderSwap.address, amount)
+      await TenderSwap.swap(
         TenderToken.address,
         amount,
-        AudiusToken.address,
-        ethers.constants.One, // TODO: set proper value
-        ethers.utils.parseEther('10') // TODO: set proper value
+        dy,
+        (await getCurrentBlockTimestamp()) + 1000
       )
 
       const lptBalAfter = await AudiusToken.balanceOf(deployer)
-      expect(lptBalAfter.sub(lptBalBefore)).to.eq(expOut)
+      expect(lptBalAfter.sub(balBefore)).to.eq(dy)
     })
   })
 
@@ -423,7 +431,7 @@ describe('Audius Integration Test', () => {
     describe('user unlock', async () => {
       it('reverts if user does not have enough tender token balance', async () => {
         withdrawAmount = await TenderToken.balanceOf(deployer)
-        await expect(Controller.unlock(withdrawAmount.add(ethers.utils.parseEther('1')))).to.be.revertedWith('BURN_AMOUNT_EXCEEDS_BALANCE')
+        await expect(Controller.unlock(withdrawAmount.add(ONE))).to.be.revertedWith('BURN_AMOUNT_EXCEEDS_BALANCE')
       })
 
       it('on success - updates current pricinple', async () => {
@@ -679,18 +687,6 @@ describe('Audius Integration Test', () => {
 
       it('should emit GovernanceUpdate event', async () => {
         expect(tx).to.emit(Tenderizer, 'GovernanceUpdate').withArgs('CONTROLLER')
-      })
-    })
-
-    describe('setting esp', async () => {
-      it('reverts if Zero address is set', async () => {
-        await expect(Controller.setEsp(ethers.constants.AddressZero)).to.be.revertedWith('ZERO_ADDRESS')
-      })
-
-      it('sets esp successfully', async () => {
-        const newEspAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
-        tx = await Controller.setEsp(newEspAddress)
-        expect(await Controller.esp()).to.equal(newEspAddress)
       })
     })
   })

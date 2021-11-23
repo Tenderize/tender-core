@@ -13,8 +13,7 @@ contract Registry is Ownable {
         address steak;
         address tenderizer;
         address tenderToken;
-        address esp;
-        address bpool;
+        address tenderSwap;
         address tenderFarm;
     }
 

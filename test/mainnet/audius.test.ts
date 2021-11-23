@@ -1,7 +1,7 @@
 import hre, { ethers } from 'hardhat'
 
 import {
-  Controller, ElasticSupplyPool, TenderToken, IAudius, BPool, Audius, ERC20, TenderFarm
+  Controller, TenderToken, IAudius, Audius, ERC20, TenderFarm, TenderSwap, LiquidityPoolToken
 } from '../../typechain'
 
 import claimsManagerAbi from './abis/audius/ClaimsManager.json'
@@ -17,6 +17,7 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { ContractTransaction } from '@ethersproject/contracts'
 
 import { sharesToTokens, percOf2 } from '../util/helpers'
+import { getCurrentBlockTimestamp } from '../util/evm'
 
 chai.use(solidity)
 const {
@@ -29,8 +30,8 @@ describe('Audius Mainnet Fork Test', () => {
   let Controller: Controller
   let Tenderizer: Audius
   let TenderToken: TenderToken
-  let Esp: ElasticSupplyPool
-  let BPool: BPool
+  let TenderSwap: TenderSwap
+  let LpToken: LiquidityPoolToken
   let TenderFarm: TenderFarm
 
   let Audius: {[name: string]: Deployment}
@@ -51,7 +52,6 @@ describe('Audius Mainnet Fork Test', () => {
   before('get signers', async () => {
     const namedAccs = await hre.getNamedAccounts()
     signers = await ethers.getSigners()
-
     deployer = namedAccs.deployer
   })
 
@@ -67,6 +67,8 @@ describe('Audius Mainnet Fork Test', () => {
   const undelegateStakeRequestedTopic = '0x0c0ebdfe3f3ccdb3ad070f98a3fb9656a7b8781c299a5c0cd0f37e4d5a02556d'
 
   const testTimeout = 1200000
+
+  const ONE = ethers.utils.parseEther('1')
 
   before('deploy Audius Tenderizer', async function () {
     this.timeout(testTimeout)
@@ -85,10 +87,6 @@ describe('Audius Mainnet Fork Test', () => {
     process.env.CONTRACT = delegateManagerAddr
     process.env.TOKEN = '0x18aaa7115705e8be94bffebde57af9bfc265b998'
     process.env.VALIDATOR = NODE
-    process.env.BFACTORY = '0x9424B1412450D0f8Fc2255FAf6046b98213B76Bd'
-    process.env.B_SAFEMATH = '0xCfE28868F6E0A24b7333D22D8943279e76aC2cdc'
-    process.env.B_RIGHTS_MANAGER = '0xCfE28868F6E0A24b7333D22D8943279e76aC2cdc'
-    process.env.B_SMART_POOL_MANAGER = '0xA3F9145CB0B50D907930840BB2dcfF4146df8Ab4'
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
 
     await hre.network.provider.request({
@@ -107,7 +105,7 @@ describe('Audius Mainnet Fork Test', () => {
 
     // Transfer some AUDIO
     AudiusToken = (await ethers.getContractAt('ERC20', process.env.TOKEN)) as ERC20
-    await AudiusToken.connect(AUDIOHolderSigner).transfer(deployer, ethers.utils.parseEther(process.env.STEAK_AMOUNT).mul(2))
+    await AudiusToken.connect(AUDIOHolderSigner).transfer(deployer, ethers.utils.parseEther(STEAK_AMOUNT).mul(2))
 
     AudiusStaking = (await ethers.getContractAt('IAudius', process.env.CONTRACT)) as IAudius
 
@@ -117,15 +115,29 @@ describe('Audius Mainnet Fork Test', () => {
     Controller = (await ethers.getContractAt('Controller', Audius.Controller.address)) as Controller
     Tenderizer = (await ethers.getContractAt('Audius', Audius.Audius.address)) as Audius
     TenderToken = (await ethers.getContractAt('TenderToken', Audius.TenderToken.address)) as TenderToken
-    Esp = (await ethers.getContractAt('ElasticSupplyPool', Audius.ElasticSupplyPool.address)) as ElasticSupplyPool
-    BPool = (await ethers.getContractAt('BPool', await Esp.bPool())) as BPool
+    TenderSwap = (await ethers.getContractAt('TenderSwap', await Controller.tenderSwap())) as TenderSwap
     TenderFarm = (await ethers.getContractAt('TenderFarm', Audius.TenderFarm.address)) as TenderFarm
+    LpToken = (await ethers.getContractAt('LiquidityPoolToken', await TenderSwap.lpToken())) as LiquidityPoolToken
     await Controller.batchExecute(
       [Tenderizer.address, Tenderizer.address],
       [0, 0],
       [Tenderizer.interface.encodeFunctionData('setProtocolFee', [protocolFeesPercent]),
         Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent])]
     )
+
+    // Deposit initial stake
+    await AudiusToken.approve(Controller.address, initialStake)
+    await Controller.deposit(initialStake, { gasLimit: 500000 })
+    await Controller.gulp()
+    // Add initial liquidity
+    await AudiusToken.approve(TenderSwap.address, initialStake)
+    await TenderToken.approve(TenderSwap.address, initialStake)
+    const lpTokensOut = await TenderSwap.calculateTokenAmount([initialStake, initialStake], true)
+    await TenderSwap.addLiquidity([initialStake, initialStake], lpTokensOut, (await getCurrentBlockTimestamp()) + 1000)
+    console.log('added liquidity')
+    await LpToken.approve(TenderFarm.address, lpTokensOut)
+    await TenderFarm.farm(lpTokensOut)
+    console.log('farmed LP tokens')
   })
 
   const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
@@ -180,12 +192,15 @@ describe('Audius Mainnet Fork Test', () => {
     let increase: BigNumber
     let liquidityFees: BigNumber
     let protocolFees: BigNumber
+    let dyBefore: BigNumber
+
     describe('stake increased', () => {
       let newStakeMinusFees: BigNumber
       let newStake: BigNumber
       let totalShares: BigNumber = ethers.utils.parseEther('1')
 
       before(async function () {
+        dyBefore = await TenderSwap.calculateSwap(TenderToken.address, ONE)
         this.timeout(testTimeout * 10)
         const claimsManager = new ethers.Contract(claimsManagerAddr, claimsManagerAbi, ethers.provider)
 
@@ -210,6 +225,7 @@ describe('Audius Mainnet Fork Test', () => {
         increase = stakeAfter.sub(stakeBefore)
         liquidityFees = percOf2(increase, liquidityFeesPercent)
         protocolFees = percOf2(increase, protocolFeesPercent)
+
         newStake = deposit.add(initialStake).add(increase)
         newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
       })
@@ -226,12 +242,16 @@ describe('Audius Mainnet Fork Test', () => {
       })
 
       it('increases the tenderToken balance of the AMM', async () => {
-        const shares = await TenderToken.sharesOf(BPool.address)
-        expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+        const shares = await TenderToken.sharesOf(TenderSwap.address)
+        expect(await TenderToken.balanceOf(TenderSwap.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
       })
 
-      it('weights of the AMM stay 50-50', async () => {
-        expect(await BPool.getNormalizedWeight(TenderToken.address)).to.be.eq(ethers.utils.parseEther('1').div(2))
+      it('steak balance stays the same', async () => {
+        expect(await AudiusToken.balanceOf(TenderSwap.address)).to.eq(initialStake)
+      })
+
+      it('tenderToken price slightly decreases vs underlying', async () => {
+        expect(await TenderSwap.calculateSwap(TenderToken.address, ONE)).to.be.lt(dyBefore)
       })
 
       it('should emit RewardsClaimed event from Tenderizer', async () => {
@@ -242,14 +262,18 @@ describe('Audius Mainnet Fork Test', () => {
 
     describe('stake decrease', () => {
       // The decrease will offset the increase from the previous test
-      let newStake: BigNumber
       let totalShares: BigNumber
       let oldPrinciple: BigNumber
 
       let feesBefore: BigNumber = ethers.constants.Zero
       let tx: ContractTransaction
 
+      let dyBefore: BigNumber
+      // calculate stake before rebase - fees
+      let newStake: BigNumber
+
       before(async function () {
+        dyBefore = await TenderSwap.calculateSwap(TenderToken.address, ONE)
         this.timeout(testTimeout)
         feesBefore = await Tenderizer.pendingFees()
         oldPrinciple = await Tenderizer.currentPrincipal()
@@ -292,12 +316,16 @@ describe('Audius Mainnet Fork Test', () => {
       })
 
       it('decreases the tenderToken balance of the AMM', async () => {
-        const shares = await TenderToken.sharesOf(BPool.address)
-        expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+        const shares = await TenderToken.sharesOf(TenderSwap.address)
+        expect(await TenderToken.balanceOf(TenderSwap.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
       })
 
-      it('weights of the AMM stay 50-50', async () => {
-        expect(await BPool.getNormalizedWeight(TenderToken.address)).to.be.eq(ethers.utils.parseEther('1').div(2))
+      it('steak balance stays the same', async () => {
+        expect(await AudiusToken.balanceOf(TenderSwap.address)).to.eq(initialStake)
+      })
+
+      it('price of the TenderTokens increases vs the underlying', async () => {
+        expect(await TenderSwap.calculateSwap(AudiusToken.address, ONE)).to.be.gt(dyBefore)
       })
 
       it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
@@ -370,36 +398,22 @@ describe('Audius Mainnet Fork Test', () => {
     })
   })
 
-  describe('swap against ESP', () => {
+  describe('swap against TenderSwap', () => {
     it('swaps tenderToken for Token', async () => {
       const amount = deposit.div(2)
       const lptBalBefore = await AudiusToken.balanceOf(deployer)
 
-      const tenderBal = await BPool.getBalance(TenderToken.address)
-      const lptBal = await BPool.getBalance(AudiusToken.address)
-      const tenderWeight = await BPool.getDenormalizedWeight(TenderToken.address)
-      const lptWeight = await BPool.getDenormalizedWeight(AudiusToken.address)
-      const swapFee = await BPool.getSwapFee()
-      const expOut = await BPool.calcOutGivenIn(
-        tenderBal,
-        tenderWeight,
-        lptBal,
-        lptWeight,
-        amount,
-        swapFee
-      )
-
-      await TenderToken.approve(BPool.address, amount)
-      await BPool.swapExactAmountIn(
+      const dy = await TenderSwap.calculateSwap(TenderToken.address, amount)
+      await TenderToken.approve(TenderSwap.address, amount)
+      await TenderSwap.swap(
         TenderToken.address,
         amount,
-        AudiusToken.address,
-        ethers.constants.One, // TODO: set proper value
-        ethers.utils.parseEther('10') // TODO: set proper value
+        dy,
+        (await getCurrentBlockTimestamp()) + 1000
       )
 
       const lptBalAfter = await AudiusToken.balanceOf(deployer)
-      expect(lptBalAfter.sub(lptBalBefore)).to.eq(expOut)
+      expect(lptBalAfter.sub(lptBalBefore)).to.eq(dy)
     })
   })
 

@@ -1,7 +1,7 @@
 import hre, { ethers } from 'hardhat'
 
 import {
-  Controller, ElasticSupplyPool, TenderToken, ILivepeer, BPool, Livepeer, ERC20, TenderFarm
+  Controller, TenderToken, ILivepeer, Livepeer, ERC20, TenderFarm, TenderSwap, LiquidityPoolToken
 } from '../../typechain'
 
 import bondingManagerAbi from './abis/livepeer/BondingManager.json'
@@ -19,6 +19,7 @@ import { Contract, ContractTransaction } from '@ethersproject/contracts'
 
 import { sharesToTokens, percOf2 } from '../util/helpers'
 import { Signer } from '@ethersproject/abstract-signer'
+import { getCurrentBlockTimestamp } from '../util/evm'
 
 chai.use(solidity)
 const {
@@ -31,8 +32,8 @@ describe('Livepeer Mainnet Fork Test', () => {
   let Controller: Controller
   let Tenderizer: Livepeer
   let TenderToken: TenderToken
-  let Esp: ElasticSupplyPool
-  let BPool: BPool
+  let TenderSwap: TenderSwap
+  let LpToken: LiquidityPoolToken
   let TenderFarm: TenderFarm
 
   let Livepeer: {[name: string]: Deployment}
@@ -71,6 +72,8 @@ describe('Livepeer Mainnet Fork Test', () => {
   const uniswapEthLptPairAddr = '0x2519042aa735edb4688a8376d69d4bb69431206c'
 
   const testTimeout = 1200000
+
+  const ONE = ethers.utils.parseEther('1')
 
   before('deploy Livepeer Tenderizer', async function () {
     this.timeout(testTimeout)
@@ -115,9 +118,9 @@ describe('Livepeer Mainnet Fork Test', () => {
     Controller = (await ethers.getContractAt('Controller', Livepeer.Controller.address)) as Controller
     Tenderizer = (await ethers.getContractAt('Livepeer', Livepeer.Livepeer.address)) as Livepeer
     TenderToken = (await ethers.getContractAt('TenderToken', Livepeer.TenderToken.address)) as TenderToken
-    Esp = (await ethers.getContractAt('ElasticSupplyPool', Livepeer.ElasticSupplyPool.address)) as ElasticSupplyPool
-    BPool = (await ethers.getContractAt('BPool', await Esp.bPool())) as BPool
+    TenderSwap = (await ethers.getContractAt('TenderSwap', await Controller.tenderSwap())) as TenderSwap
     TenderFarm = (await ethers.getContractAt('TenderFarm', Livepeer.TenderFarm.address)) as TenderFarm
+    LpToken = (await ethers.getContractAt('LiquidityPoolToken', await TenderSwap.lpToken())) as LiquidityPoolToken
     await Controller.batchExecute(
       [Tenderizer.address, Tenderizer.address, Tenderizer.address],
       [0, 0, 0],
@@ -125,6 +128,21 @@ describe('Livepeer Mainnet Fork Test', () => {
         Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent]),
         Tenderizer.interface.encodeFunctionData('setUniswapRouter', [uniswapRouter])]
     )
+
+    // Deposit initial stake
+    await LivepeerToken.approve(Controller.address, initialStake)
+    await Controller.deposit(initialStake, { gasLimit: 500000 })
+    await Controller.gulp()
+    // Add initial liquidity
+    await LivepeerToken.approve(TenderSwap.address, initialStake)
+    await TenderToken.approve(TenderSwap.address, initialStake)
+    const lpTokensOut = await TenderSwap.calculateTokenAmount([initialStake, initialStake], true)
+    await TenderSwap.addLiquidity([initialStake, initialStake], lpTokensOut, (await getCurrentBlockTimestamp()) + 1000)
+    console.log('added liquidity')
+    console.log('calculated', lpTokensOut.toString(), 'actual', (await LpToken.balanceOf(deployer)).toString())
+    await LpToken.approve(TenderFarm.address, lpTokensOut)
+    await TenderFarm.farm(lpTokensOut)
+    console.log('farmed LP tokens')
   })
 
   const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
@@ -182,9 +200,11 @@ describe('Livepeer Mainnet Fork Test', () => {
       let increase: BigNumber
       let newStakeMinusFees: BigNumber
       let newStake: BigNumber
-      let totalShares: BigNumber = ethers.utils.parseEther('1')
+      let totalShares: BigNumber = ONE
+      let dyBefore: BigNumber
 
       before(async function () {
+        dyBefore = await TenderSwap.calculateSwap(TenderToken.address, ONE)
         this.timeout(testTimeout * 10)
         bondingManager = new ethers.Contract(bondingManagerAddr, bondingManagerAbi, ethers.provider)
         roundsManager = new ethers.Contract(roundsManagerAddr, adjustableRoundsManagerAbi, ethers.provider)
@@ -256,12 +276,16 @@ describe('Livepeer Mainnet Fork Test', () => {
       })
 
       it('increases the tenderToken balance of the AMM', async () => {
-        const shares = await TenderToken.sharesOf(BPool.address)
-        expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+        const shares = await TenderToken.sharesOf(TenderSwap.address)
+        expect(await TenderToken.balanceOf(TenderSwap.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
       })
 
-      it('weights of the AMM stay 50-50', async () => {
-        expect(await BPool.getNormalizedWeight(TenderToken.address)).to.be.eq(ethers.utils.parseEther('1').div(2))
+      it('steak balance stays the same', async () => {
+        expect(await LivepeerToken.balanceOf(TenderSwap.address)).to.eq(initialStake)
+      })
+
+      it('tenderToken price slightly decreases vs underlying', async () => {
+        expect(await TenderSwap.calculateSwap(TenderToken.address, ONE)).to.be.lt(dyBefore)
       })
 
       it('stakes all rewards claimed - drains tenderizer', async () => {
@@ -340,36 +364,22 @@ describe('Livepeer Mainnet Fork Test', () => {
     })
   })
 
-  describe('swap against ESP', () => {
+  describe('swap against TenderSwap', () => {
     it('swaps tenderToken for Token', async () => {
       const amount = deposit.div(2)
       const lptBalBefore = await LivepeerToken.balanceOf(deployer)
 
-      const tenderBal = await BPool.getBalance(TenderToken.address)
-      const lptBal = await BPool.getBalance(LivepeerToken.address)
-      const tenderWeight = await BPool.getDenormalizedWeight(TenderToken.address)
-      const lptWeight = await BPool.getDenormalizedWeight(LivepeerToken.address)
-      const swapFee = await BPool.getSwapFee()
-      const expOut = await BPool.calcOutGivenIn(
-        tenderBal,
-        tenderWeight,
-        lptBal,
-        lptWeight,
-        amount,
-        swapFee
-      )
-
-      await TenderToken.approve(BPool.address, amount)
-      await BPool.swapExactAmountIn(
+      const dy = await TenderSwap.calculateSwap(TenderToken.address, amount)
+      await TenderToken.approve(TenderSwap.address, amount)
+      await TenderSwap.swap(
         TenderToken.address,
         amount,
-        LivepeerToken.address,
-        ethers.constants.One, // TODO: set proper value
-        ethers.utils.parseEther('10') // TODO: set proper value
+        dy,
+        (await getCurrentBlockTimestamp()) + 1000
       )
 
       const lptBalAfter = await LivepeerToken.balanceOf(deployer)
-      expect(lptBalAfter.sub(lptBalBefore)).to.eq(expOut)
+      expect(lptBalAfter.sub(lptBalBefore)).to.eq(dy)
     })
   })
 

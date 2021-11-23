@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./LiquidityPoolToken.sol";
 
 pragma solidity 0.8.4;
 
@@ -63,9 +64,10 @@ interface ITenderSwap {
         uint256 _a,
         uint256 _fee,
         uint256 _adminFee,
-        address lpTokenTargetAddress) external;
+        address lpTokenTargetAddress) external returns (bool);
 
     /*** VIEW FUNCTIONS ***/
+    function lpToken() external view returns(LiquidityPoolToken);
     function getA() external view returns (uint256);
     function getAPrecise() external view returns (uint256);
     function getToken0() external view returns (IERC20);

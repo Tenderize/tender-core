@@ -1,4 +1,4 @@
-import {
+import hre, {
   ethers, upgrades
 } from 'hardhat'
 import { MockContract, smockit } from '@eth-optimism/smock'
@@ -30,9 +30,18 @@ describe('Controller', () => {
   let steakMock : MockContract
   const tenderizer = '0x0000000000000000000000000000000000000002'
   let tenderTokenMock : MockContract
-  const esp = '0x0000000000000000000000000000000000000004'
   let tenderFarmMock: MockContract
   let tenderFarmNoMock: TenderFarm
+
+  const tenderSwapConfig = {
+    tenderSwapTarget: '0x0000000000000000000000000000000000000002',
+    lpTokenName: 'TenderSwap Token v1',
+    lpTokenSymbol: 'tToken-SWAP',
+    amplifier: 85,
+    fee: 5e6,
+    adminFee: 0,
+    lpTokenTarget: '0x0000000000000000000000000000000000000002'
+  }
 
   const depositAmount = ethers.utils.parseEther('100')
 
@@ -53,6 +62,7 @@ describe('Controller', () => {
 
     const tenderToken = (await TenderTokenFactory.deploy('tender-TestToken', 't-TEST', tenderizer)) as TenderToken
     tenderTokenMock = await smockit(tenderToken)
+    tenderTokenMock.smocked.decimals.will.return.with(18)
   })
 
   beforeEach('Deploy Steak Token Mock', async () => {
@@ -64,6 +74,7 @@ describe('Controller', () => {
 
     const testToken = (await SimpleTokenFactory.deploy('Test Token', 'TEST', ethers.utils.parseEther('1000000'))) as SimpleToken
     steakMock = await smockit(testToken)
+    steakMock.smocked.decimals.will.return.with(18)
   })
 
   beforeEach('Deploy TenderFarm Mock', async () => {
@@ -77,6 +88,14 @@ describe('Controller', () => {
     tenderFarmMock = await smockit(tenderFarmNoMock)
   })
 
+  beforeEach('Deploy TenderSwap Mock', async () => {
+    const fixture = await hre.deployments.fixture(['TenderSwap'], {
+      keepExistingDeployments: false
+    })
+    tenderSwapConfig.lpTokenTarget = fixture.LiquidityPoolToken.address
+    tenderSwapConfig.tenderSwapTarget = fixture.TenderSwap.address
+  })
+
   beforeEach('Deploy Controller', async () => {
     signers = await ethers.getSigners()
     const ControllerFactory = await ethers.getContractFactory(
@@ -85,8 +104,7 @@ describe('Controller', () => {
     )
 
     account0 = await signers[0].getAddress()
-
-    controller = await upgrades.deployProxy(ControllerFactory, [steakMock.address, tenderizer, tenderTokenMock.address, esp])
+    controller = await upgrades.deployProxy(ControllerFactory, [steakMock.address, tenderizer, tenderTokenMock.address, tenderSwapConfig])
     await controller.deployed()
     await controller.setTenderFarm(tenderFarmMock.address)
   })
@@ -106,10 +124,6 @@ describe('Controller', () => {
 
     it('Sets tenderToken', async () => {
       expect(await controller.tenderToken()).to.eq(tenderTokenMock.address)
-    })
-
-    it('Sets ESP', async () => {
-      expect(await controller.esp()).to.eq(esp)
     })
   })
 
