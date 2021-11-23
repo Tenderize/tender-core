@@ -30,7 +30,6 @@ interface IERC20Decimals is IERC20 {
  */
 
 contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSwap {
-    using SafeERC20 for IERC20;
     using SwapUtils for SwapUtils.Amplification;
     using SwapUtils for SwapUtils.PooledToken;
     using SwapUtils for SwapUtils.FeeParams;

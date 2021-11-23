@@ -2,9 +2,9 @@
 
 import { constants, Signer, BigNumber } from 'ethers'
 import { solidity } from 'ethereum-waffle'
-import { ethers } from 'hardhat'
+import { ethers, deployments } from 'hardhat'
 
-import { ITenderSwap, SimpleToken, LiquidityPoolToken, TestSwapReturnValues, IERC20 } from '../../typechain'
+import { TenderSwap, SimpleToken, LiquidityPoolToken, TestSwapReturnValues, IERC20 } from '../../typechain'
 import chai from 'chai'
 import * as rpc from '../util/snapshot'
 import {
@@ -39,7 +39,7 @@ async function getUserTokenBalances (
 describe('TenderSwap', () => {
   let snapshotId: any
   let signers: Array<Signer>
-  let swap: ITenderSwap
+  let swap: TenderSwap
   let testSwapReturnValues: TestSwapReturnValues
   //   let swapUtils: SwapUtils
   let firstToken: SimpleToken
@@ -93,18 +93,8 @@ describe('TenderSwap', () => {
       await secondToken.mint(address, String(1e20))
     })
 
-    // deploy SwapUtils
-    const swapUtils = await (await ethers.getContractFactory('SwapUtils')).deploy()
-
-    const lpTokenFac = await ethers.getContractFactory('LiquidityPoolToken')
-    const lpToken = (await lpTokenFac.deploy()) as LiquidityPoolToken
-
-    const swapFactory = await ethers.getContractFactory('TenderSwap', {
-      libraries: {
-        SwapUtils: swapUtils.address
-      }
-    })
-    swap = (await swapFactory.deploy()) as ITenderSwap
+    const fixture = await deployments.fixture('TenderSwap')
+    swap = await ethers.getContractAt('TenderSwap', fixture.TenderSwap.address) as TenderSwap
 
     await swap.initialize(
       firstToken.address,
@@ -114,10 +104,10 @@ describe('TenderSwap', () => {
       INITIAL_A_VALUE,
       SWAP_FEE,
       0,
-      lpToken.address
+      fixture.LiquidityPoolToken.address
     )
 
-    swapToken = (await ethers.getContractAt('LiquidityPoolToken', await swap.lpToken())) as LiquidityPoolToken
+    swapToken = await ethers.getContractAt('LiquidityPoolToken', await swap.lpToken()) as LiquidityPoolToken
 
     const testSwapReturnValuesFactory = await ethers.getContractFactory(
       'TestSwapReturnValues'

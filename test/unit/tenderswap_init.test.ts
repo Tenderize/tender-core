@@ -1,24 +1,33 @@
 import { constants } from 'ethers'
 import { solidity } from 'ethereum-waffle'
-import { ethers } from 'hardhat'
+import { ethers, deployments } from 'hardhat'
 
-import { TenderSwap, SimpleToken, LiquidityPoolToken } from '../../typechain'
+import { TenderSwap, SimpleToken } from '../../typechain'
 import chai from 'chai'
+import * as rpc from '../util/snapshot'
 
 chai.use(solidity)
 const { expect } = chai
 
 describe('TenderSwap', () => {
+  let snapshotId: any
   let swap: TenderSwap
   let firstToken: SimpleToken
   let secondToken: SimpleToken
-  let lpToken: LiquidityPoolToken
-
+  let fixture: any
   // Test Values
   const INITIAL_A_VALUE = 50
   const SWAP_FEE = 1e7
   const LP_TOKEN_NAME = 'Test LP Token Name'
   const LP_TOKEN_SYMBOL = 'TESTLP'
+
+  beforeEach(async () => {
+    snapshotId = await rpc.snapshot()
+  })
+
+  afterEach(async () => {
+    await rpc.revert(snapshotId)
+  })
 
   beforeEach(async () => {
     // Deploy dummy tokens
@@ -36,18 +45,8 @@ describe('TenderSwap', () => {
       '18'
     )) as SimpleToken
 
-    // deploy SwapUtils
-    const swapUtils = await (await ethers.getContractFactory('SwapUtils')).deploy()
-
-    const lpTokenFac = await ethers.getContractFactory('LiquidityPoolToken')
-    lpToken = (await lpTokenFac.deploy()) as LiquidityPoolToken
-
-    const swapFactory = await ethers.getContractFactory('TenderSwap', {
-      libraries: {
-        SwapUtils: swapUtils.address
-      }
-    })
-    swap = (await swapFactory.deploy()) as TenderSwap
+    fixture = await deployments.fixture('TenderSwap')
+    swap = await ethers.getContractAt('TenderSwap', fixture.TenderSwap.address) as TenderSwap
   })
 
   describe('Initialize', () => {
@@ -61,7 +60,7 @@ describe('TenderSwap', () => {
           INITIAL_A_VALUE,
           SWAP_FEE,
           0,
-          lpToken.address
+          fixture.LiquidityPoolToken.address
         )
       ).to.be.revertedWith('TOKEN0_ZEROADDRESS')
     })
@@ -76,7 +75,7 @@ describe('TenderSwap', () => {
           INITIAL_A_VALUE,
           SWAP_FEE,
           0,
-          lpToken.address
+          fixture.LiquidityPoolToken.address
         )
       ).to.be.revertedWith('TOKEN1_ZEROADDRESS')
     })
@@ -91,7 +90,7 @@ describe('TenderSwap', () => {
           INITIAL_A_VALUE,
           SWAP_FEE,
           0,
-          lpToken.address
+          fixture.LiquidityPoolToken.address
         )
       ).to.be.revertedWith('DUPLICATE_TOKENS')
     })
@@ -106,7 +105,7 @@ describe('TenderSwap', () => {
           10e6 + 1,
           SWAP_FEE,
           0,
-          lpToken.address
+          fixture.LiquidityPoolToken.address
         )
       ).to.be.revertedWith('_a exceeds maximum')
     })
@@ -121,7 +120,7 @@ describe('TenderSwap', () => {
           INITIAL_A_VALUE,
           10e8 + 1,
           0,
-          lpToken.address
+          fixture.LiquidityPoolToken.address
         )
       ).to.be.revertedWith('_fee exceeds maximum')
     })
@@ -136,7 +135,7 @@ describe('TenderSwap', () => {
           INITIAL_A_VALUE,
           SWAP_FEE,
           10e10 + 1,
-          lpToken.address
+          fixture.LiquidityPoolToken.address
         )
       ).to.be.revertedWith('_adminFee exceeds maximum')
     })
