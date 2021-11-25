@@ -633,5 +633,79 @@ describe('Matic Integration Test', () => {
         expect(tx).to.emit(Tenderizer, 'GovernanceUpdate').withArgs('NODE')
       })
     })
+
+    describe('setting steak', async () => {
+      it('reverts if Zero address is set', async () => {
+        const txData = Tenderizer.interface.encodeFunctionData('setSteak', [ethers.constants.AddressZero])
+        await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_ADDRESS')
+      })
+
+      it('sets steak successfully', async () => {
+        const newSteakAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
+        const txData = Tenderizer.interface.encodeFunctionData('setSteak', [newSteakAddress])
+        tx = await Controller.execute(Tenderizer.address, 0, txData)
+        expect(await Tenderizer.steak()).to.equal(newSteakAddress)
+      })
+
+      it('should emit GovernanceUpdate event', async () => {
+        expect(tx).to.emit(Tenderizer, 'GovernanceUpdate').withArgs('STEAK')
+      })
+    })
+
+    describe('setting protocol fee', async () => {
+      it('sets protocol fee', async () => {
+        const newFee = ethers.utils.parseEther('0.05') // 5%
+        const txData = Tenderizer.interface.encodeFunctionData('setProtocolFee', [newFee])
+        tx = await Controller.execute(Tenderizer.address, 0, txData)
+        expect(await Tenderizer.protocolFee()).to.equal(newFee)
+      })
+
+      it('should emit GovernanceUpdate event', async () => {
+        expect(tx).to.emit(Tenderizer, 'GovernanceUpdate').withArgs('PROTOCOL_FEE')
+      })
+    })
+
+    describe('setting liquidity fee', async () => {
+      it('sets liquidity fee', async () => {
+        const newFee = ethers.utils.parseEther('0.05') // 5%
+        const txData = Tenderizer.interface.encodeFunctionData('setLiquidityFee', [newFee])
+        tx = await Controller.execute(Tenderizer.address, 0, txData)
+        expect(await Tenderizer.liquidityFee()).to.equal(newFee)
+      })
+
+      it('should emit GovernanceUpdate event', async () => {
+        expect(tx).to.emit(Tenderizer, 'GovernanceUpdate').withArgs('LIQUIDITY_FEE')
+      })
+    })
+
+    describe('setting controller', async () => {
+      it('reverts if Zero address is set', async () => {
+        const txData = Tenderizer.interface.encodeFunctionData('setController', [ethers.constants.AddressZero])
+        await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_ADDRESS')
+      })
+
+      it('sets controller successfully', async () => {
+        const newControllerAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
+        const txData = Tenderizer.interface.encodeFunctionData('setController', [newControllerAddress])
+        tx = await Controller.execute(Tenderizer.address, 0, txData)
+        expect(await Tenderizer.controller()).to.equal(newControllerAddress)
+      })
+
+      it('should emit GovernanceUpdate event', async () => {
+        expect(tx).to.emit(Tenderizer, 'GovernanceUpdate').withArgs('CONTROLLER')
+      })
+    })
+
+    describe('setting esp', async () => {
+      it('reverts if Zero address is set', async () => {
+        await expect(Controller.setEsp(ethers.constants.AddressZero)).to.be.revertedWith('ZERO_ADDRESS')
+      })
+
+      it('sets esp successfully', async () => {
+        const newEspAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
+        tx = await Controller.setEsp(newEspAddress)
+        expect(await Controller.esp()).to.equal(newEspAddress)
+      })
+    })
   })
 })
