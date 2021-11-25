@@ -118,6 +118,10 @@ describe('Graph Integration Test', () => {
     .sub(deposit.add(initialStake).mul(DELEGATION_TAX).div(MAX_PPM))
 
   describe('deposit', () => {
+    it('reverts because transfer amount exceeds allowance', async () => {
+      await expect(Controller.deposit(deposit)).to.be.revertedWith('ERC20: transfer amount exceeds allowance')
+    })
+
     describe('deposits funds succesfully', async () => {
       let tx: ContractTransaction
       before(async () => {
@@ -145,23 +149,53 @@ describe('Graph Integration Test', () => {
   })
 
   describe('stake', () => {
-    describe('stakes succeessfully', async () => {
-      let tx: ContractTransaction
-      it('bond succeeds', async () => {
-        GraphMock.smocked.delegate.will.return()
-        tx = await Controller.gulp()
-        expect(GraphMock.smocked.delegate.calls.length).to.eq(1)
-        expect(GraphMock.smocked.delegate.calls[0]._indexer).to.eq(NODE)
-        // A smocked contract doesn't execute its true code
-        // So livepeer.bond() never calls ERC20.transferFrom() under the hood
-        // Therefore when we call gulp() it will be for the deposit and bootstrapped supply on deployment
-        // Smock doesn't support executing code
-        expect(GraphMock.smocked.delegate.calls[0]._tokens).to.eq(deposit.add(initialStake))
-      })
+    let tx: ContractTransaction
+    it('delegate succeeds', async () => {
+      GraphMock.smocked.delegate.will.return()
+      tx = await Controller.gulp()
+      expect(GraphMock.smocked.delegate.calls.length).to.eq(1)
+      expect(GraphMock.smocked.delegate.calls[0]._indexer).to.eq(NODE)
+      expect(GraphMock.smocked.delegate.calls[0]._tokens).to.eq(deposit.add(initialStake))
+    })
 
-      it('emits Stake event from tenderizer', async () => {
-        expect(tx).to.emit(Tenderizer, 'Stake').withArgs(NODE, deposit.add(initialStake))
-      })
+    it('emits Stake event from tenderizer', async () => {
+      expect(tx).to.emit(Tenderizer, 'Stake').withArgs(NODE, deposit.add(initialStake))
+    })
+
+    it('uses specified node if passed, not default', async () => {
+      const newNodeAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
+      const txData = Tenderizer.interface.encodeFunctionData('stake', [newNodeAddress, ethers.utils.parseEther('0')])
+      await Controller.execute(Tenderizer.address, 0, txData)
+      expect(GraphMock.smocked.delegate.calls[0]._indexer).to.eq(newNodeAddress)
+    })
+
+    it('uses specified amount if passed, not contract token balance', async () => {
+      const amount = ethers.utils.parseEther('0.1')
+      const txData = Tenderizer.interface.encodeFunctionData('stake', [ethers.constants.AddressZero, amount])
+      await Controller.execute(Tenderizer.address, 0, txData)
+      expect(GraphMock.smocked.delegate.calls[0]._tokens).to.eq(amount)
+    })
+
+    it('returns without calling delegate() if no balance', async () => {
+      await hre.network.provider.request({
+        method: 'hardhat_impersonateAccount',
+        params: [Tenderizer.address]
+      }
+      )
+      const signer = await ethers.provider.getSigner(Tenderizer.address)
+      await hre.network.provider.send('hardhat_setBalance', [
+        Tenderizer.address,
+        `0x${ethers.utils.parseEther('10')}`
+      ])
+      await GraphToken.connect(signer).transfer(NODE, deposit.add(initialStake))
+      await hre.network.provider.request({
+        method: 'hardhat_stopImpersonatingAccount',
+        params: [Tenderizer.address]
+      }
+      )
+
+      await Controller.gulp()
+      expect(GraphMock.smocked.delegate.calls.length).to.eq(0)
     })
   })
 
@@ -499,6 +533,10 @@ describe('Graph Integration Test', () => {
         GraphMock.smocked.withdrawDelegated.will.return()
         const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('withdraw',
           [Controller.address, govUnboundLockID]))
+        // Smocked doesn't actually execute transactions, so balance of Controller is not updated
+        // hence manually transferring some tokens to simlaute withdrawal
+        await GraphToken.transfer(Tenderizer.address, withdrawAmount)
+
         tx = await Controller.execute(Tenderizer.address, 0, txData)
         expect(GraphMock.smocked.withdrawDelegated.calls.length).to.eq(1)
         expect(GraphMock.smocked.withdrawDelegated.calls[0]._indexer).to.eq(NODE)
@@ -605,6 +643,105 @@ describe('Graph Integration Test', () => {
     it('current principal still matches', async () => {
       const newPrincipal = await Tenderizer.currentPrincipal()
       expect(newPrincipal).to.equal(beforeBalance)
+    })
+  })
+
+  describe('Setting contract variables', async () => {
+    // TODO: Split into common file since these will be the same on all integrations?
+    describe('setting node', async () => {
+      it('reverts if Zero address is set', async () => {
+        const txData = Tenderizer.interface.encodeFunctionData('setNode', [ethers.constants.AddressZero])
+        await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_ADDRESS')
+      })
+
+      it('reverts if not called by controller', async () => {
+        await expect(Tenderizer.setNode(ethers.constants.AddressZero)).to.be.reverted
+      })
+
+      it('sets node successfully', async () => {
+        const newNodeAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
+        const txData = Tenderizer.interface.encodeFunctionData('setNode', [newNodeAddress])
+        tx = await Controller.execute(Tenderizer.address, 0, txData)
+        expect(await Tenderizer.node()).to.equal(newNodeAddress)
+      })
+
+      it('should emit GovernanceUpdate event', async () => {
+        expect(tx).to.emit(Tenderizer, 'GovernanceUpdate').withArgs('NODE')
+      })
+    })
+
+    describe('setting steak', async () => {
+      it('reverts if Zero address is set', async () => {
+        const txData = Tenderizer.interface.encodeFunctionData('setSteak', [ethers.constants.AddressZero])
+        await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_ADDRESS')
+      })
+
+      it('sets steak successfully', async () => {
+        const newSteakAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
+        const txData = Tenderizer.interface.encodeFunctionData('setSteak', [newSteakAddress])
+        tx = await Controller.execute(Tenderizer.address, 0, txData)
+        expect(await Tenderizer.steak()).to.equal(newSteakAddress)
+      })
+
+      it('should emit GovernanceUpdate event', async () => {
+        expect(tx).to.emit(Tenderizer, 'GovernanceUpdate').withArgs('STEAK')
+      })
+    })
+
+    describe('setting protocol fee', async () => {
+      it('sets protocol fee', async () => {
+        const newFee = ethers.utils.parseEther('0.05') // 5%
+        const txData = Tenderizer.interface.encodeFunctionData('setProtocolFee', [newFee])
+        tx = await Controller.execute(Tenderizer.address, 0, txData)
+        expect(await Tenderizer.protocolFee()).to.equal(newFee)
+      })
+
+      it('should emit GovernanceUpdate event', async () => {
+        expect(tx).to.emit(Tenderizer, 'GovernanceUpdate').withArgs('PROTOCOL_FEE')
+      })
+    })
+
+    describe('setting liquidity fee', async () => {
+      it('sets liquidity fee', async () => {
+        const newFee = ethers.utils.parseEther('0.05') // 5%
+        const txData = Tenderizer.interface.encodeFunctionData('setLiquidityFee', [newFee])
+        tx = await Controller.execute(Tenderizer.address, 0, txData)
+        expect(await Tenderizer.liquidityFee()).to.equal(newFee)
+      })
+
+      it('should emit GovernanceUpdate event', async () => {
+        expect(tx).to.emit(Tenderizer, 'GovernanceUpdate').withArgs('LIQUIDITY_FEE')
+      })
+    })
+
+    describe('setting controller', async () => {
+      it('reverts if Zero address is set', async () => {
+        const txData = Tenderizer.interface.encodeFunctionData('setController', [ethers.constants.AddressZero])
+        await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.revertedWith('ZERO_ADDRESS')
+      })
+
+      it('sets controller successfully', async () => {
+        const newControllerAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
+        const txData = Tenderizer.interface.encodeFunctionData('setController', [newControllerAddress])
+        tx = await Controller.execute(Tenderizer.address, 0, txData)
+        expect(await Tenderizer.controller()).to.equal(newControllerAddress)
+      })
+
+      it('should emit GovernanceUpdate event', async () => {
+        expect(tx).to.emit(Tenderizer, 'GovernanceUpdate').withArgs('CONTROLLER')
+      })
+    })
+
+    describe('setting esp', async () => {
+      it('reverts if Zero address is set', async () => {
+        await expect(Controller.setEsp(ethers.constants.AddressZero)).to.be.revertedWith('ZERO_ADDRESS')
+      })
+
+      it('sets esp successfully', async () => {
+        const newEspAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
+        tx = await Controller.setEsp(newEspAddress)
+        expect(await Controller.esp()).to.equal(newEspAddress)
+      })
     })
   })
 })
