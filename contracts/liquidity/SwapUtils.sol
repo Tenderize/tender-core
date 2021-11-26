@@ -693,7 +693,7 @@ library SwapUtils {
         uint256 totalSupply = lpToken.totalSupply();
 
         if (deposit) {
-            return (d1 - d0) * totalSupply / d0;
+            return totalSupply == 0 ? d1 : (d1 - d0) * totalSupply / d0;
         } else {
             return (d0 - d1) * totalSupply / d0;
         }
