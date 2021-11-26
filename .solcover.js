@@ -11,9 +11,18 @@ module.exports = {
         'tenderizer/integrations/graph/GraphMock.sol',
         'tenderizer/integrations/matic/IMatic.sol',
         'tenderizer/integrations/matic/MaticMock.sol',
+        'tenderizer/integrations/audius/IAudius.sol',
+        'tenderizer/integrations/audius/AudiusMock.sol',
         'liquidity/ElasticSupplyPool.sol',
         'liquidity/IElasticSupplyPool.sol',
+        'liquidity/ISwapRouter.sol',
+        'liquidity/ITenderFarm.sol',
+        'liquidity/ITenderSwap.sol',
         'liquidity/IOneInch.sol',
+        'liquidity/UniswapPoolMock.sol',
+        'liquidity/UniswapRouterMock.sol',
         'token/ITenderToken.sol',
+        'token/WETHMock.sol',
+        'token/IWETH.sol',
     ]
   };
