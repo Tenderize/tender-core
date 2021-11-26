@@ -1,5 +1,7 @@
 # Tenderizer
 
+[![Coverage Status](https://coveralls.io/repos/github/Tenderize/tender-core/badge.svg?t=C7yU8H)](https://coveralls.io/github/Tenderize/tender-core)
+
 ## Install
 
 Make sure Node.js (>=v12.0) is installed.
