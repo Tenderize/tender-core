@@ -1,6 +1,4 @@
-import hre, {
-  ethers
-} from 'hardhat'
+import { ethers } from 'hardhat'
 import ethersTypes, { BigNumber } from 'ethers'
 import { MockContract, smockit } from '@eth-optimism/smock'
 import chai from 'chai'
@@ -181,12 +179,6 @@ describe('TenderToken', () => {
         tenderizerMock.smocked.totalStakedTokens.will.return.with(initialAmount)
       })
 
-      afterEach(async () => {
-        await hre.network.provider.request({
-          method: 'hardhat_reset'
-        })
-      })
-
       it('total supply is correct', async () => {
         expect(await tenderToken.totalSupply()).to.eq(initialAmount)
       })
@@ -295,12 +287,6 @@ describe('TenderToken', () => {
         beforeEach(async () => {
           await tenderToken.approve(account1, transferAmount)
           await tenderToken.connect(signers[1]).approve(account2, transferAmount) // account1 has no tokens
-        })
-
-        afterEach(async () => {
-          await hre.network.provider.request({
-            method: 'hardhat_reset'
-          })
         })
 
         it('reverts when recipient is zero address', async () => {
