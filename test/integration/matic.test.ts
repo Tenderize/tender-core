@@ -3,7 +3,7 @@ import hre, { ethers } from 'hardhat'
 import { MockContract, smockit } from '@eth-optimism/smock'
 
 import {
-  SimpleToken, Controller, Tenderizer, ElasticSupplyPool, TenderToken, IMatic, BPool, EIP173Proxy, TenderFarm
+  SimpleToken, Controller, Tenderizer, TenderToken, IMatic, EIP173Proxy, TenderFarm, TenderSwap, LiquidityPoolToken
 } from '../../typechain/'
 
 import chai from 'chai'
@@ -16,6 +16,7 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { ContractTransaction } from '@ethersproject/contracts'
 
 import { sharesToTokens, percOf2 } from '../util/helpers'
+import { getCurrentBlockTimestamp } from '../util/evm'
 
 chai.use(solidity)
 const {
@@ -29,8 +30,8 @@ describe('Matic Integration Test', () => {
   let Controller: Controller
   let Tenderizer: Tenderizer
   let TenderToken: TenderToken
-  let Esp: ElasticSupplyPool
-  let BPool: BPool
+  let TenderSwap: TenderSwap
+  let LpToken: LiquidityPoolToken
   let TenderFarm: TenderFarm
 
   let Matic: {[name: string]: Deployment}
@@ -82,6 +83,12 @@ describe('Matic Integration Test', () => {
   })
 
   const STEAK_AMOUNT = '100000'
+  const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
+
+  const deposit = ethers.utils.parseEther('100')
+  const secondDeposit = ethers.utils.parseEther('10')
+
+  const ONE = ethers.utils.parseEther('1')
 
   before('deploy Matic Tenderizer', async () => {
     process.env.NAME = 'Matic'
@@ -96,21 +103,33 @@ describe('Matic Integration Test', () => {
     Controller = (await ethers.getContractAt('Controller', Matic.Controller.address)) as Controller
     Tenderizer = (await ethers.getContractAt('Tenderizer', Matic.Matic.address)) as Tenderizer
     TenderToken = (await ethers.getContractAt('TenderToken', Matic.TenderToken.address)) as TenderToken
-    Esp = (await ethers.getContractAt('ElasticSupplyPool', Matic.ElasticSupplyPool.address)) as ElasticSupplyPool
-    BPool = (await ethers.getContractAt('BPool', await Esp.bPool())) as BPool
+    TenderSwap = (await ethers.getContractAt('TenderSwap', await Controller.tenderSwap())) as TenderSwap
     TenderFarm = (await ethers.getContractAt('TenderFarm', Matic.TenderFarm.address)) as TenderFarm
+    LpToken = (await ethers.getContractAt('LiquidityPoolToken', await TenderSwap.lpToken())) as LiquidityPoolToken
+    TenderFarm = (await ethers.getContractAt('TenderFarm', Matic.TenderFarm.address)) as TenderFarm
+
     await Controller.batchExecute(
       [Tenderizer.address, Tenderizer.address],
       [0, 0],
       [Tenderizer.interface.encodeFunctionData('setProtocolFee', [protocolFeesPercent]),
         Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent])]
     )
+
+    // Deposit initial stake
+    await MaticToken.approve(Controller.address, initialStake)
+    await Controller.deposit(initialStake, { gasLimit: 500000 })
+    await Controller.gulp()
+    // Add initial liquidity
+    await MaticToken.approve(TenderSwap.address, initialStake)
+    await TenderToken.approve(TenderSwap.address, initialStake)
+    const lpTokensOut = await TenderSwap.calculateTokenAmount([initialStake, initialStake], true)
+    await TenderSwap.addLiquidity([initialStake, initialStake], lpTokensOut, (await getCurrentBlockTimestamp()) + 1000)
+    console.log('added liquidity')
+    console.log('calculated', lpTokensOut.toString(), 'actual', (await LpToken.balanceOf(deployer)).toString())
+    await LpToken.approve(TenderFarm.address, lpTokensOut)
+    await TenderFarm.farm(lpTokensOut)
+    console.log('farmed LP tokens')
   })
-
-  const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
-
-  const deposit = ethers.utils.parseEther('100')
-  const secondDeposit = ethers.utils.parseEther('10')
 
   describe('deposit', () => {
     it('reverts because transfer amount exceeds allowance', async () => {
@@ -208,14 +227,17 @@ describe('Matic Integration Test', () => {
   const protocolFees = percOf2(increase, protocolFeesPercent)
   const newStake = deposit.add(initialStake).add(increase)
   const newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
+  let dyBefore: BigNumber
+
   describe('rebase', () => {
     let totalShares: BigNumber
 
     describe('stake increased', () => {
-      totalShares = ethers.utils.parseEther('1')
+      totalShares = ONE
       let tx: ContractTransaction
 
       before(async () => {
+        dyBefore = await TenderSwap.calculateSwap(TenderToken.address, ONE)
         totalShares = await TenderToken.getTotalShares()
         MaticMock.smocked.balanceOf.will.return.with(newStake)
         MaticMock.smocked.exchangeRate.will.return.with(fxRate)
@@ -230,20 +252,19 @@ describe('Matic Integration Test', () => {
         // account 0
         const shares = await TenderToken.sharesOf(deployer)
         totalShares = await TenderToken.getTotalShares()
-        expect(await TenderToken.balanceOf(deployer)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+        expect(await TenderToken.balanceOf(deployer)).to.eq(sharesToTokens(shares, totalShares, newStakeMinusFees))
       })
-
       it('increases the tenderToken balance of the AMM', async () => {
-        const shares = await TenderToken.sharesOf(BPool.address)
-        expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+        const shares = await TenderToken.sharesOf(TenderSwap.address)
+        expect(await TenderToken.balanceOf(TenderSwap.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
       })
 
       it('steak balance stays the same', async () => {
-        expect(await MaticToken.balanceOf(BPool.address)).to.eq(initialStake)
+        expect(await MaticToken.balanceOf(TenderSwap.address)).to.eq(initialStake)
       })
 
-      it('weights of the AMM stay 50-50', async () => {
-        expect(await BPool.getNormalizedWeight(TenderToken.address)).to.be.eq(ethers.utils.parseEther('1').div(2))
+      it('tenderToken price slightly decreases vs underlying', async () => {
+        expect(await TenderSwap.calculateSwap(TenderToken.address, ONE)).to.be.lt(dyBefore)
       })
 
       it('should emit RewardsClaimed event from Tenderizer', async () => {
@@ -275,12 +296,14 @@ describe('Matic Integration Test', () => {
 
       let feesBefore: BigNumber = ethers.constants.Zero
       let tx: ContractTransaction
+      let dyBefore: BigNumber
 
       // calculate stake before rebase - fees
       const oldStake = deposit.add(initialStake)
       const expectedCP = oldStake.sub(liquidityFees).sub(protocolFees)
 
       before(async () => {
+        dyBefore = await TenderSwap.calculateSwap(TenderToken.address, ONE)
         feesBefore = await Tenderizer.pendingFees()
         MaticMock.smocked.balanceOf.will.return.with(newStake)
         MaticMock.smocked.exchangeRate.will.return.with(fxRate)
@@ -304,16 +327,16 @@ describe('Matic Integration Test', () => {
       })
 
       it('decreases the tenderToken balance of the AMM', async () => {
-        const shares = await TenderToken.sharesOf(BPool.address)
-        expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+        const shares = await TenderToken.sharesOf(TenderSwap.address)
+        expect(await TenderToken.balanceOf(TenderSwap.address)).to.eq(sharesToTokens(shares, totalShares, expectedCP))
       })
 
       it('steak balance stays the same', async () => {
-        expect(await MaticToken.balanceOf(BPool.address)).to.eq(initialStake)
+        expect(await MaticToken.balanceOf(TenderSwap.address)).to.eq(initialStake)
       })
 
-      it('weights of the AMM stay 50-50', async () => {
-        expect(await BPool.getNormalizedWeight(TenderToken.address)).to.be.eq(ethers.utils.parseEther('1').div(2))
+      it('price of the TenderTokens increases vs the underlying', async () => {
+        expect(await TenderSwap.calculateSwap(MaticToken.address, ONE)).to.be.gt(dyBefore)
       })
 
       it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
@@ -385,36 +408,22 @@ describe('Matic Integration Test', () => {
     })
   })
 
-  describe('swap against ESP', () => {
+  describe('swap against TenderSwap', () => {
     it('swaps tenderToken for Token', async () => {
       const amount = deposit.div(2)
-      const matBalBefore = await MaticToken.balanceOf(deployer)
+      const balBefore = await MaticToken.balanceOf(deployer)
 
-      const tenderBal = await BPool.getBalance(TenderToken.address)
-      const lptBal = await BPool.getBalance(MaticToken.address)
-      const tenderWeight = await BPool.getDenormalizedWeight(TenderToken.address)
-      const lptWeight = await BPool.getDenormalizedWeight(MaticToken.address)
-      const swapFee = await BPool.getSwapFee()
-      const expOut = await BPool.calcOutGivenIn(
-        tenderBal,
-        tenderWeight,
-        lptBal,
-        lptWeight,
-        amount,
-        swapFee
-      )
-
-      await TenderToken.approve(BPool.address, amount)
-      await BPool.swapExactAmountIn(
+      const dy = await TenderSwap.calculateSwap(TenderToken.address, amount)
+      await TenderToken.approve(TenderSwap.address, amount)
+      await TenderSwap.swap(
         TenderToken.address,
         amount,
-        MaticToken.address,
-        ethers.constants.One, // TODO: set proper value
-        ethers.utils.parseEther('10') // TODO: set proper value
+        dy,
+        (await getCurrentBlockTimestamp()) + 1000
       )
 
       const lptBalAfter = await MaticToken.balanceOf(deployer)
-      expect(lptBalAfter.sub(matBalBefore)).to.eq(expOut)
+      expect(lptBalAfter.sub(balBefore)).to.eq(dy)
     })
   })
 
@@ -433,7 +442,7 @@ describe('Matic Integration Test', () => {
     it('reverts if requested amount exceeds balance', async () => {
       MaticMock.smocked.sellVoucher_new.will.return()
       withdrawAmount = await TenderToken.balanceOf(deployer)
-      await expect(Controller.unlock(withdrawAmount.add(ethers.utils.parseEther('1')))).to.be.revertedWith('BURN_AMOUNT_EXCEEDS_BALANCE')
+      await expect(Controller.unlock(withdrawAmount.add(ONE))).to.be.revertedWith('BURN_AMOUNT_EXCEEDS_BALANCE')
     })
 
     it('reverts if requested amount is 0', async () => {
@@ -481,7 +490,7 @@ describe('Matic Integration Test', () => {
         let poolBalBefore: BigNumber
         let otherAccBalBefore: BigNumber
         before('perform partial unbond', async () => {
-          poolBalBefore = await TenderToken.balanceOf(BPool.address)
+          poolBalBefore = await TenderToken.balanceOf(TenderSwap.address)
           otherAccBalBefore = await TenderToken.balanceOf(signers[2].address)
           const totalStaked = await Tenderizer.totalStakedTokens()
           govWithdrawAmount = totalStaked.div(2)
@@ -500,9 +509,9 @@ describe('Matic Integration Test', () => {
           expect(await TenderToken.balanceOf(signers[2].address)).to.eq(otherAccBalBefore.div(2))
         })
 
-        it('TenderToken balance of BPool account halves', async () => {
+        it('TenderToken balance of TenderSwap account halves', async () => {
           // Accpetable delta of 30 gwei
-          expect((await TenderToken.balanceOf(BPool.address)).sub(poolBalBefore.div(2)).abs())
+          expect((await TenderToken.balanceOf(TenderSwap.address)).sub(poolBalBefore.div(2)).abs())
             .to.lte(acceptableDelta * 15)
         })
       })
@@ -526,8 +535,8 @@ describe('Matic Integration Test', () => {
           expect(await TenderToken.balanceOf(signers[2].address)).to.eq(0)
         })
 
-        it('TenderToken balance of BPool account becomes 0', async () => {
-          expect(await TenderToken.balanceOf(BPool.address)).to.eq(0)
+        it('TenderToken balance of TenderSwap account becomes 0', async () => {
+          expect(await TenderToken.balanceOf(TenderSwap.address)).to.eq(0)
         })
       })
     })
@@ -693,18 +702,6 @@ describe('Matic Integration Test', () => {
 
       it('should emit GovernanceUpdate event', async () => {
         expect(tx).to.emit(Tenderizer, 'GovernanceUpdate').withArgs('CONTROLLER')
-      })
-    })
-
-    describe('setting esp', async () => {
-      it('reverts if Zero address is set', async () => {
-        await expect(Controller.setEsp(ethers.constants.AddressZero)).to.be.revertedWith('ZERO_ADDRESS')
-      })
-
-      it('sets esp successfully', async () => {
-        const newEspAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
-        tx = await Controller.setEsp(newEspAddress)
-        expect(await Controller.esp()).to.equal(newEspAddress)
       })
     })
   })

@@ -3,7 +3,7 @@ import hre, { ethers } from 'hardhat'
 import { MockContract, smockit } from '@eth-optimism/smock'
 
 import {
-  SimpleToken, Controller, Tenderizer, ElasticSupplyPool, TenderToken, IGraph, BPool, EIP173Proxy, TenderFarm
+  SimpleToken, Controller, Tenderizer, TenderToken, IGraph, EIP173Proxy, TenderFarm, TenderSwap, LiquidityPoolToken
 } from '../../typechain/'
 
 import { sharesToTokens, percOf2 } from '../util/helpers'
@@ -16,6 +16,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Deployment } from 'hardhat-deploy/dist/types'
 import { BigNumber } from '@ethersproject/bignumber'
 import { ContractTransaction } from '@ethersproject/contracts'
+import { getCurrentBlockTimestamp } from '../util/evm'
 
 chai.use(solidity)
 const {
@@ -29,8 +30,8 @@ describe('Graph Integration Test', () => {
   let Controller: Controller
   let Tenderizer: Tenderizer
   let TenderToken: TenderToken
-  let Esp: ElasticSupplyPool
-  let BPool: BPool
+  let TenderSwap: TenderSwap
+  let LpToken: LiquidityPoolToken
   let TenderFarm: TenderFarm
 
   let Graph: {[name: string]: Deployment}
@@ -79,6 +80,15 @@ describe('Graph Integration Test', () => {
   const NODE = '0xf4e8Ef0763BCB2B1aF693F5970a00050a6aC7E1B'
   const DELEGATION_TAX = BigNumber.from(5000)
   const MAX_PPM = BigNumber.from(1000000)
+  const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
+  const initialStakeAfterTax = initialStake.sub(initialStake.mul(DELEGATION_TAX).div(MAX_PPM))
+  const deposit = ethers.utils.parseEther('100')
+  const secondDeposit = ethers.utils.parseEther('10')
+
+  const supplyAfterTax = deposit.add(initialStake)
+    .sub(deposit.add(initialStake).mul(DELEGATION_TAX).div(MAX_PPM))
+
+  const ONE = ethers.utils.parseEther('1')
 
   before('deploy Graph Tenderizer', async () => {
     process.env.NAME = 'Graph'
@@ -94,28 +104,34 @@ describe('Graph Integration Test', () => {
     Controller = (await ethers.getContractAt('Controller', Graph.Controller.address)) as Controller
     Tenderizer = (await ethers.getContractAt('Tenderizer', Graph.Graph.address)) as Tenderizer
     TenderToken = (await ethers.getContractAt('TenderToken', Graph.TenderToken.address)) as TenderToken
-    Esp = (await ethers.getContractAt('ElasticSupplyPool', Graph.ElasticSupplyPool.address)) as ElasticSupplyPool
-    BPool = (await ethers.getContractAt('BPool', await Esp.bPool())) as BPool
+    TenderSwap = (await ethers.getContractAt('TenderSwap', await Controller.tenderSwap())) as TenderSwap
     TenderFarm = (await ethers.getContractAt('TenderFarm', Graph.TenderFarm.address)) as TenderFarm
-    await Controller.execute(
-      Tenderizer.address,
-      0,
-      Tenderizer.interface.encodeFunctionData('setProtocolFee', [protocolFeesPercent])
+    LpToken = (await ethers.getContractAt('LiquidityPoolToken', await TenderSwap.lpToken())) as LiquidityPoolToken
+
+    await Controller.batchExecute(
+      [Tenderizer.address, Tenderizer.address],
+      [0, 0],
+      [
+        Tenderizer.interface.encodeFunctionData('setProtocolFee', [protocolFeesPercent]),
+        Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent])
+      ]
     )
-    await Controller.execute(
-      Tenderizer.address,
-      0,
-      Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent])
-    )
+
+    // Deposit initial stake
+    await GraphToken.approve(Controller.address, initialStake)
+    await Controller.deposit(initialStake, { gasLimit: 500000 })
+    await Controller.gulp()
+    // Add initial liquidity
+    await GraphToken.approve(TenderSwap.address, initialStake)
+    await TenderToken.approve(TenderSwap.address, initialStake)
+    const lpTokensOut = await TenderSwap.calculateTokenAmount([initialStakeAfterTax, initialStakeAfterTax], true)
+    await TenderSwap.addLiquidity([initialStakeAfterTax, initialStakeAfterTax], lpTokensOut, (await getCurrentBlockTimestamp()) + 1000)
+    console.log('added liquidity')
+    console.log('calculated', lpTokensOut.toString(), 'actual', (await LpToken.balanceOf(deployer)).toString())
+    await LpToken.approve(TenderFarm.address, lpTokensOut)
+    await TenderFarm.farm(lpTokensOut)
+    console.log('farmed LP tokens')
   })
-
-  const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
-
-  const deposit = ethers.utils.parseEther('100')
-  const secondDeposit = ethers.utils.parseEther('10')
-
-  const supplyAfterTax = deposit.add(initialStake)
-    .sub(deposit.add(initialStake).mul(DELEGATION_TAX).div(MAX_PPM))
 
   describe('deposit', () => {
     it('reverts because transfer amount exceeds allowance', async () => {
@@ -205,11 +221,14 @@ describe('Graph Integration Test', () => {
     const protocolFees = percOf2(increase, protocolFeesPercent)
     const newStake = supplyAfterTax.add(increase)
     const newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
+    let dyBefore: BigNumber
+
     describe('stake increased', () => {
-      let totalShares: BigNumber = ethers.utils.parseEther('1')
+      let totalShares: BigNumber = ONE
       let tx: ContractTransaction
 
       before(async () => {
+        dyBefore = await TenderSwap.calculateSwap(TenderToken.address, ONE)
         totalShares = await TenderToken.getTotalShares()
         GraphMock.smocked.getDelegation.will.return.with(
           {
@@ -241,18 +260,17 @@ describe('Graph Integration Test', () => {
       })
 
       it('increases the tenderToken balance of the AMM', async () => {
-        const shares = await TenderToken.sharesOf(BPool.address)
-        expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+        const shares = await TenderToken.sharesOf(TenderSwap.address)
+        expect(await TenderToken.balanceOf(TenderSwap.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
       })
 
       it('steak balance stays the same', async () => {
-        expect(await GraphToken.balanceOf(BPool.address)).to.eq(initialStake)
+        expect(await GraphToken.balanceOf(TenderSwap.address)).to.eq(initialStakeAfterTax)
       })
 
-      it('weights of the AMM stay 50-50', async () => {
-        expect(await BPool.getNormalizedWeight(TenderToken.address)).to.be.eq(ethers.utils.parseEther('1').div(2))
+      it('tenderToken price slightly decreases vs underlying', async () => {
+        expect(await TenderSwap.calculateSwap(TenderToken.address, ONE)).to.be.lt(dyBefore)
       })
-
       it('should emit RewardsClaimed event from Tenderizer', async () => {
         expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs(increase, newStakeMinusFees, supplyAfterTax)
       })
@@ -282,11 +300,13 @@ describe('Graph Integration Test', () => {
 
       let feesBefore: BigNumber = ethers.constants.Zero
       let tx: ContractTransaction
+      let dyBefore: BigNumber
 
       // calculate stake before rebase - fees
       const expectedCP = newStake.sub(liquidityFees).sub(protocolFees)
 
       before(async () => {
+        dyBefore = await TenderSwap.calculateSwap(TenderToken.address, ONE)
         feesBefore = await Tenderizer.pendingFees()
         oldPrinciple = await Tenderizer.currentPrincipal()
         GraphMock.smocked.getDelegation.will.return.with(
@@ -323,16 +343,16 @@ describe('Graph Integration Test', () => {
       })
 
       it('decreases the tenderToken balance of the AMM', async () => {
-        const shares = await TenderToken.sharesOf(BPool.address)
-        expect(await TenderToken.balanceOf(BPool.address)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
+        const shares = await TenderToken.sharesOf(TenderSwap.address)
+        expect(await TenderToken.balanceOf(TenderSwap.address)).to.eq(sharesToTokens(shares, totalShares, expectedCP))
       })
 
       it('steak balance stays the same', async () => {
-        expect(await GraphToken.balanceOf(BPool.address)).to.eq(initialStake)
+        expect(await GraphToken.balanceOf(TenderSwap.address)).to.eq(initialStakeAfterTax)
       })
 
-      it('weights of the AMM stay 50-50', async () => {
-        expect(await BPool.getNormalizedWeight(TenderToken.address)).to.be.eq(ethers.utils.parseEther('1').div(2))
+      it('price of the TenderTokens increases vs the underlying', async () => {
+        expect(await TenderSwap.calculateSwap(GraphToken.address, ONE)).to.be.gt(dyBefore)
       })
 
       it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
@@ -401,36 +421,22 @@ describe('Graph Integration Test', () => {
     })
   })
 
-  describe('swap against ESP', () => {
+  describe('swap against TenderSwap', () => {
     it('swaps tenderToken for Token', async () => {
       const amount = deposit.div(2)
-      const lptBalBefore = await GraphToken.balanceOf(deployer)
+      const balBefore = await GraphToken.balanceOf(deployer)
 
-      const tenderBal = await BPool.getBalance(TenderToken.address)
-      const lptBal = await BPool.getBalance(GraphToken.address)
-      const tenderWeight = await BPool.getDenormalizedWeight(TenderToken.address)
-      const lptWeight = await BPool.getDenormalizedWeight(GraphToken.address)
-      const swapFee = await BPool.getSwapFee()
-      const expOut = await BPool.calcOutGivenIn(
-        tenderBal,
-        tenderWeight,
-        lptBal,
-        lptWeight,
-        amount,
-        swapFee
-      )
-
-      await TenderToken.approve(BPool.address, amount)
-      await BPool.swapExactAmountIn(
+      const dy = await TenderSwap.calculateSwap(TenderToken.address, amount)
+      await TenderToken.approve(TenderSwap.address, amount)
+      await TenderSwap.swap(
         TenderToken.address,
         amount,
-        GraphToken.address,
-        ethers.constants.One, // TODO: set proper value
-        ethers.utils.parseEther('10') // TODO: set proper value
+        dy,
+        (await getCurrentBlockTimestamp()) + 1000
       )
 
       const lptBalAfter = await GraphToken.balanceOf(deployer)
-      expect(lptBalAfter.sub(lptBalBefore)).to.eq(expOut)
+      expect(lptBalAfter.sub(balBefore)).to.eq(dy)
     })
   })
 
@@ -444,7 +450,7 @@ describe('Graph Integration Test', () => {
     describe('user unlock', async () => {
       it('reverts if user does not have enough tender token balance', async () => {
         withdrawAmount = await TenderToken.balanceOf(deployer)
-        await expect(Controller.unlock(withdrawAmount.add(ethers.utils.parseEther('1')))).to.be.revertedWith('BURN_AMOUNT_EXCEEDS_BALANCE')
+        await expect(Controller.unlock(withdrawAmount.add(ONE))).to.be.revertedWith('BURN_AMOUNT_EXCEEDS_BALANCE')
       })
 
       it('on success - updates current pricinple', async () => {
@@ -729,18 +735,6 @@ describe('Graph Integration Test', () => {
 
       it('should emit GovernanceUpdate event', async () => {
         expect(tx).to.emit(Tenderizer, 'GovernanceUpdate').withArgs('CONTROLLER')
-      })
-    })
-
-    describe('setting esp', async () => {
-      it('reverts if Zero address is set', async () => {
-        await expect(Controller.setEsp(ethers.constants.AddressZero)).to.be.revertedWith('ZERO_ADDRESS')
-      })
-
-      it('sets esp successfully', async () => {
-        const newEspAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
-        tx = await Controller.setEsp(newEspAddress)
-        expect(await Controller.esp()).to.equal(newEspAddress)
       })
     })
   })
