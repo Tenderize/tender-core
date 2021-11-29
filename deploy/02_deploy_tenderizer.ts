@@ -5,10 +5,9 @@ import {
 } from 'hardhat'
 
 import {
-  TenderToken, Tenderizer, ElasticSupplyPool, ERC20, Controller, EIP173Proxy, TenderFarm, BPool, Registry, IGraph
+  TenderToken, Tenderizer, ERC20, Controller, EIP173Proxy, TenderFarm, Registry, TenderSwap, LiquidityPoolToken
 } from '../typechain'
-import { BigNumber } from '@ethersproject/bignumber'
-import { constants, utils } from 'ethers'
+import { constants } from 'ethers'
 
 import dotenv from 'dotenv'
 
@@ -27,9 +26,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   const { deployer } = await getNamedAccounts() // Fetch named accounts from hardhat.process.env.ts
 
   const steakAmount = process.env.STEAK_AMOUNT || '0'
-
-  const bootstrapSupply: BigNumber = ethers.utils.parseEther(steakAmount).div(2)
-  let tenderBootstrapSupply = bootstrapSupply
 
   console.log(`Bootstrap Tenderizer with ${steakAmount} ${SYMBOL}`)
 
@@ -50,51 +46,20 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     log: true // display the address and gas used in the console (not when run in test though)
   })
 
-  // Account for GRT Delegation Tax
-  if (SYMBOL === 'GRT') {
-    const graphStaking: IGraph = (await ethers.getContractAt('IGraph', process.env.CONTRACT as string)) as IGraph
-    const tax = await graphStaking.delegationTaxPercentage()
-    tenderBootstrapSupply = bootstrapSupply.sub(bootstrapSupply.mul(tax).div(1000000))
+  const tenderSwapConfig = {
+    tenderSwapTarget: (await deployments.get('TenderSwap')).address,
+    lpTokenName: `t${SYMBOL}-${SYMBOL} TenderSwap Token v1`,
+    lpTokenSymbol: `t${SYMBOL}-${SYMBOL}-SWAP`,
+    amplifier: 85,
+    fee: 5e6,
+    adminFee: 0,
+    lpTokenTarget: (await deployments.get('LiquidityPoolToken')).address
   }
-
-  const permissions = {
-    canPauseSwapping: true,
-    canChangeSwapFee: true,
-    canChangeWeights: true,
-    canAddRemoveTokens: false,
-    canWhitelistLPs: false,
-    canChangeCap: false
-  }
-
-  const poolParams = {
-    poolTokenSymbol: `t${SYMBOL}-${SYMBOL}-POOL`,
-    poolTokenName: `${SYMBOL}-${SYMBOL} Pool Token V1`,
-    constituentTokens: [
-      tenderToken.address,
-      process.env.TOKEN
-    ],
-    tokenBalances: [tenderBootstrapSupply, bootstrapSupply],
-    tokenWeights: ['7071067811870000000', '7071067811870000000'],
-    swapFee: '3000000000000000'
-  }
-
-  const BFactory = await deployments.get('BFactory')
-
-  const esp = await deploy('ElasticSupplyPool', {
-    from: deployer,
-    libraries: {
-      BalancerSafeMath: (await deployments.get('BalancerSafeMath')).address,
-      RightsManager: (await deployments.get('RightsManager')).address,
-      SmartPoolManager: (await deployments.get('SmartPoolManager')).address
-    },
-    log: true, // display the address and gas used in the console (not when run in test though)
-    args: [BFactory.address, poolParams, permissions]
-  })
 
   const controller = await deploy('Controller', {
     from: deployer,
     log: true,
-    args: [process.env.TOKEN, tenderizer.address, tenderToken.address, esp.address],
+    args: [process.env.TOKEN, tenderizer.address, tenderToken.address, tenderSwapConfig],
     proxy: {
       proxyContract: 'EIP173ProxyWithReceive',
       owner: deployer,
@@ -102,11 +67,20 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     }
   })
 
+  const Controller: Controller = (await ethers.getContractAt('Controller', controller.address)) as Controller
+
+  const TenderSwap: TenderSwap = (await ethers.getContractAt(
+    'TenderSwap',
+    await Controller.tenderSwap()
+  )) as TenderSwap
+
+  const LiquidityPoolToken = (await ethers.getContractAt(
+    'LiquidityPoolToken',
+    await TenderSwap.lpToken()
+  )) as LiquidityPoolToken
+
   const TenderToken: TenderToken = (await ethers.getContractAt('TenderToken', tenderToken.address)) as TenderToken
   const Tenderizer: Tenderizer = (await ethers.getContractAt('Tenderizer', tenderizer.address)) as Tenderizer
-  const Esp: ElasticSupplyPool = (await ethers.getContractAt('ElasticSupplyPool', esp.address)) as ElasticSupplyPool
-  const Steak: ERC20 = (await ethers.getContractAt('ERC20', process.env.TOKEN || ethers.constants.AddressZero)) as ERC20
-  const Controller: Controller = (await ethers.getContractAt('Controller', controller.address)) as Controller
   const Proxy: EIP173Proxy = (await ethers.getContractAt('EIP173Proxy', tenderizer.address)) as EIP173Proxy
 
   console.log('Setting controller on Tenderizer')
@@ -115,42 +89,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   console.log('Transferring ownership for TenderToken to Controller')
   await TenderToken.transferOwnership(controller.address)
 
-  const pcTokenSupply = '1000000000000000000000' // 1000e18
-  const minimumWeightChangeBlockPeriod = 10
-  const addTokenTimeLockInBlocks = 10
+  // console.log('Approving tokens for depositing in Tenderizer')
 
-  console.log('Approving tokens for depositing in Tenderizer')
+  // await Steak.approve(controller.address, bootstrapSupply)
 
-  await Steak.approve(controller.address, bootstrapSupply)
+  // console.log('Depositing tokens in Tenderizer')
 
-  console.log('Depositing tokens in Tenderizer')
+  // await Controller.deposit(bootstrapSupply, { gasLimit: 500000 })
 
-  await Controller.deposit(bootstrapSupply, { gasLimit: 500000 })
+  // console.log('Stake the deposited tokens')
 
-  console.log('Approving tokens and tender tokens for creating the Elastic Supply Pool')
-
-  await Steak.approve(esp.address, bootstrapSupply)
-  await TenderToken.approve(esp.address, tenderBootstrapSupply)
-
-  console.log('Creating Elastic Supply Pool')
-
-  const cpTxGas = hre.network.name === 'hardhat' ? 12000000 : 8000000
-  const cpTx = await Esp.createPool(pcTokenSupply, minimumWeightChangeBlockPeriod, addTokenTimeLockInBlocks, { gasLimit: cpTxGas })
-  await cpTx.wait()
-
-  const bpoolAddr = await Esp.bPool()
-
-  const BPool: BPool = (await ethers.getContractAt('BPool', bpoolAddr)) as BPool
-
-  console.log('Transferring ownership for Elastic Supply Pool to Controller')
-
-  await Esp.setController(controller.address)
-
-  console.log('Stake the deposited tokens')
-
-  await Controller.gulp({ gasLimit: 1500000 })
-
-  console.log('Balancer pool address', bpoolAddr)
+  // await Controller.gulp({ gasLimit: 1500000 })
 
   console.log('Succesfully Deployed ! ')
 
@@ -159,7 +108,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   const tenderFarm = await deploy('TenderFarm', {
     from: deployer,
     log: true,
-    args: [await Esp.address, tenderToken.address, Controller.address],
+    args: [LiquidityPoolToken.address, tenderToken.address, Controller.address],
     proxy: {
       proxyContract: 'EIP173ProxyWithReceive',
       owner: deployer,
@@ -172,13 +121,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   await FarmProxy.transferOwnership(controller.address)
   await Controller.setTenderFarm(FarmProxy.address)
   console.log('Deployed TenderFarm')
-
-  // Stake tokens in tenderfarm for deployer
-  const lpTokenBal = await Esp.balanceOf(deployer)
-  console.log('Liquidity Pool Tokens Received:', utils.formatEther(lpTokenBal))
-  await Esp.approve(tenderFarm.address, lpTokenBal, { gasLimit: 1000000 })
-  console.log('farming balancer pool tokens')
-  await TenderFarm.farm(lpTokenBal, { gasLimit: 250000 })
 
   // set liquidity fee
   const data = Tenderizer.interface.encodeFunctionData('setLiquidityFee', [ethers.utils.parseEther('0.075')])
@@ -196,8 +138,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
       steak: process.env.TOKEN || constants.AddressZero,
       tenderizer: Tenderizer.address,
       tenderToken: TenderToken.address,
-      esp: Esp.address,
-      bpool: BPool.address,
+      tenderSwap: TenderSwap.address,
       tenderFarm: TenderFarm.address
     })
   } else if (hre.network.name === 'mainnet' || hre.network.name === 'rinkeby') {
@@ -229,6 +170,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   }
 }
 
-func.dependencies = ['Registry', 'Libraries']
+func.dependencies = ['Registry', 'TenderSwap']
 func.tags = [NAME, 'Deploy'] // this setup a tag so you can execute the script on its own (and its dependencies)
 export default func
