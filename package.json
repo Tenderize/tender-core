@@ -1,5 +1,6 @@
 {
-  "name": "hardhat-project",
+  "name": "tender-core",
+  "version": "0.1.0",
   "scripts": {
     "clean": "rm -rf cache artifacts typechain",
     "compile": "npx hardhat compile",
