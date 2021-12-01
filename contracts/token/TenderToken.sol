@@ -14,13 +14,16 @@ import {ERC20, ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions
  * @title Interest-bearing ERC20-like token for Tenderize protocol.
  * @author Tenderize <info@tenderize.me>
  * @dev TenderToken balances are dynamic and are calculated based on the accounts' shares
-    and the total amount of Tokens controlled by the protocol. Account shares aren't
-    normalized, so the contract also stores the sum of all shares to calculate
-    each account's token balance which equals to:
-
-    shares[account] * _getTotalPooledTokens() / _getTotalShares()
+ * and the total amount of Tokens controlled by the protocol. Account shares aren't
+ * normalized, so the contract also stores the sum of all shares to calculate
+ * each account's token balance which equals to:
+ *
+ * shares[account] * _getTotalPooledTokens() / _getTotalShares()
  */
 contract TenderToken is Ownable, ERC20Permit {
+    /**
+     * @dev ERC20 Deciamls
+     */
     uint8 internal constant DECIMALS = 18;
 
     /**
@@ -56,7 +59,7 @@ contract TenderToken is Ownable, ERC20Permit {
     }
 
     /**
-     * @notice The number of decimals the TenderToken uses
+     * @notice The number of decimals the TenderToken uses.
      * @return the number of decimals for getting user representation of a token amount.
      */
     function decimals() public override pure returns (uint8) {
@@ -64,9 +67,9 @@ contract TenderToken is Ownable, ERC20Permit {
     }
 
     /**
-     * @notice The total supply of tender tokens in existence
+     * @notice The total supply of tender tokens in existence.
      * @dev Always equals to `_getTotalPooledTokens()` since token amount
-        is pegged to the total amount of Tokens controlled by the protocol.
+     * is pegged to the total amount of Tokens controlled by the protocol.
      * @return total supply
      */
     function totalSupply() public view override returns (uint256) {
@@ -74,7 +77,7 @@ contract TenderToken is Ownable, ERC20Permit {
     }
 
     /**
-     * @notice Total amount of underlying tokens controlled by the Tenderizer
+     * @notice Total amount of underlying tokens controlled by the Tenderizer.
      * @dev The sum of all Tokens balances in the protocol, equals to the total supply of TenderToken.
      * @return total amount of pooled tokens
      */
@@ -85,7 +88,7 @@ contract TenderToken is Ownable, ERC20Permit {
     /**
      * @notice The total amount of shares in existence.
      * @dev The sum of all accounts' shares can be an arbitrary number, therefore
-        it is necessary to store it in order to calculate each account's relative share.
+     * it is necessary to store it in order to calculate each account's relative share.
      * @return total amount of shares
      */
     function getTotalShares() public view returns (uint256) {
@@ -113,7 +116,7 @@ contract TenderToken is Ownable, ERC20Permit {
 
     /**
      * @notice The remaining number of tokens that `_spender` is allowed to spend
-        behalf of `_owner` through `transferFrom`. This is zero by default.
+     * behalf of `_owner` through `transferFrom`. This is zero by default.
      * @dev This value changes when `approve` or `transferFrom` is called.
      * @param _owner address that approved the allowance
      * @param _spender address that is allowed to spend the allowance
@@ -161,8 +164,8 @@ contract TenderToken is Ownable, ERC20Permit {
      * @return a boolean value indicating whether the operation succeeded.
      * @dev Emits a `Transfer` event.
      * @dev Requirements:
-        - `_recipient` cannot be the zero address.
-        - the caller must have a balance of at least `_amount`.
+     * - `_recipient` cannot be the zero address.
+     * - the caller must have a balance of at least `_amount`.
      * @dev The `_amount` argument is the amount of tokens, not shares.
      */
     function transfer(address _recipient, uint256 _amount) public override returns (bool) {
@@ -177,7 +180,7 @@ contract TenderToken is Ownable, ERC20Permit {
      * @return a boolean value indicating whether the operation succeeded.
      * @dev Emits an `Approval` event.
      * @dev Requirements:
-        - `_spender` cannot be the zero address.
+     * - `_spender` cannot be the zero address.
      * @dev The `_amount` argument is the amount of tokens, not shares.
      */
     function approve(address _spender, uint256 _amount) public override returns (bool) {
@@ -187,16 +190,16 @@ contract TenderToken is Ownable, ERC20Permit {
 
     /**
      * @notice Transfers `_amount` tokens from `_sender` to `_recipient` using the
-        allowance mechanism. `_amount` is then deducted from the caller's allowance.
+     * allowance mechanism. `_amount` is then deducted from the caller's allowance.
      * @param _sender address of the account to transfer tokens from
      * @param _recipient address of the recipient
      * @return a boolean value indicating whether the operation succeeded.
      * @dev Emits a `Transfer` event.
      * @dev Emits an `Approval` event indicating the updated allowance.
      * @dev Requirements:
-        - `_sender` and `_recipient` cannot be the zero addresses.
-        - `_sender` must have a balance of at least `_amount`.
-        - the caller must have allowance for `_sender`'s tokens of at least `_amount`.
+     * - `_sender` and `_recipient` cannot be the zero addresses.
+     * - `_sender` must have a balance of at least `_amount`.
+     * - the caller must have allowance for `_sender`'s tokens of at least `_amount`.
      * @dev The `_amount` argument is the amount of tokens, not shares.
      */
     function transferFrom(
@@ -217,10 +220,10 @@ contract TenderToken is Ownable, ERC20Permit {
      * @param _spender address of the spender allowed to approve tokens from caller
      * @param _addedValue amount to add to allowance
      * @dev This is an alternative to `approve` that can be used as a mitigation for problems described in:
-        https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol#L42
+     * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol#L42
      * @dev Emits an `Approval` event indicating the updated allowance.
      * @dev Requirements:
-        - `_spender` cannot be the the zero address.
+     * - `_spender` cannot be the the zero address.
      */
     function increaseAllowance(address _spender, uint256 _addedValue) public override returns (bool) {
         _approve(msg.sender, _spender, allowances[msg.sender][_spender] + _addedValue);
@@ -232,11 +235,11 @@ contract TenderToken is Ownable, ERC20Permit {
      * @param _spender address of the spender allowed to approve tokens from caller
      * @param _subtractedValue amount to subtract from current allowance
      * @dev This is an alternative to `approve` that can be used as a mitigation for problems described in:
-        https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol#L42
+     * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol#L42
      * @dev Emits an `Approval` event indicating the updated allowance.
      * @dev Requirements:
-        - `_spender` cannot be the zero address.
-        - `_spender` must have allowance for the caller of at least `_subtractedValue`.
+     * - `_spender` cannot be the zero address.
+     * - `_spender` must have allowance for the caller of at least `_subtractedValue`.
      */
     function decreaseAllowance(address _spender, uint256 _subtractedValue) public override returns (bool) {
         uint256 currentAllowance = allowances[msg.sender][_spender];
@@ -252,9 +255,9 @@ contract TenderToken is Ownable, ERC20Permit {
      * @return a boolean value indicating whether the operation succeeded.
      * @dev Only callable by contract owner
      * @dev Calculates the amount of shares to create based on the specified '_amount'
-        and creates new shares rather than minting actual tokens
+     * and creates new shares rather than minting actual tokens
      * @dev '_recipient' should also deposit into Tenderizer
-        atomically to prevent diluation of existing particpants
+     * atomically to prevent diluation of existing particpants
      */
     function mint(address _recipient, uint256 _amount) public onlyOwner returns (bool) {
         uint256 _totalPooledTokens = _getTotalPooledTokens();
@@ -274,7 +277,7 @@ contract TenderToken is Ownable, ERC20Permit {
      * @return a boolean value indicating whether the operation succeeded.
      * @dev Only callable by contract owner
      * @dev Calculates the amount of shares to destroy based on the specified '_amount'
-        and destroy shares rather than burning tokens
+     * and destroy shares rather than burning tokens
      * @dev '_recipient' should also withdraw from Tenderizer atomically
      */
     function burn(address _account, uint256 _amount) public onlyOwner returns (bool) {
@@ -339,9 +342,9 @@ contract TenderToken is Ownable, ERC20Permit {
     /**
      * @dev Moves `_shares` shares from `_sender` to `_recipient`.
      * @dev Requirements:
-        - `_sender` cannot be the zero address.
-        - `_recipient` cannot be the zero address.
-        - `_sender` must hold at least `_shares` shares.
+     * - `_sender` cannot be the zero address.
+     * - `_recipient` cannot be the zero address.
+     * - `_sender` must hold at least `_shares` shares.
      */
     function _transferShares(
         address _sender,
@@ -362,7 +365,7 @@ contract TenderToken is Ownable, ERC20Permit {
      * @dev Creates `_shares` shares and assigns them to `_recipient`, increasing the total amount of shares.
      * @dev This doesn't increase the token total supply.
      * @dev Requirements:
-        - `_recipient` cannot be the zero address.
+     * - `_recipient` cannot be the zero address.
      */
     function _mintShares(address _recipient, uint256 _shares) internal returns (uint256 newTotalShares) {
         require(_recipient != address(0), "MINT_TO_THE_ZERO_ADDRESS");
@@ -384,8 +387,8 @@ contract TenderToken is Ownable, ERC20Permit {
      * @dev Destroys `_shares` shares from `_account`'s holdings, decreasing the total amount of shares.
      * @dev This doesn't decrease the token total supply.
      * @dev Requirements:
-        - `_account` cannot be the zero address.
-        - `_account` must hold at least `_shares` shares.
+     * - `_account` cannot be the zero address.
+     * - `_account` must hold at least `_shares` shares.
      */
     function _burnShares(address _account, uint256 _shares) internal returns (uint256 newTotalShares) {
         require(_account != address(0), "BURN_FROM_THE_ZERO_ADDRESS");

@@ -13,7 +13,7 @@ import "../token/ITenderToken.sol";
 /**
  * @title TenderFarm
  * @notice TenderFarm is responsible for incetivizing liquidity providers, by accepting LP Tokens 
- * and a proportionaly rewarding them with TenderTokens over time
+ * and a proportionaly rewarding them with TenderTokens over time.
  */
 contract TenderFarm is Initializable {
     event Farm(address indexed account, uint256 amount);
@@ -53,8 +53,8 @@ contract TenderFarm is Initializable {
 
     /**
      * @notice stake liquidity pool tokens to receive rewards
-     * @dev '_amount' needs to be approved for the 'TenderFarm' to transfer
-     * @dev harvests current rewards before accounting updates are made
+     * @dev '_amount' needs to be approved for the 'TenderFarm' to transfer.
+     * @dev harvests current rewards before accounting updates are made.
      * @param _amount amount of liquidity pool tokens to stake
      */
     function farm(uint256 _amount) public {
@@ -63,9 +63,9 @@ contract TenderFarm is Initializable {
 
     /**
      * @notice stake liquidity pool tokens for a specific account so that it receives rewards
-     * @dev '_amount' needs to be approved for the 'TenderFarm' to transfer
-     * @dev staked tokens will belong to the account they are staked for
-     * @dev harvests current rewards before accounting updates are made
+     * @dev '_amount' needs to be approved for the 'TenderFarm' to transfer.
+     * @dev staked tokens will belong to the account they are staked for.
+     * @dev harvests current rewards before accounting updates are made.
      * @param _for account to stake for
      * @param _amount amount of liquidity pool tokens to stake
      */
@@ -75,8 +75,8 @@ contract TenderFarm is Initializable {
 
     /**
      * @notice unstake liquidity pool tokens
-     * @dev '_amount' needs to be approved for the 'TenderFarm' to transfer
-     * @dev harvests current rewards before accounting updates are made
+     * @dev '_amount' needs to be approved for the 'TenderFarm' to transfer.
+     * @dev harvests current rewards before accounting updates are made.
      * @param _amount amount of liquidity pool tokens to stake
      */
     function unfarm(uint256 _amount) public {
@@ -85,8 +85,8 @@ contract TenderFarm is Initializable {
 
     /**
      * @notice harvest outstanding rewards
-     * @dev reverts when trying to harvest multiple times if no new rewards have been added
-     * @dev emits an event with how many reward tokens have been harvested
+     * @dev reverts when trying to harvest multiple times if no new rewards have been added.
+     * @dev emits an event with how many reward tokens have been harvested.
      */
     function harvest() public {
         _harvest(msg.sender);
@@ -94,8 +94,8 @@ contract TenderFarm is Initializable {
 
     /**
      * @notice add new rewards
-     * @dev will 'start' a new 'epoch'
-     * @dev only callable by owner
+     * @dev will 'start' a new 'epoch'.
+     * @dev only callable by owner.
      * @param _amount amount of reward tokens to add
      */
     function addRewards(uint256 _amount) public onlyController {

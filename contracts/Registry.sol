@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 /**
  * @title Registry for regsitering contracts on Subgraph
  * @notice Event emiited is used to register contracts on the subgraph,
- * after deployment from which events can be tracked
+ * after deployment from which events can be tracked.
  */
 contract Registry is Ownable {
     struct TenderizerConfig {
@@ -26,7 +26,7 @@ contract Registry is Ownable {
 
     /**
      * @param config contract addresses of deployment
-     * @dev This is not called from a contract/factory but directly from the deployment script
+     * @dev This is not called from a contract/factory but directly from the deployment script.
      */
     function addTenderizer(TenderizerConfig calldata config) public onlyOwner {
         emit TenderizerCreated(config);

@@ -17,8 +17,8 @@ import "./liquidity/ITenderSwap.sol";
  * @title Controller contract for a Tenderizer
  * @notice Entry point for all contract interactions and dependency manager; making required internal transactions
  * to underlying contracts like the Tenderizer operations (user deposits, staking, unstaking etc),
- * minting/burning TenderTokens etc
- * @dev Set as owner of TenderFarm, TenderToken, Tenderizer 
+ * minting/burning TenderTokens etc.
+ * @dev Set as owner of TenderFarm, TenderToken, Tenderizer.
  */
 
 contract Controller is Initializable, ReentrancyGuardUpgradeable {
@@ -80,9 +80,9 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
     /**
      * @notice Deposit tokens in Tenderizer to earn staking rewards
      * @param _amount amount deposited
-     * @dev calls Tenderizer to deposit tokens and updates total pooled tokens
-     * @dev equal amount of tenderTokens are minted for the caller
-     * @dev requires '_amount' to be approved by '_from'
+     * @dev calls Tenderizer to deposit tokens and updates total pooled tokens.
+     * @dev equal amount of tenderTokens are minted for the caller.
+     * @dev requires '_amount' to be approved by '_from'.
      */
     function deposit(uint256 _amount) public {
         require(_amount > 0, "ZERO_AMOUNT");
@@ -104,9 +104,9 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
      * @notice Unlock staked tokens
      * @param _amount amount deposited
      * @return unstakeLockID
-     * @dev calls Tenderizer to unstake tokens and updates total pooled tokens
-     * @dev equal amount of tenderTokens are burned from the user
-     * @dev unstaking functionality varies by the protocol, check tenderizer.unstake()
+     * @dev calls Tenderizer to unstake tokens and updates total pooled tokens.
+     * @dev equal amount of tenderTokens are burned from the user.
+     * @dev unstaking functionality varies by the protocol, check tenderizer.unstake().
      */
     function unlock(uint256 _amount) public nonReentrant returns (uint256 unstakeLockID) {
         require(_amount > 0, "ZERO_AMOUNT");
@@ -121,8 +121,8 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
     /**
      * @notice Withdraws unstaked tokens
      * @param _unstakeLockID lockID of the unstake
-     * @dev tokens need to be unstaked before they can be withdrawn
-     * @dev caller address should match the user address in lock
+     * @dev tokens need to be unstaked before they can be withdrawn.
+     * @dev caller address should match the user address in lock.
      */
     function withdraw(uint256 _unstakeLockID) public nonReentrant {
         // Execute pending withdrawal
@@ -132,8 +132,8 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
 
     /**
      * @notice Rebase will stake pending deposits, claim rewards, 
-     resync the liquidity pool and collect fees
-     * @dev only callable by owner(gov)
+     * resync the liquidity pool and collect fees.
+     * @dev only callable by owner(gov).
      */
     function rebase() public nonReentrant {
         // claim rewards
@@ -144,10 +144,10 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @notice Gulp stakes any unstaked token balance held by the Tenderizer
+     * @notice Gulp stakes any unstaked token balance held by the Tenderizer.
      * @dev deposit() only aggregates stake in the tenderizer, while gulp
-     will perform the actual stake call
-     * @dev only callable by owner(gov)
+     * will perform the actual stake call.
+     * @dev only callable by owner(gov).
      */
     function gulp() public {
         // gulp steak balance of Tenderizer and stake it
@@ -155,18 +155,18 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @notice Collect pending protocol fees from Tenderizer
-     * @dev mints equal number of tender tokens to the owner
-     * @dev only callable by owner(gov)
+     * @notice Collect pending protocol fees from Tenderizer.
+     * @dev mints equal number of tender tokens to the owner.
+     * @dev only callable by owner(gov).
      */
     function collectFees() public onlyGov {
         _collectFees();
     }
 
     /**
-     * @notice Collect pending liquidity provider fees from Tenderizer
-     * @dev mints equal number of tender tokens to the tenderFarm
-     * @dev only callable by owner(gov)
+     * @notice Collect pending liquidity provider fees from Tenderizer.
+     * @dev mints equal number of tender tokens to the tenderFarm.
+     * @dev only callable by owner(gov).
      */
     function collectLiquidityFees() public onlyGov {
         _collectLiquidityFees();
@@ -177,7 +177,7 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
     /**
      * @notice Set TenderFarm contract
      * @param _tenderFarm TenderFarm contract address
-     * @dev only callable by owner(gov)
+     * @dev only callable by owner(gov).
      */
     function setTenderFarm(ITenderFarm _tenderFarm) public onlyGov {
         tenderFarm = _tenderFarm;
@@ -186,7 +186,7 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
     /**
      * @notice Set new Governance address
      * @param _gov Governance address
-     * @dev only callable by owner(gov)
+     * @dev only callable by owner(gov).
      */
     function setGov(address _gov) public onlyGov {
         require(_gov != address(0), "ZERO_ADDRESS");
@@ -198,7 +198,7 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
      * @param _target target address for the contract call
      * @param _value ether value to be transeffered with the transaction
      * @param _data call data - check ethers.interface.encodeFunctionData()
-     * @dev only callable by owner(gov)
+     * @dev only callable by owner(gov).
      */
     function execute(
         address _target,
@@ -213,8 +213,8 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
      * @param _targets array of target addresses for the contract call
      * @param _values array of ether values to be transeffered with the transactions
      * @param _datas array of call datas - check ethers.interface.encodeFunctionData()
-     * @dev Every target to its value, data via it's corresponding index
-     * @dev only callable by owner(gov)
+     * @dev Every target to its value, data via it's corresponding index.
+     * @dev only callable by owner(gov).
      */
     function batchExecute(
         address[] calldata _targets,

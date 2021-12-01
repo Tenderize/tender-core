@@ -22,11 +22,10 @@ interface IERC20Decimals is IERC20 {
 /**
  * @title TenderSwap
  * @dev TenderSwap is a light-weight StableSwap implementation for two assets.
-        * See the Curve StableSwap paper for more details (https://curve.fi/files/stableswap-paper.pdf).
-        * that trade 1:1 with eachother (e.g. USD stablecoins or tenderToken derivatives vs their underlying assets).
-        * It supports Elastic Supply ERC20 tokens,
-        * which are tokens of which the balances can change 
-        * as the total supply of the token 'rebases'.
+ * See the Curve StableSwap paper for more details (https://curve.fi/files/stableswap-paper.pdf).
+ * that trade 1:1 with eachother (e.g. USD stablecoins or tenderToken derivatives vs their underlying assets).
+ * It supports Elastic Supply ERC20 tokens, which are tokens of which the balances can change 
+ * as the total supply of the token 'rebases'.
  */
 
 contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSwap {
@@ -291,7 +290,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
 
     /**
      * @notice Swap two tokens using this pool
-     * @dev revert is token being sold is not in the pool
+     * @dev revert is token being sold is not in the pool.
      * @param _tokenFrom the token the user wants to sell
      * @param _dx the amount of tokens the user wants to swap from
      * @param _minDy the min amount the user would like to receive, or revert
