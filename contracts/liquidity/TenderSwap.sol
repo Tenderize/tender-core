@@ -57,22 +57,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
         _;
     }
 
-    /**
-     * @notice Initializes this Swap contract with the given parameters.
-     * This will also clone a LPToken contract that represents users'
-     * LP positions. The owner of LPToken will be this contract - which means
-     * only this contract is allowed to mint/burn tokens.
-     *
-     * @param _token0 First token in the pool
-     * @param _token1 Second token in the pool
-     * @param lpTokenName the long-form name of the token to be deployed
-     * @param lpTokenSymbol the short symbol for the token to be deployed
-     * @param _a the amplification coefficient * n * (n - 1). See the
-     * StableSwap paper for details
-     * @param _fee default swap fee to be initialized with
-     * @param _adminFee default adminFee to be initialized with
-     * @param lpTokenTargetAddress the address of an existing LiquidityPoolToken contract to use as a target
-     */
+    /// @inheritdoc ITenderSwap
     function initialize(
         IERC20 _token0,
         IERC20 _token1,
@@ -136,73 +121,42 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
 
     /*** VIEW FUNCTIONS ***/
 
-    /**
-     * @notice Return A, the amplification coefficient * n * (n - 1)
-     * @dev See the StableSwap paper for details
-     * @return A parameter
-     */
+    /// @inheritdoc ITenderSwap
     function getA() external view override returns (uint256) {
         return amplificationParams.getA();
     }
 
-    /**
-     * @notice Return A in its raw precision form
-     * @dev See the StableSwap paper for details
-     * @return A parameter in its raw precision form
-     */
+    /// @inheritdoc ITenderSwap
     function getAPrecise() external view override returns (uint256) {
         return amplificationParams.getAPrecise();
     }
 
-    /**
-     * @notice Returns the contract address for token0
-     * @dev EVM return type is IERC20
-     * @return token0 contract address
-     */
+    /// @inheritdoc ITenderSwap
     function getToken0() external view override returns (IERC20) {
         return token0.token;
     }
 
-    /**
-     * @notice Returns the contract address for token1
-     * @dev EVM return type is IERC20
-     * @return token1 contract address
-     */
+    /// @inheritdoc ITenderSwap
     function getToken1() external view override returns (IERC20) {
         return token1.token;
     }
 
-    /**
-     * @notice Return current balance of token0 in the pool
-     * @return current balance of the pooled token
-     */
+    /// @inheritdoc ITenderSwap
     function getToken0Balance() external view override returns (uint256) {
         return token0.getTokenBalance();
     }
 
-    /**
-     * @notice Return current balance of token1 in the pool
-     * @return current balance of the pooled token
-     */
+    /// @inheritdoc ITenderSwap
     function getToken1Balance() external view override returns (uint256) {
         return token1.getTokenBalance();
     }
 
-    /**
-     * @notice Get the override price, to help calculate profit
-     * @return the override price, scaled to the POOL_PRECISION_DECIMALS
-     */
+    /// @inheritdoc ITenderSwap
     function getVirtualPrice() external view override returns (uint256) {
         return SwapUtils.getVirtualPrice(token0, token1, amplificationParams, lpToken);
     }
 
-    /**
-     * @notice Calculate amount of tokens you receive on swap
-     * @param _tokenFrom the token the user wants to sell
-     * @param _dx the amount of tokens the user wants to sell. If the token charges
-     * a fee on transfers, use the amount that gets transferred after the fee.
-     * @return amount of tokens the user will receive
-     */
+    /// @inheritdoc ITenderSwap
     function calculateSwap(
         IERC20 _tokenFrom,
         uint256 _dx
@@ -214,12 +168,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
             ;
     }
 
-    /**
-     * @notice A simple method to calculate amount of each underlying
-     * tokens that is returned upon burning given amount of LP tokens
-     * @param amount the amount of LP tokens that would be burned on withdrawal
-     * @return array of token balances that the user will receive
-     */
+    /// @inheritdoc ITenderSwap
     function calculateRemoveLiquidity(uint256 amount)
         external
         view
@@ -230,14 +179,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
         return SwapUtils.calculateRemoveLiquidity(amount, tokens_, lpToken);
     }
 
-    /**
-     * @notice Calculate the amount of underlying token available to withdraw
-     * when withdrawing via only single token
-     * @param tokenAmount the amount of LP token to burn
-     * @param tokenReceive the token to receive
-     * @return availableTokenAmount calculated amount of underlying token
-     * available to withdraw
-     */
+    /// @inheritdoc ITenderSwap
     function calculateRemoveLiquidityOneToken(
         uint256 tokenAmount,
         IERC20 tokenReceive
@@ -263,20 +205,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
         ;
     }
 
-    /**
-     * @notice A simple method to calculate prices from deposits or
-     * withdrawals, excluding fees but including slippage. This is
-     * helpful as an input into the various "min" parameters on calls
-     * to fight front-running
-     *
-     * @dev This shouldn't be used outside frontends for user estimates.
-     *
-     * @param amounts an array of token amounts to deposit or withdrawal,
-     * corresponding to pool cardinality of [token0, token1]. The amount should be in each
-     * pooled token's native precision. 
-     * @param deposit whether this is a deposit or a withdrawal
-     * @return token amount the user will receive
-     */
+    /// @inheritdoc ITenderSwap
     function calculateTokenAmount(
         uint256[] calldata amounts,
         bool deposit
@@ -288,14 +217,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
 
     /*** STATE MODIFYING FUNCTIONS ***/
 
-    /**
-     * @notice Swap two tokens using this pool
-     * @dev revert is token being sold is not in the pool.
-     * @param _tokenFrom the token the user wants to sell
-     * @param _dx the amount of tokens the user wants to swap from
-     * @param _minDy the min amount the user would like to receive, or revert
-     * @param _deadline latest timestamp to accept this transaction
-     */
+    /// @inheritdoc ITenderSwap
     function swap(
         IERC20 _tokenFrom,
         uint256 _dx,
@@ -317,15 +239,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
         }
     }
 
-    /**
-     * @notice Add liquidity to the pool with the given amounts of tokens
-     * @param _amounts the amounts of each token to add, in their native precision 
-     *          according to the cardinality of the pool [token0, token1]
-     * @param _minToMint the minimum LP tokens adding this amount of liquidity
-     * should mint, otherwise revert. Handy for front-running mitigation
-     * @param _deadline latest timestamp to accept this transaction
-     * @return amount of LP token user minted and received
-     */
+    /// @inheritdoc ITenderSwap
     function addLiquidity(
         uint256[2] calldata _amounts,
         uint256 _minToMint,
@@ -342,16 +256,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
         return SwapUtils.addLiquidity(tokens_, _amounts, _minToMint, amplificationParams, feeParams, lpToken);
     }
 
-    /**
-     * @notice Burn LP tokens to remove liquidity from the pool.
-     * @dev Liquidity can always be removed, even when the pool is paused.
-     * @param amount the amount of LP tokens to burn
-     * @param minAmounts the minimum amounts of each token in the pool
-     *        acceptable for this burn. Useful as a front-running mitigation
-     *        according to the cardinality of the pool [token0, token1]
-     * @param deadline latest timestamp to accept this transaction
-     * @return amounts of tokens user received
-     */
+    /// @inheritdoc ITenderSwap
     function removeLiquidity(
         uint256 amount,
         uint256[2] calldata minAmounts,
@@ -368,14 +273,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
         return SwapUtils.removeLiquidity(amount, tokens_, minAmounts, lpToken);
     }
 
-    /**
-     * @notice Remove liquidity from the pool all in one token.
-     * @param _tokenAmount the amount of the token you want to receive
-     * @param _tokenReceive the  token you want to receive
-     * @param _minAmount the minimum amount to withdraw, otherwise revert
-     * @param _deadline latest timestamp to accept this transaction
-     * @return amount of chosen token user received
-     */
+    /// @inheritdoc ITenderSwap
     function removeLiquidityOneToken(
         uint256 _tokenAmount,
         IERC20 _tokenReceive,
@@ -411,16 +309,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
         }
     }
 
-    /**
-     * @notice Remove liquidity from the pool, weighted differently than the
-     * pool's current balances. Withdraw fee that decays linearly
-     * over period of 4 weeks since last deposit will apply.
-     * @param _amounts how much of each token to withdraw
-     * @param _maxBurnAmount the max LP token provider is willing to pay to
-     * remove liquidity. Useful as a front-running mitigation.
-     * @param _deadline latest timestamp to accept this transaction
-     * @return amount of LP tokens burned
-     */
+    /// @inheritdoc ITenderSwap
     function removeLiquidityImbalance(
         uint256[2] calldata _amounts,
         uint256 _maxBurnAmount,
@@ -446,36 +335,22 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
 
     /*** ADMIN FUNCTIONS ***/
 
-    /**
-     * @notice Update the admin fee. Admin fee takes portion of the swap fee.
-     * @param newAdminFee new admin fee to be applied on future transactions
-     */
+    /// @inheritdoc ITenderSwap
     function setAdminFee(uint256 newAdminFee) external override onlyOwner {
         feeParams.setAdminFee(newAdminFee);
     }
 
-    /**
-     * @notice Update the swap fee to be applied on swaps
-     * @param newSwapFee new swap fee to be applied on future transactions
-     */
+    /// @inheritdoc ITenderSwap
     function setSwapFee(uint256 newSwapFee) external override onlyOwner {
         feeParams.setSwapFee(newSwapFee);
     }
 
-    /**
-     * @notice Start ramping up or down A parameter towards given futureA and futureTime
-     * Checks if the change is too rapid, and commits the new A value only when it falls under
-     * the limit range.
-     * @param futureA the new A to ramp towards
-     * @param futureTime timestamp when the new A should be reached
-     */
+    /// @inheritdoc ITenderSwap
     function rampA(uint256 futureA, uint256 futureTime) external override onlyOwner {
         amplificationParams.rampA(futureA, futureTime);
     }
 
-    /**
-     * @notice Stop ramping A immediately. Reverts if ramp A is already stopped.
-     */
+    /// @inheritdoc ITenderSwap
     function stopRampA() external override onlyOwner {
         amplificationParams.stopRampA();
     }
