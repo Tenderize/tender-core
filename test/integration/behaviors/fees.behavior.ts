@@ -2,6 +2,8 @@ import { BigNumber, ContractTransaction } from 'ethers/lib/ethers'
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
 
+const acceptableDelta = 2
+
 export function protocolFeeTests () {
   let tx: ContractTransaction
   let ctx: any
@@ -23,8 +25,8 @@ export function protocolFeeTests () {
   })
 
   it('should increase tenderToken balance of owner', async () => {
-    expect(await ctx.TenderToken.balanceOf(ctx.deployer))
-      .to.eq(ownerBalBefore.add(fees).sub(1))
+    expect((await ctx.TenderToken.balanceOf(ctx.deployer)).sub(ownerBalBefore.add(fees)).abs())
+      .to.lte(acceptableDelta)
   })
 
   it('should not change balance of other account', async () => {
@@ -57,7 +59,8 @@ export function liquidityFeeTests () {
   })
 
   it('should increase tenderToken balance of tenderFarm', async () => {
-    expect(await ctx.TenderToken.balanceOf(ctx.TenderFarm.address)).to.eq(farmBalanceBefore.add(fees).sub(1))
+    expect((await ctx.TenderToken.balanceOf(ctx.TenderFarm.address)).sub(farmBalanceBefore.add(fees)).abs())
+      .to.lte(acceptableDelta)
   })
 
   it('should not change balance of other account', async () => {

@@ -1,10 +1,10 @@
-import { Transaction } from 'ethers/lib/ethers'
+import { ContractTransaction } from 'ethers/lib/ethers'
 import { expect } from 'chai'
 import { smockit } from '@eth-optimism/smock'
 import { ethers } from 'hardhat'
 
 export default function suite () {
-  let tx: Transaction
+  let tx: ContractTransaction
   let ctx: any
   before(async function () {
     ctx = this.test?.ctx
@@ -12,13 +12,20 @@ export default function suite () {
   describe('setting staking contract', () => {
     it('sets staking contract', async () => {
       const newStakingContract = await smockit(ctx.StakingContractNoMock)
+
+      // TODO: Anti-pattern, come up with a better way?
+      if (ctx.NAME === 'Audius') {
+        const dummyStakingAddress = '0xfA668FB97697200FA56ce98E246db61Cc7E14Bd5'
+        newStakingContract.smocked.getStakingAddress.will.return.with(dummyStakingAddress)
+      }
+
       const txData = ctx.Tenderizer.interface.encodeFunctionData('setStakingContract', [newStakingContract.address])
       tx = await ctx.Controller.execute(ctx.Tenderizer.address, 0, txData)
 
       // assert that bond() call is made to new staking contract on gulp()
       await ctx.Controller.gulp()
       expect(ctx.stakeMock.function.calls.length).to.eq(0)
-      expect(newStakingContract.smocked.bond.calls.length).to.eq(1)
+      expect(newStakingContract.smocked[ctx.stakeMock.functionName].calls.length).to.eq(1)
     })
 
     it('should emit GovernanceUpdate event', async () => {
@@ -26,7 +33,6 @@ export default function suite () {
     })
   })
 
-  // TODO: Split into common file since these will be the same on all integrations?
   describe('setting node', async () => {
     it('reverts if Zero address is set', async () => {
       const txData = ctx.Tenderizer.interface.encodeFunctionData('setNode', [ethers.constants.AddressZero])
