@@ -53,27 +53,12 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         controller = _controller;
     }
 
-    /**
-     * @notice Deposit tokens in Tenderizer
-     * @param _from account that deposits
-     * @param _amount amount deposited
-     * @dev only callable by Controller.
-     * @dev doesn't actually stakes the tokens but aggregates the balance in the tenderizer
-     * awaiting to be staked.
-     * @dev requires '_amount' to be approved by '_from'.
-     */
+    /// @inheritdoc ITenderizer
     function deposit(address _from, uint256 _amount) external override onlyController {
         _deposit(_from, _amount);
     }
 
-    /**
-     * @notice Stake '_amount' of tokens to '_account'
-     * @param _account account to stake to in the underlying protocol
-     * @param _amount amount to stake
-     * @dev If '_account' is not specified, stake towards the default address.
-     * @dev If '_amount' is 0, stake the entire current token balance of the Tenderizer.
-     * @dev Only callable by controller.
-     */
+    /// @inheritdoc ITenderizer
     function stake(address _account, uint256 _amount) external override onlyController {
         // Execute state updates
         // approve pendingTokens for staking
@@ -81,14 +66,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         _stake(_account, _amount);
     }
 
-    /**
-     * @notice Unstake '_amount' of tokens from '_account'
-     * @param _account account to unstake from in the underlying protocol
-     * @param _amount amount to unstake
-     * @dev If '_account' is not specified, stake towards the default address.
-     * @dev If '_amount' is 0, unstake the entire amount staked towards _account.
-     * @dev Only callable by controller.
-     */
+    /// @inheritdoc ITenderizer
     function unstake(address _account, uint256 _amount)
         external
         override
@@ -100,24 +78,14 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         return _unstake(_account, address(0), _amount);
     }
 
-    /**
-     * @notice Withdraw '_amount' of tokens previously unstaked by '_account'
-     * @param _unstakeLockID ID for the lock to request the withdraw for
-     * @param _account account requesting the withdrawam
-     * @dev If '_amount' isn't specified all unstake tokens by '_account' will be withdrawn.
-     * @dev Requires '_account' to have unstaked prior to calling withdraw.
-     * @dev Only callable by controller.
-     */
+    /// @inheritdoc ITenderizer
     function withdraw(address _account, uint256 _unstakeLockID) external override onlyController {
         // Execute state updates to pending withdrawals
         // Transfer tokens to _account
         _withdraw(_account, _unstakeLockID);
     }
 
-    /**
-     * @notice Claim staking rewards for the underlying protocol.
-     * @dev Only callable by controller.
-     */
+    /// @inheritdoc ITenderizer
     function claimRewards() external override onlyController {
         // Claim rewards
         // If received staking rewards in steak don't automatically compound, add to pendingTokens
@@ -126,10 +94,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         _claimRewards();
     }
 
-    /**
-     * @notice Total Staked Tokens returns the total amount of underlying tokens staked by this Tenderizer.
-     * @return total amount staked by this Tenderizer
-     */
+    /// @inheritdoc ITenderizer
     function totalStakedTokens() external view override returns (uint256) {
         return _totalStakedTokens();
     }
@@ -168,32 +133,21 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     }
 
     // Fee collection
-    /**
-     * @notice Collect fees pulls any pending governance fees from the Tenderizer to the governance treasury.
-     * @return Amount of protocol fees collected
-     * @dev Resets pendingFees.
-     * @dev Fees claimed are added to total staked.
-     */
+    /// @inheritdoc ITenderizer
     function collectFees() external override onlyController returns (uint256) {
         return _collectFees();
     }
 
-    /**
-     * @notice Collect Liquidity fees pulls any pending LP fees from the Tenderizer to TenderFarm.
-     * @return Amount of liquidity fees collected
-     * @dev Resets pendingFees.
-     * @dev Fees claimed are added to total staked.
-     */
+    /// @inheritdoc ITenderizer
     function collectLiquidityFees() external override onlyController returns (uint256) {
         return _collectLiquidityFees();
     }
 
-    /**
-     * @notice Returns the number of tenderTokens to be minted for amountIn deposit.
-     * @dev used by controller to calculate tokens to be minted before depositing.
-     */
+    /// @inheritdoc ITenderizer
     function calcDepositOut(uint256 amountIn) override public virtual returns (uint256);
 
+
+    // Internal functions
     function _deposit(address _account, uint256 _amount) internal virtual;
 
     function _stake(address _account, uint256 _amount) internal virtual;

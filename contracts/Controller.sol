@@ -14,7 +14,7 @@ import "./liquidity/ITenderFarm.sol";
 import "./liquidity/ITenderSwap.sol";
 
 /**
- * @title Controller contract for a Tenderizer
+ * @title Controller contract for a Tenderizer.
  * @notice Entry point for all contract interactions and dependency manager; making required internal transactions
  * to underlying contracts like the Tenderizer operations (user deposits, staking, unstaking etc),
  * minting/burning TenderTokens etc.
@@ -78,7 +78,7 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @notice Deposit tokens in Tenderizer to earn staking rewards
+     * @notice Deposit tokens in Tenderizer to earn staking rewards.
      * @param _amount amount deposited
      * @dev calls Tenderizer to deposit tokens and updates total pooled tokens.
      * @dev equal amount of tenderTokens are minted for the caller.
@@ -101,7 +101,7 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @notice Unlock staked tokens
+     * @notice Unlock staked tokens.
      * @param _amount amount deposited
      * @return unstakeLockID
      * @dev calls Tenderizer to unstake tokens and updates total pooled tokens.
@@ -119,7 +119,7 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @notice Withdraws unstaked tokens
+     * @notice Withdraws unstaked tokens.
      * @param _unstakeLockID lockID of the unstake
      * @dev tokens need to be unstaked before they can be withdrawn.
      * @dev caller address should match the user address in lock.
@@ -175,7 +175,7 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
     function migrateToNewTenderizer(ITenderizer _tenderizer) public onlyGov {}
 
     /**
-     * @notice Set TenderFarm contract
+     * @notice Set TenderFarm contract.
      * @param _tenderFarm TenderFarm contract address
      * @dev only callable by owner(gov).
      */
@@ -184,7 +184,7 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @notice Set new Governance address
+     * @notice Set new Governance address.
      * @param _gov Governance address
      * @dev only callable by owner(gov).
      */
@@ -194,7 +194,7 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @notice Exectutes a transaction on behalf of the controller
+     * @notice Exectutes a transaction on behalf of the controller.
      * @param _target target address for the contract call
      * @param _value ether value to be transeffered with the transaction
      * @param _data call data - check ethers.interface.encodeFunctionData()
@@ -209,7 +209,7 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
     }
 
     /**
-     * @notice Exectutes a batch of transaction on behalf of the controller
+     * @notice Exectutes a batch of transaction on behalf of the controller.
      * @param _targets array of target addresses for the contract call
      * @param _values array of ether values to be transeffered with the transactions
      * @param _datas array of call datas - check ethers.interface.encodeFunctionData()
