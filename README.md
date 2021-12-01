@@ -1,8 +1,39 @@
-# Tenderizer
+# Tenderize Audit
+
+## Scope 
+
+This audit will be in scope for the Tenderize core contracts. This means the contracts that allow a user to deposit their tokens, receive tenderTokens in return and the allocations of the deposited tokens in their underlying proof-of-stake networks. 
+
+Out of scope for this audit will be peripheral contracts and the contracts pertaining to liquidity (TenderSwap, TenderFarm). These contracts will be subject to audit at a later stage given that their code is based on well audited code (Saddle Finance and Livepeer). 
+
+```
+contracts/
+  tenderizer/
+    integrations/
+      livepeer/Livepeer.sol
+      matic/Matic.sol
+      graph/Graph.sol
+    Tenderizer.sol
+  token/TenderToken.sol
+  Controller.sol
+  
+```
+
+## Goal
+
+The goal of the audit is to establish 
+
+- The correctness of the `TenderToken` contract, a custom ERC-20 implementation
+- The correctness of the `Tenderizer` and its extensions (integrations)
+- The correctness of logic dealing with the external calls to the external contracts of the underlying protocols
+
+With a focus on no loss of user funds possible.
+
+## Tenderize
 
 [![Coverage Status](https://coveralls.io/repos/github/Tenderize/tender-core/badge.svg?t=C7yU8H)](https://coveralls.io/github/Tenderize/tender-core)
 
-## Install
+### Install
 
 Make sure Node.js (>=v12.0) is installed.
 
