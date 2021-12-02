@@ -7,6 +7,15 @@ import "./LiquidityPoolToken.sol";
 
 pragma solidity 0.8.4;
 
+/**
+ * @title TenderSwap
+ * @dev TenderSwap is a light-weight StableSwap implementation for two assets.
+ * See the Curve StableSwap paper for more details (https://curve.fi/files/stableswap-paper.pdf).
+ * that trade 1:1 with eachother (e.g. USD stablecoins or tenderToken derivatives vs their underlying assets).
+ * It supports Elastic Supply ERC20 tokens, which are tokens of which the balances can change 
+ * as the total supply of the token 'rebases'.
+ */
+ 
 interface ITenderSwap {
 
     /*** EVENTS ***/
