@@ -2,6 +2,8 @@ import { ethers } from 'hardhat'
 import { expect } from 'chai'
 import { BigNumber, ContractTransaction } from 'ethers'
 
+const acceptableDelta = 2
+
 // For protocols where unlocks are tracked per user
 export function userBasedUnlockByUser () {
   let ctx: any
@@ -109,8 +111,8 @@ export function userBasedUnlockByGov () {
     })
 
     it('TenderToken balance of TenderSwap account halves', async () => {
-      expect(await ctx.TenderToken.balanceOf(ctx.TenderSwap.address))
-        .to.eq(poolBalBefore.div(2))
+      expect((await ctx.TenderToken.balanceOf(ctx.TenderSwap.address)).sub(poolBalBefore.div(2)).abs())
+        .to.lte(acceptableDelta * 15)
     })
   })
 

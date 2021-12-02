@@ -1,6 +1,7 @@
 import { Transaction } from 'ethers/lib/ethers'
 import { expect } from 'chai'
 import hre, { ethers } from 'hardhat'
+import { MockContract, smockit } from '@eth-optimism/smock'
 
 export default function suite () {
   let tx: Transaction
@@ -13,11 +14,15 @@ export default function suite () {
     ctx.stakeMock.function.will.return()
     tx = await ctx.Controller.gulp()
     expect(ctx.stakeMock.function.calls.length).to.eq(1)
-    expect(ctx.stakeMock.function.calls[0][ctx.stakeMock.nodeParam]).to.eq(ctx.NODE)
-    // A smocked contract doesn't execute its true code
-    // So livepeer.bond() never calls ERC20.transferFrom() under the hood
-    // Therefore when we call gulp() it will be for the deposit and bootstrapped supply on deployment
-    // Smock doesn't support executing code
+    // TODO: Antipattern - Refactor, possibly have assertion function defined
+    // in main test file that are then called from here
+    if (ctx.NAME === 'Matic') {
+      const minSharesToMint = ctx.deposit.add(ctx.initialStake)
+        .mul(ctx.exchangeRatePrecision).div(ctx.fxRate).sub(1)
+      expect(ctx.stakeMock.function.calls[0]._minSharesToMint).to.eq(minSharesToMint)
+    } else {
+      expect(ctx.stakeMock.function.calls[0][ctx.stakeMock.nodeParam]).to.eq(ctx.NODE)
+    }
     expect(ctx.stakeMock.function.calls[0][ctx.stakeMock.amountParam])
       .to.eq(ctx.deposit.add(ctx.initialStake))
   })
@@ -27,10 +32,23 @@ export default function suite () {
   })
 
   it('uses specified node if passed, not default', async () => {
-    const newNodeAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
+    let newNodeAddress: string
+    // TODO: Antipattern - Refactor
+    const newValidatorShare = await smockit(ctx.StakingContractNoMock)
+    if (ctx.NAME === 'Matic') {
+      newValidatorShare.smocked.buyVoucher.will.return()
+      newNodeAddress = newValidatorShare.address
+    } else {
+      newNodeAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751' // dummy
+    }
     const txData = ctx.Tenderizer.interface.encodeFunctionData('stake', [newNodeAddress, ethers.utils.parseEther('0')])
     await ctx.Controller.execute(ctx.Tenderizer.address, 0, txData)
-    expect(ctx.stakeMock.function.calls[0][ctx.stakeMock.nodeParam]).to.eq(newNodeAddress)
+    // TODO: Antipattern - Refactor
+    if (ctx.NAME === 'Matic') {
+      expect(newValidatorShare.smocked.buyVoucher.calls.length).to.eq(1)
+    } else {
+      expect(ctx.stakeMock.function.calls[0][ctx.stakeMock.nodeParam]).to.eq(newNodeAddress)
+    }
   })
 
   it('uses specified amount if passed, not contract token balance', async () => {

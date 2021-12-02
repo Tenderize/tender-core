@@ -23,9 +23,12 @@ export default function suite () {
       tx = await ctx.Controller.execute(ctx.Tenderizer.address, 0, txData)
 
       // assert that bond() call is made to new staking contract on gulp()
-      await ctx.Controller.gulp()
-      expect(ctx.stakeMock.function.calls.length).to.eq(0)
-      expect(newStakingContract.smocked[ctx.stakeMock.functionName].calls.length).to.eq(1)
+      // Except for matic, TODO: Anti-pattern, Improve this?
+      if (ctx.NAME !== 'Matic') {
+        await ctx.Controller.gulp()
+        expect(ctx.stakeMock.function.calls.length).to.eq(0)
+        expect(newStakingContract.smocked[ctx.stakeMock.functionName].calls.length).to.eq(1)
+      }
     })
 
     it('should emit GovernanceUpdate event', async () => {
