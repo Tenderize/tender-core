@@ -9,31 +9,48 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 import "../libs/MathUtils.sol";
 import "../token/ITenderToken.sol";
+import "./ITenderFarm.sol";
 
 /**
  * @title TenderFarm
  * @notice TenderFarm is responsible for incetivizing liquidity providers, by accepting LP Tokens 
  * and a proportionaly rewarding them with TenderTokens over time.
  */
-contract TenderFarm is Initializable {
-    event Farm(address indexed account, uint256 amount);
-    event Unfarm(address indexed account, uint256 amount);
-    event Harvest(address indexed account, uint256 amount);
-    event RewardsAdded(uint256 amount);
+contract TenderFarm is Initializable, ITenderFarm {
+    /**
+     * @dev LP token.
+     */
+    IERC20 public token;
 
-    IERC20 public token; // LP token
-    ITenderToken public rewardToken; // tender token
+    /**
+     * @dev Tender token.
+     */
+    ITenderToken public rewardToken;
+
+    /**
+     * @dev Controller.
+     */
     address public controller;
 
-    uint256 public totalStake; // total amount of LP tokens staked
-    uint256 public nextTotalStake;
-    uint256 public CRF; // cumulative reward factor
+    /// @inheritdoc ITenderFarm
+    uint256 public override totalStake;
+
+    /// @inheritdoc ITenderFarm
+    uint256 public override nextTotalStake;
+
+    /**
+     * @dev Cumulative reward factor
+     */
+    uint256 public CRF;
 
     struct Stake {
         uint256 stake;
         uint256 lastCRF;
     }
 
+    /**
+     * @dev stake mapping of each address
+     */
     mapping(address => Stake) public stakes;
 
     function initialize(
@@ -51,54 +68,28 @@ contract TenderFarm is Initializable {
         _;
     }
 
-    /**
-     * @notice stake liquidity pool tokens to receive rewards
-     * @dev '_amount' needs to be approved for the 'TenderFarm' to transfer.
-     * @dev harvests current rewards before accounting updates are made.
-     * @param _amount amount of liquidity pool tokens to stake
-     */
-    function farm(uint256 _amount) public {
+    /// @inheritdoc ITenderFarm
+    function farm(uint256 _amount) public override {
         _farmFor(msg.sender, _amount);
     }
 
-    /**
-     * @notice stake liquidity pool tokens for a specific account so that it receives rewards
-     * @dev '_amount' needs to be approved for the 'TenderFarm' to transfer.
-     * @dev staked tokens will belong to the account they are staked for.
-     * @dev harvests current rewards before accounting updates are made.
-     * @param _for account to stake for
-     * @param _amount amount of liquidity pool tokens to stake
-     */
-    function farmFor(address _for, uint256 _amount) public {
+    /// @inheritdoc ITenderFarm
+    function farmFor(address _for, uint256 _amount) public override {
         _farmFor(_for, _amount);
     }
 
-    /**
-     * @notice unstake liquidity pool tokens
-     * @dev '_amount' needs to be approved for the 'TenderFarm' to transfer.
-     * @dev harvests current rewards before accounting updates are made.
-     * @param _amount amount of liquidity pool tokens to stake
-     */
-    function unfarm(uint256 _amount) public {
+    /// @inheritdoc ITenderFarm
+    function unfarm(uint256 _amount) public override {
         _unfarm(msg.sender, _amount);
     }
 
-    /**
-     * @notice harvest outstanding rewards
-     * @dev reverts when trying to harvest multiple times if no new rewards have been added.
-     * @dev emits an event with how many reward tokens have been harvested.
-     */
-    function harvest() public {
+    /// @inheritdoc ITenderFarm
+    function harvest() public override {
         _harvest(msg.sender);
     }
 
-    /**
-     * @notice add new rewards
-     * @dev will 'start' a new 'epoch'.
-     * @dev only callable by owner.
-     * @param _amount amount of reward tokens to add
-     */
-    function addRewards(uint256 _amount) public onlyController {
+    /// @inheritdoc ITenderFarm
+    function addRewards(uint256 _amount) public override onlyController {
         uint256 _nextStake = nextTotalStake;
         require(_nextStake > 0, "NO_STAKE");
         totalStake = _nextStake;
@@ -108,13 +99,17 @@ contract TenderFarm is Initializable {
         emit RewardsAdded(_amount);
     }
 
-    function availableRewards(address _for) public view returns (uint256) {
+    /// @inheritdoc ITenderFarm
+    function availableRewards(address _for) public view override returns (uint256) {
         return rewardToken.sharesToTokens(_availableRewardShares(_for));
     }
 
-    function stakeOf(address _of) public view returns (uint256) {
+    /// @inheritdoc ITenderFarm
+    function stakeOf(address _of) public view override returns (uint256) {
         return _stakeOf(_of);
     }
+
+    // INTERNAL FUNCTIONS
 
     function _farmFor(address _for, uint256 _amount) internal {
         _harvest(_for);
