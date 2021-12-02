@@ -10,10 +10,12 @@ export function stakeIncreaseTests () {
   let ctx: any
   let totalShares: BigNumber
   let dyBefore: BigNumber
+  let swapStakeBalBefore: BigNumber
 
   before(async function () {
     ctx = this.test?.ctx
     dyBefore = await ctx.TenderSwap.calculateSwap(ctx.TenderToken.address, ONE)
+    swapStakeBalBefore = await ctx.Steak.balanceOf(ctx.TenderSwap.address)
     tx = await ctx.Controller.rebase()
   })
 
@@ -34,7 +36,7 @@ export function stakeIncreaseTests () {
   })
 
   it('steak balance stays the same', async () => {
-    expect(await ctx.Steak.balanceOf(ctx.TenderSwap.address)).to.eq(ctx.initialStake)
+    expect(await ctx.Steak.balanceOf(ctx.TenderSwap.address)).to.eq(swapStakeBalBefore)
   })
 
   it('tenderToken price slightly decreases vs underlying', async () => {
@@ -42,8 +44,10 @@ export function stakeIncreaseTests () {
   })
 
   it('should emit RewardsClaimed event from Tenderizer', async () => {
+    const oldPrinciple = ctx.deposit.add(ctx.initialStake)
+      .sub(ctx.deposit.add(ctx.initialStake).mul(ctx.DELEGATION_TAX).div(ctx.MAX_PPM))
     expect(tx).to.emit(ctx.Tenderizer, 'RewardsClaimed')
-      .withArgs(ctx.increase, ctx.newStakeMinusFees, ctx.deposit.add(ctx.initialStake))
+      .withArgs(ctx.increase, ctx.newStakeMinusFees, oldPrinciple)
   })
 }
 
@@ -79,12 +83,14 @@ export function stakeDecreaseTests () {
   let tx: ContractTransaction
   let totalShares: BigNumber
   let dyBefore: BigNumber
+  let swapStakeBalBefore: BigNumber
 
   before(async function () {
     ctx = this.test?.ctx
     feesBefore = await ctx.Tenderizer.pendingFees()
     oldPrinciple = await ctx.Tenderizer.currentPrincipal()
     dyBefore = await ctx.TenderSwap.calculateSwap(ctx.TenderToken.address, ONE)
+    swapStakeBalBefore = await ctx.Steak.balanceOf(ctx.TenderSwap.address)
     tx = await ctx.Controller.rebase()
   })
 
@@ -110,7 +116,7 @@ export function stakeDecreaseTests () {
   })
 
   it('steak balance stays the same', async () => {
-    expect(await ctx.Steak.balanceOf(ctx.TenderSwap.address)).to.eq(ctx.initialStake)
+    expect(await ctx.Steak.balanceOf(ctx.TenderSwap.address)).to.eq(swapStakeBalBefore)
   })
 
   it('price of the TenderTokens increases vs the underlying', async () => {

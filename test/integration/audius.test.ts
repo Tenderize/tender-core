@@ -106,6 +106,7 @@ describe('Audius Integration Test', () => {
       [this.Tenderizer.interface.encodeFunctionData('setProtocolFee', [protocolFeesPercent]),
         this.Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent])]
     )
+
     // Deposit initial stake
     await this.Steak.approve(this.Controller.address, this.initialStake)
     await this.Controller.deposit(this.initialStake)

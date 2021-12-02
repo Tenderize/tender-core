@@ -38,7 +38,9 @@ export default function suite () {
 
     it('TenderToken balance of other account stays the same', async () => {
       const otherAccBal = await ctx.TenderToken.balanceOf(ctx.signers[2].address)
-      expect(otherAccBal.sub(secondDeposit).abs()).to.lte(acceptableDelta)
+      const depositAfterTax = secondDeposit.sub(secondDeposit.mul(ctx.DELEGATION_TAX)
+        .div(ctx.MAX_PPM))
+      expect(otherAccBal.sub(depositAfterTax).abs()).to.lte(acceptableDelta)
     })
 
     it('should create unstakeLock', async () => {
@@ -54,14 +56,14 @@ export default function suite () {
   })
 
   describe('gov unlock', async () => {
-    it('reverts if requestUndelegateStake() reverts', async () => {
+    it('reverts if unlock() reverts', async () => {
       ctx.unbondMock.function.will.revert()
       const txData = ethers.utils.arrayify(ctx.Tenderizer.interface.encodeFunctionData('unstake',
         [ctx.Controller.address, ethers.utils.parseEther('0')]))
       await expect(ctx.Controller.execute(ctx.Tenderizer.address, 0, txData)).to.be.reverted
     })
 
-    it('requestUndelegateStake() suceeds', async () => {
+    it('unlock() suceeds', async () => {
       ctx.unbondMock.function.will.return()
       const txData = ethers.utils.arrayify(ctx.Tenderizer.interface.encodeFunctionData('unstake',
         [ctx.Controller.address, ethers.utils.parseEther('0')]))

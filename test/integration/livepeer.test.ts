@@ -138,6 +138,7 @@ describe('Livepeer Integration Test', () => {
         this.Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent]),
         this.Tenderizer.interface.encodeFunctionData('setUniswapRouter', [UniswapRouterMock.address])]
     )
+
     // Deposit initial stake
     await this.Steak.approve(this.Controller.address, this.initialStake)
     await this.Controller.deposit(this.initialStake)

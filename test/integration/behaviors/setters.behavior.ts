@@ -13,7 +13,7 @@ export default function suite () {
     it('sets staking contract', async () => {
       const newStakingContract = await smockit(ctx.StakingContractNoMock)
 
-      // TODO: Anti-pattern, come up with a better way?
+      // TODO: Anti-pattern, refactor!
       if (ctx.NAME === 'Audius') {
         const dummyStakingAddress = '0xfA668FB97697200FA56ce98E246db61Cc7E14Bd5'
         newStakingContract.smocked.getStakingAddress.will.return.with(dummyStakingAddress)
