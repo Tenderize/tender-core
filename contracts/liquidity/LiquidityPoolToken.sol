@@ -29,7 +29,7 @@ contract LiquidityPoolToken is OwnableUpgradeable, ERC20BurnableUpgradeable {
 
     /**
      * @notice Mints the given amount of LPToken to the recipient.
-     * @dev only owner can call this mint function
+     * @dev only owner can call this mint function.
      * @param recipient address of account to receive the tokens
      * @param amount amount of tokens to mint
      */

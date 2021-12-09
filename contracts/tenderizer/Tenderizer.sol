@@ -9,6 +9,12 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 import "./ITenderizer.sol";
 
+/**
+ * @title Tenderizer is the base contract to be implemented.
+ * @notice Tenderizer is responsible for all Protocol interactions (staking, unstaking, claiming rewards)
+ * while also keeping track of user depsotis/withdrawals and protocol fees.
+ * @dev New implementations are required to inherit this contract and override any required internal functions.
+ */
 abstract contract Tenderizer is Initializable, ITenderizer {
     struct UnstakeLock {
         uint256 amount;
@@ -47,27 +53,12 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         controller = _controller;
     }
 
-    /**
-     * @notice Deposit tokens in Tenderizer
-     * @param _from account that deposits
-     * @param _amount amount deposited
-     * @dev only callable by Controller
-     * @dev doesn't actually stakes the tokens but aggregates the balance in the tenderizer
-        awaiting to be staked
-     * @dev requires '_amount' to be approved by '_from'
-     */
+    /// @inheritdoc ITenderizer
     function deposit(address _from, uint256 _amount) external override onlyController {
         _deposit(_from, _amount);
     }
 
-    /**
-     * @notice Stake '_amount' of tokens to '_account'
-     * @param _account account to stake to in the underlying protocol
-     * @param _amount amount to stake
-     * @dev If '_account' is not specified, stake towards the default address
-     * @dev If '_amount' is 0, stake the entire current token balance of the Tenderizer
-     * @dev Only callable by controller
-     */
+    /// @inheritdoc ITenderizer
     function stake(address _account, uint256 _amount) external override onlyController {
         // Execute state updates
         // approve pendingTokens for staking
@@ -75,14 +66,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         _stake(_account, _amount);
     }
 
-    /**
-     * @notice Unstake '_amount' of tokens from '_account'
-     * @param _account account to unstake from in the underlying protocol
-     * @param _amount amount to unstake
-     * @dev If '_account' is not specified, stake towards the default address
-     * @dev If '_amount' is 0, unstake the entire amount staked towards _account
-     * @dev Only callable by controller
-     */
+    /// @inheritdoc ITenderizer
     function unstake(address _account, uint256 _amount)
         external
         override
@@ -94,24 +78,14 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         return _unstake(_account, address(0), _amount);
     }
 
-    /**
-     * @notice Withdraw '_amount' of tokens previously unstaked by '_account'
-     * @param _unstakeLockID ID for the lock to request the withdraw for
-     * @param _account account requesting the withdrawam
-     * @dev If '_amount' isn't specified all unstake tokens by '_account' will be withdrawn
-     * @dev Requires '_account' to have unstaked prior to calling withdraw
-     * @dev Only callable by controller
-     */
+    /// @inheritdoc ITenderizer
     function withdraw(address _account, uint256 _unstakeLockID) external override onlyController {
         // Execute state updates to pending withdrawals
         // Transfer tokens to _account
         _withdraw(_account, _unstakeLockID);
     }
 
-    /**
-     * @notice Claim staking rewards for the underlying protocol
-     * @dev Only callable by controller
-     */
+    /// @inheritdoc ITenderizer
     function claimRewards() external override onlyController {
         // Claim rewards
         // If received staking rewards in steak don't automatically compound, add to pendingTokens
@@ -120,6 +94,12 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         _claimRewards();
     }
 
+    /// @inheritdoc ITenderizer
+    function totalStakedTokens() external view override returns (uint256) {
+        return _totalStakedTokens();
+    }
+
+    // Setter functions
     function setController(address _controller) external override onlyController {
         require(_controller != address(0), "ZERO_ADDRESS");
         controller = _controller;
@@ -152,24 +132,22 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         _setStakingContract(_stakingContract);
     }
 
+    // Fee collection
+    /// @inheritdoc ITenderizer
     function collectFees() external override onlyController returns (uint256) {
         return _collectFees();
     }
 
+    /// @inheritdoc ITenderizer
     function collectLiquidityFees() external override onlyController returns (uint256) {
         return _collectLiquidityFees();
     }
 
-    function totalStakedTokens() external view override returns (uint256) {
-        return _totalStakedTokens();
-    }
-
-    /**
-     * @notice Returns the number of tenderTokens to be minted for amountIn deposit
-     * @dev used by controller to calculate tokens to be minted before depositing
-     */
+    /// @inheritdoc ITenderizer
     function calcDepositOut(uint256 amountIn) override public virtual returns (uint256);
 
+
+    // Internal functions
     function _deposit(address _account, uint256 _amount) internal virtual;
 
     function _stake(address _account, uint256 _amount) internal virtual;
@@ -206,6 +184,5 @@ abstract contract Tenderizer is Initializable, ITenderizer {
 
     function _totalStakedTokens() internal view virtual returns (uint256);
 
-    // Internal governance functions
     function _setStakingContract(address _stakingContract) internal virtual;
 }
