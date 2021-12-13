@@ -27,6 +27,7 @@ describe('TenderToken', () => {
   let tenderToken: TenderToken
   let tenderizerMock: MockContract
   let signers: ethersTypes.Signer[]
+  let TenderizerFactory: ethersTypes.ethers.ContractFactory
 
   let account0: string
   let account1: string
@@ -44,20 +45,7 @@ describe('TenderToken', () => {
     // 1
     signers = await ethers.getSigners()
     // 2
-    const TenderizerFactory = await ethers.getContractFactory(
-      'Livepeer',
-      signers[0]
-    )
-
-    const tenderizer = (await TenderizerFactory.deploy()) as Livepeer
-    tenderizerMock = await smockit(tenderizer)
-  })
-
-  beforeEach('Deploy TenderToken', async () => {
-    // 1
-    signers = await ethers.getSigners()
-    // 2
-    const TenderizerFactory = await ethers.getContractFactory(
+    TenderizerFactory = await ethers.getContractFactory(
       'Livepeer',
       signers[0]
     )
@@ -168,6 +156,26 @@ describe('TenderToken', () => {
 
         expect(await tenderToken.totalSupply()).to.eq(amount)
         expect(await tenderToken.balanceOf(to)).to.eq(ethers.constants.Zero)
+      })
+
+      describe('tenderize (StakedReader) setter/getter', async () => {
+        it('initial tenderizer is set correctly', async () => {
+          expect(await tenderToken.tenderizer()).to.eq(tenderizerMock.address)
+        })
+
+        it('setts new tenderizer correctly', async () => {
+          const newTenderizer = (await TenderizerFactory.deploy()) as Livepeer
+          const newtenderizerMock = await smockit(newTenderizer)
+          await tenderToken.setTenderizer(newtenderizerMock.address)
+          expect(await tenderToken.tenderizer()).to.eq(newtenderizerMock.address)
+        })
+
+        it('reverts if not set by owner', async () => {
+          const newTenderizer = (await TenderizerFactory.deploy()) as Livepeer
+          const newtenderizerMock = await smockit(newTenderizer)
+          await expect(tenderToken.connect(signers[1]).setTenderizer(newtenderizerMock.address))
+            .to.be.reverted
+        })
       })
     })
 

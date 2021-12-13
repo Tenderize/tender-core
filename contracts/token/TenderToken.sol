@@ -7,7 +7,6 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../libs/MathUtils.sol";
-import "../tenderizer/ITotalStakedReader.sol";
 import {ERC20, ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "./ITenderToken.sol";
 
@@ -47,7 +46,7 @@ contract TenderToken is Ownable, ERC20Permit, ITenderToken {
     /**
      * @dev Tendeizer address, to pull totalStakedTokens
      */
-    ITotalStakedReader immutable private tenderizer;
+    ITotalStakedReader public override tenderizer;
 
     constructor(string memory _name, string memory _symbol, ITotalStakedReader _tenderizer) 
         ERC20(string(abi.encodePacked("tender ", _name)), string(abi.encodePacked("t", _symbol)))
@@ -177,6 +176,11 @@ contract TenderToken is Ownable, ERC20Permit, ITenderToken {
         uint256 _sharesToburn = tokensToShares(_amount);
         _burnShares(_account, _sharesToburn);
         return true;
+    }
+
+    /// @inheritdoc ITenderToken
+    function setTenderizer(ITotalStakedReader _tenderizer) external onlyOwner override {
+        tenderizer = _tenderizer;
     }
 
     // INTERNAL FUNCTIONS

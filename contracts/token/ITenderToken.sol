@@ -4,6 +4,8 @@
 
 pragma solidity 0.8.4;
 
+import "../tenderizer/ITotalStakedReader.sol";
+
 /**
  * @title Interest-bearing ERC20-like token for Tenderize protocol.
  * @author Tenderize <info@tenderize.me>
@@ -133,7 +135,7 @@ interface ITenderToken {
      * @param _spender address of the spender allowed to approve tokens from caller
      * @param _addedValue amount to add to allowance
      * @dev This is an alternative to `approve` that can be used as a mitigation for problems described in:
-     * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol#L42
+     * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol#L42.
      * @dev Emits an `Approval` event indicating the updated allowance.
      * @dev Requirements:
      * - `_spender` cannot be the the zero address.
@@ -145,7 +147,7 @@ interface ITenderToken {
      * @param _spender address of the spender allowed to approve tokens from caller
      * @param _subtractedValue amount to subtract from current allowance
      * @dev This is an alternative to `approve` that can be used as a mitigation for problems described in:
-     * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol#L42
+     * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol#L42.
      * @dev Emits an `Approval` event indicating the updated allowance.
      * @dev Requirements:
      * - `_spender` cannot be the zero address.
@@ -160,9 +162,9 @@ interface ITenderToken {
      * @return a boolean value indicating whether the operation succeeded.
      * @dev Only callable by contract owner
      * @dev Calculates the amount of shares to create based on the specified '_amount'
-     * and creates new shares rather than minting actual tokens
+     * and creates new shares rather than minting actual tokens.
      * @dev '_recipient' should also deposit into Tenderizer
-     * atomically to prevent diluation of existing particpants
+     * atomically to prevent diluation of existing particpants.
      */
     function mint(address _recipient, uint256 _amount) external returns (bool);
 
@@ -171,10 +173,25 @@ interface ITenderToken {
      * @param _account address to burn the tokens from
      * @param _amount amount to burn
      * @return a boolean value indicating whether the operation succeeded.
-     * @dev Only callable by contract owner
+     * @dev Only callable by contract owner.
      * @dev Calculates the amount of shares to destroy based on the specified '_amount'
-     * and destroy shares rather than burning tokens
-     * @dev '_recipient' should also withdraw from Tenderizer atomically
+     * and destroy shares rather than burning tokens.
+     * @dev '_recipient' should also withdraw from Tenderizer atomically.
      */
     function burn(address _account, uint256 _amount) external returns (bool);
+
+    /**
+     * @notice sets the Tenderizer contract address
+     * @param _tenderizer tenderizer contract address
+     * @dev Only callable by contract owner.
+     * @dev Used to read principle from tenderizer to set as supply.
+     */
+    function setTenderizer(ITotalStakedReader _tenderizer) external;
+
+    /**
+     * @notice gets the Tenderizer contract address
+     * @return _tenderizer tenderizer contract address
+     */
+    function tenderizer() external returns (ITotalStakedReader _tenderizer);
+
 }
