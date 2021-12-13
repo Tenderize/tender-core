@@ -9,16 +9,16 @@ export default function suite () {
   })
 
   it('reverts because transfer amount exceeds allowance', async function () {
-    await expect(ctx.Controller.deposit(ctx.deposit)).to.be.revertedWith('ERC20: transfer amount exceeds allowance')
+    await expect(ctx.Tenderizer.deposit(ctx.deposit)).to.be.revertedWith('ERC20: transfer amount exceeds allowance')
   })
 
   describe('deposits funds succesfully', async () => {
     let supplyAfterTax: BigNumber
     before(async () => {
-      await ctx.Steak.approve(ctx.Controller.address, ctx.deposit)
+      await ctx.Steak.approve(ctx.Tenderizer.address, ctx.deposit)
       supplyAfterTax = ctx.deposit.add(ctx.initialStake)
         .sub(ctx.deposit.add(ctx.initialStake).mul(ctx.DELEGATION_TAX).div(ctx.MAX_PPM))
-      tx = await ctx.Controller.deposit(ctx.deposit)
+      tx = await ctx.Tenderizer.deposit(ctx.deposit)
     })
 
     it('increases TenderToken supply', async () => {

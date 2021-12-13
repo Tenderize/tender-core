@@ -25,9 +25,11 @@ contract Audius is Tenderizer {
     function initialize(
         IERC20 _steak,
         IAudius _audius,
-        address _node
+        address _node,
+        TenderTokenConfig calldata _tenderTokenConfig,
+        TenderSwapConfig calldata _tenderSwapConfig
     ) public {
-        Tenderizer._initialize(_steak, _node, msg.sender);
+        Tenderizer._initialize(_steak, _node, _tenderTokenConfig, _tenderSwapConfig);
         audius = _audius;
         audiusStaking = audius.getStakingAddress();
     }
@@ -84,7 +86,7 @@ contract Audius is Tenderizer {
         }
 
         // If caller is controller, process all user unstake requests
-        if (_caller == controller) {
+        if (_caller == gov) {
             // Check that no governance unstake is pending
             require(governancePendingUnstakeLockID == governanceLastProcessedUnstakeLockID, "GOV_WITHDRAW_PENDING");
 
@@ -120,7 +122,7 @@ contract Audius is Tenderizer {
         require(amount > 0, "ZERO_AMOUNT");
 
         // If caller is controller, process all user unstakes
-        if (_caller == controller) {
+        if (_caller == gov) {
             governanceLastProcessedUnstakeLockID = governancePendingUnstakeLockID;
             // Withdraw from Audius
             audius.undelegateStake();

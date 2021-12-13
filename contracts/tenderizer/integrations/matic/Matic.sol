@@ -24,14 +24,16 @@ contract Matic is Tenderizer {
     function initialize(
         IERC20 _steak,
         address _matic,
-        address _node
+        address _node,
+        TenderTokenConfig calldata _tenderTokenConfig,
+        TenderSwapConfig calldata _tenderSwapConfig
     ) public {
-        Tenderizer._initialize(_steak, _node, msg.sender);
+        Tenderizer._initialize(_steak, _node, _tenderTokenConfig, _tenderSwapConfig);
         maticStakeManager = _matic;
         matic = IMatic(_node);
     }
 
-    function setNode(address _node) external override onlyController {
+    function setNode(address _node) external override onlyGov {
         require(_node != address(0), "ZERO_ADDRESS");
         node = _node;
         matic = IMatic(_node);
@@ -94,7 +96,7 @@ contract Matic is Tenderizer {
         uint256 fxRate = _getExchangeRate(matic_);
 
         // Sanity check. Controller already checks user deposits and withdrawals > 0
-        if (_account != controller) require(amount > 0, "ZERO_AMOUNT");
+        if (_account != gov) require(amount > 0, "ZERO_AMOUNT");
         if (amount == 0) {
             uint256 shares = matic_.balanceOf(address(this));
             amount = (shares * fxRate) / exhangeRatePrecision;

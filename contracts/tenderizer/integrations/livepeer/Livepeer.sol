@@ -27,9 +27,11 @@ contract Livepeer is Tenderizer {
     function initialize(
         IERC20 _steak,
         ILivepeer _livepeer,
-        address _node
+        address _node,
+        TenderTokenConfig calldata _tenderTokenConfig,
+        TenderSwapConfig calldata _tenderSwapConfig
     ) public {
-        Tenderizer._initialize(_steak, _node, msg.sender);
+        Tenderizer._initialize(_steak, _node, _tenderTokenConfig, _tenderSwapConfig);
         livepeer = _livepeer;
     }
 
@@ -78,7 +80,7 @@ contract Livepeer is Tenderizer {
         uint256 amount = _amount;
 
         // Sanity check. Controller already checks user deposits and withdrawals > 0
-        if (_account != controller) require(amount > 0, "ZERO_AMOUNT");
+        if (_account != gov) require(amount > 0, "ZERO_AMOUNT");
         if (amount == 0) {
             amount = livepeer.pendingStake(address(this), MAX_ROUND);
             require(amount > 0, "ZERO_STAKE");
@@ -198,7 +200,7 @@ contract Livepeer is Tenderizer {
         emit GovernanceUpdate("STAKING_CONTRACT");
     }
 
-    function setUniswapRouter(address _uniswapRouter) external onlyController {
+    function setUniswapRouter(address _uniswapRouter) external onlyGov {
         uniswapRouter = ISwapRouterWithWETH(_uniswapRouter);
         WETH = IWETH(uniswapRouter.WETH9());
     }

@@ -5,6 +5,7 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "../liquidity/ITenderFarm.sol";
 
 /**
  * @title Tenderizer is the base contract to be implemented.
@@ -26,14 +27,19 @@ interface ITenderizer {
 
     /**
      * @notice Deposit tokens in Tenderizer.
-     * @param _from account that deposits
      * @param _amount amount deposited
-     * @dev only callable by Controller.
      * @dev doesn't actually stakes the tokens but aggregates the balance in the tenderizer
      * awaiting to be staked.
      * @dev requires '_amount' to be approved by '_from'.
      */
-    function deposit(address _from, uint256 _amount) external;
+    function deposit(uint256 _amount) external;
+
+    /**
+     * @notice Gulp or Stake all tokens
+     * @dev Staked towards the default address.
+     * @dev stakes the entire current token balance of the Tenderizer.
+     */
+    function gulp() external;
 
     /**
      * @notice Stake '_amount' of tokens to '_node'.
@@ -41,35 +47,36 @@ interface ITenderizer {
      * @param _amount amount to stake
      * @dev If '_node' is not specified, stake towards the default address.
      * @dev If '_amount' is 0, stake the entire current token balance of the Tenderizer.
-     * @dev Only callable by controller.
+     * @dev Only callable by Gov.
      */
     function stake(address _node, uint256 _amount) external;
 
     /**
      * @notice Unstake '_amount' of tokens from '_account'.
-     * @param _account account to unstake from in the underlying protocol
      * @param _amount amount to unstake
-     * @dev If '_account' is not specified, stake towards the default address.
+     * @dev unstake from the default address.
      * @dev If '_amount' is 0, unstake the entire amount staked towards _account.
-     * @dev Only callable by controller.
      */
-    function unstake(address _account, uint256 _amount) external returns (uint256 unstakeLockID);
+    function unstake(uint256 _amount) external returns (uint256 unstakeLockID);
 
     /**
      * @notice Withdraw '_amount' of tokens previously unstaked by '_account'.
      * @param _unstakeLockID ID for the lock to request the withdraw for
-     * @param _account account requesting the withdrawam
      * @dev If '_amount' isn't specified all unstake tokens by '_account' will be withdrawn.
      * @dev Requires '_account' to have unstaked prior to calling withdraw.
-     * @dev Only callable by controller.
      */
-    function withdraw(address _account, uint256 _unstakeLockID) external;
+    function withdraw(uint256 _unstakeLockID) external;
 
     /**
      * @notice Claim staking rewards for the underlying protocol.
-     * @dev Only callable by controller.
      */
     function claimRewards() external;
+
+    /**
+     * @notice Rebase will stake pending deposits, claim rewards, 
+     * resync the liquidity pool and collect fees.
+     */
+     function rebase() external;
 
     /**
      * @notice Collect fees pulls any pending governance fees from the Tenderizer to the governance treasury.
@@ -104,9 +111,35 @@ interface ITenderizer {
     function pendingLiquidityFees() external view returns (uint256);
 
 
-    // Governance setter funtions
+    /**
+     * @notice Exectutes a transaction on behalf of the controller.
+     * @param _target target address for the contract call
+     * @param _value ether value to be transeffered with the transaction
+     * @param _data call data - check ethers.interface.encodeFunctionData()
+     * @dev only callable by owner(gov).
+     */
+    function execute(
+        address _target,
+        uint256 _value,
+        bytes calldata _data
+    ) external;
 
-    function setController(address _controller) external;
+    /**
+     * @notice Exectutes a batch of transaction on behalf of the controller.
+     * @param _targets array of target addresses for the contract call
+     * @param _values array of ether values to be transeffered with the transactions
+     * @param _datas array of call datas - check ethers.interface.encodeFunctionData()
+     * @dev Every target to its value, data via it's corresponding index.
+     * @dev only callable by owner(gov).
+     */
+    function batchExecute(
+        address[] calldata _targets,
+        uint256[] calldata _values,
+        bytes[] calldata _datas
+    ) external;
+
+
+    // Governance setter funtions
 
     function setNode(address _node) external;
 
@@ -117,4 +150,6 @@ interface ITenderizer {
     function setLiquidityFee(uint256 _liquidityFee) external;
 
     function setStakingContract(address _stakingContract) external;
+
+    function setTenderFarm(ITenderFarm _tenderFarm) external;
 }

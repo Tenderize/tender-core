@@ -3,7 +3,7 @@ import hre, { ethers } from 'hardhat'
 import { MockContract, smockit } from '@eth-optimism/smock'
 
 import {
-  SimpleToken, Controller, TenderToken, ILivepeer, Livepeer, ISwapRouterWithWETH, IWETH, TenderFarm, TenderSwap, LiquidityPoolToken
+  SimpleToken, TenderToken, ILivepeer, Livepeer, ISwapRouterWithWETH, IWETH, TenderFarm, TenderSwap, LiquidityPoolToken
 } from '../../typechain/'
 
 import chai from 'chai'
@@ -123,26 +123,23 @@ describe('Livepeer Integration Test', () => {
     Livepeer = await hre.deployments.fixture(['Livepeer'], {
       keepExistingDeployments: false
     })
-    this.Controller = ((await ethers.getContractAt('Controller', Livepeer.Controller.address)) as Controller)
     this.Tenderizer = (await ethers.getContractAt('Livepeer', Livepeer.Livepeer_Proxy.address)) as Livepeer
     this.TenderizerImpl = (await ethers.getContractAt('Livepeer', Livepeer.Livepeer_Implementation.address)) as Livepeer
-    this.TenderToken = (await ethers.getContractAt('TenderToken', await this.Controller.tenderToken())) as TenderToken
-    this.TenderSwap = (await ethers.getContractAt('TenderSwap', await this.Controller.tenderSwap())) as TenderSwap
+    this.TenderToken = (await ethers.getContractAt('TenderToken', await this.Tenderizer.tenderToken())) as TenderToken
+    this.TenderSwap = (await ethers.getContractAt('TenderSwap', await this.Tenderizer.tenderSwap())) as TenderSwap
     this.TenderFarm = (await ethers.getContractAt('TenderFarm', Livepeer.TenderFarm.address)) as TenderFarm
     this.LpToken = (await ethers.getContractAt('LiquidityPoolToken', await this.TenderSwap.lpToken())) as LiquidityPoolToken
     UniswapRouterMock.smocked.WETH9.will.return.with(WethMock.address)
-    await this.Controller.batchExecute(
-      [this.Tenderizer.address, this.Tenderizer.address, this.Tenderizer.address],
-      [0, 0, 0],
-      [this.Tenderizer.interface.encodeFunctionData('setProtocolFee', [protocolFeesPercent]),
-        this.Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent]),
-        this.Tenderizer.interface.encodeFunctionData('setUniswapRouter', [UniswapRouterMock.address])]
-    )
+
+    // Set contract variables
+    await this.Tenderizer.setProtocolFee(protocolFeesPercent)
+    await this.Tenderizer.setLiquidityFee(liquidityFeesPercent)
+    await this.Tenderizer.setUniswapRouter(UniswapRouterMock.address)
 
     // Deposit initial stake
-    await this.Steak.approve(this.Controller.address, this.initialStake)
-    await this.Controller.deposit(this.initialStake)
-    await this.Controller.gulp()
+    await this.Steak.approve(this.Tenderizer.address, this.initialStake)
+    await this.Tenderizer.deposit(this.initialStake)
+    await this.Tenderizer.gulp()
     // Add initial liquidity
     await this.Steak.approve(this.TenderSwap.address, this.initialStake)
     await this.TenderToken.approve(this.TenderSwap.address, this.initialStake)

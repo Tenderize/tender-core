@@ -5,7 +5,7 @@ import {
 } from 'hardhat'
 
 import {
-  TenderToken, Tenderizer, ERC20, Controller, EIP173Proxy, TenderFarm, Registry, TenderSwap, LiquidityPoolToken
+  Tenderizer, ERC20, TenderSwap, TenderFarm, Registry, LiquidityPoolToken
 } from '../typechain'
 import { constants } from 'ethers'
 
@@ -25,21 +25,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   const { deployer } = await getNamedAccounts() // Fetch named accounts from hardhat.process.env.ts
 
-  const steakAmount = process.env.STEAK_AMOUNT || '0'
-
-  console.log(`Bootstrap Tenderizer with ${steakAmount} ${SYMBOL}`)
-
-  const tenderizer = await deploy(NAME, {
-    from: deployer,
-    args: [process.env.TOKEN, process.env.CONTRACT, process.env.VALIDATOR],
-    log: true, // display the address and gas used in the console (not when run in test though),
-    proxy: {
-      proxyContract: 'EIP173ProxyWithReceive',
-      owner: deployer,
-      methodName: 'initialize'
-    }
-  })
-
   const tenderTokenConfig = {
     name: NAME,
     symbol: SYMBOL,
@@ -56,10 +41,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     lpTokenTarget: (await deployments.get('LiquidityPoolToken')).address
   }
 
-  const controller = await deploy('Controller', {
+  const tenderizer = await deploy(NAME, {
     from: deployer,
-    log: true,
-    args: [process.env.TOKEN, tenderizer.address, tenderSwapConfig, tenderTokenConfig],
+    args: [process.env.TOKEN, process.env.CONTRACT, process.env.VALIDATOR, tenderTokenConfig, tenderSwapConfig],
+    log: true, // display the address and gas used in the console (not when run in test though),
     proxy: {
       proxyContract: 'EIP173ProxyWithReceive',
       owner: deployer,
@@ -67,68 +52,27 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     }
   })
 
-  const Controller: Controller = (await ethers.getContractAt('Controller', controller.address)) as Controller
-
-  const TenderSwap: TenderSwap = (await ethers.getContractAt(
-    'TenderSwap',
-    await Controller.tenderSwap()
-  )) as TenderSwap
-
-  const TenderToken: TenderToken = (await ethers.getContractAt(
-    'TenderToken',
-    await Controller.tenderToken()
-  )) as TenderToken
-
-  const LiquidityPoolToken = (await ethers.getContractAt(
-    'LiquidityPoolToken',
-    await TenderSwap.lpToken()
-  )) as LiquidityPoolToken
-
   const Tenderizer: Tenderizer = (await ethers.getContractAt('Tenderizer', tenderizer.address)) as Tenderizer
-  const Proxy: EIP173Proxy = (await ethers.getContractAt('EIP173Proxy', tenderizer.address)) as EIP173Proxy
-
-  console.log('Setting controller on Tenderizer')
-  await Tenderizer.setController(controller.address)
-  await Proxy.transferOwnership(Controller.address)
-  // console.log('Transferring ownership for TenderToken to Controller')
-  // await TenderToken.transferOwnership(controller.address)
-
-  // console.log('Approving tokens for depositing in Tenderizer')
-
-  // await Steak.approve(controller.address, bootstrapSupply)
-
-  // console.log('Depositing tokens in Tenderizer')
-
-  // await Controller.deposit(bootstrapSupply, { gasLimit: 500000 })
-
-  // console.log('Stake the deposited tokens')
-
-  // await Controller.gulp({ gasLimit: 1500000 })
-
-  console.log('Succesfully Deployed ! ')
-
-  console.log('Deploy TenderFarm')
+  const swapAddress = await Tenderizer.tenderSwap()
+  const tenderTokenAddress = await Tenderizer.tenderToken()
+  const TenderSwap: TenderSwap = (await ethers.getContractAt('TenderSwap', swapAddress)) as TenderSwap
+  const LpToken: LiquidityPoolToken = (await ethers.getContractAt('LiquidityPoolToken', await TenderSwap.lpToken())) as LiquidityPoolToken
 
   const tenderFarm = await deploy('TenderFarm', {
     from: deployer,
     log: true,
-    args: [LiquidityPoolToken.address, TenderToken.address, Controller.address],
+    args: [LpToken.address, tenderTokenAddress, Tenderizer.address],
     proxy: {
       proxyContract: 'EIP173ProxyWithReceive',
       owner: deployer,
       methodName: 'initialize'
     }
   })
-
   const TenderFarm: TenderFarm = (await ethers.getContractAt('TenderFarm', tenderFarm.address)) as TenderFarm
-  const FarmProxy: EIP173Proxy = (await ethers.getContractAt('EIP173Proxy', tenderFarm.address)) as EIP173Proxy
-  await FarmProxy.transferOwnership(controller.address)
-  await Controller.setTenderFarm(FarmProxy.address)
-  console.log('Deployed TenderFarm')
 
-  // set liquidity fee
-  const data = Tenderizer.interface.encodeFunctionData('setLiquidityFee', [ethers.utils.parseEther('0.075')])
-  await Controller.execute(Tenderizer.address, 0, data)
+  await Tenderizer.setTenderFarm(TenderFarm.address)
+
+  console.log('Succesfully Deployed ! ')
 
   // register protocol
   const allDeployed = await deployments.all()
@@ -138,11 +82,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
     await Registry.addTenderizer({
       name: NAME,
-      controller: Controller.address,
       steak: process.env.TOKEN || constants.AddressZero,
       tenderizer: Tenderizer.address,
-      tenderToken: TenderToken.address,
-      tenderSwap: TenderSwap.address,
+      tenderToken: tenderTokenAddress,
+      tenderSwap: swapAddress,
       tenderFarm: TenderFarm.address
     })
   } else if (hre.network.name === 'mainnet' || hre.network.name === 'rinkeby') {

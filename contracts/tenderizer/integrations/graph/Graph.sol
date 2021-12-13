@@ -26,9 +26,11 @@ contract Graph is Tenderizer {
     function initialize(
         IERC20 _steak,
         IGraph _graph,
-        address _node
+        address _node,
+        TenderTokenConfig calldata _tenderTokenConfig,
+        TenderSwapConfig calldata _tenderSwapConfig
     ) public {
-        Tenderizer._initialize(_steak, _node, msg.sender);
+        Tenderizer._initialize(_steak, _node, _tenderTokenConfig, _tenderSwapConfig);
         graph = _graph;
     }
 
@@ -85,7 +87,7 @@ contract Graph is Tenderizer {
         }
 
         // Unstake from governance
-        if (_account == controller) {
+        if (_account == gov) {
             // Check that no governance unstake is pending
             require(governancePendingUnstakeLockID == governanceLastProcessedUnstakeLockID, "GOV_WITHDRAW_PENDING");
 
@@ -130,7 +132,7 @@ contract Graph is Tenderizer {
         require(account == _account, "ACCOUNT_MISTMATCH");
         require(amount > 0, "ZERO_AMOUNT");
 
-        if (_account == controller) {
+        if (_account == gov) {
             governanceLastProcessedUnstakeLockID = governancePendingUnstakeLockID;
             graph.withdrawDelegated(node, ZERO_ADDRESS);
         } else {
