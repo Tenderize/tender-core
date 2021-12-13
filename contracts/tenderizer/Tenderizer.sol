@@ -4,10 +4,11 @@
 
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/proxy/Clones.sol";
 
 import "./ITenderizer.sol";
+import "../token/ITenderToken.sol";
+import "../liquidity/ITenderSwap.sol";
 
 /**
  * @title Tenderizer is the base contract to be implemented.
@@ -21,12 +22,30 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         address account;
     }
 
+      struct TenderTokenConfig {
+        address tenderTokenTarget;
+        string name;
+        string symbol; 
+    }
+
+    struct TenderSwapConfig {
+        address tenderSwapTarget;
+        address lpTokenTarget;
+        string lpTokenName;
+        string lpTokenSymbol; // e.g. tLPT-LPT-SWAP
+        uint256 amplifier;
+        uint256 fee;
+        uint256 adminFee;
+    }
+
     address constant ZERO_ADDRESS = address(0);
 
     IERC20 public steak;
-    address public node;
+    ITenderToken public tenderToken;
+    ITenderSwap public tenderSwap;
+    ITenderFarm public tenderFarm;
 
-    address public controller;
+    address public node;
 
     uint256 public protocolFee;
     uint256 public liquidityFee;
@@ -37,29 +56,80 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     mapping(uint256 => UnstakeLock) public unstakeLocks;
     uint256 nextUnstakeLockID;
 
-    modifier onlyController() {
-        require(msg.sender == controller);
+    address public gov;
+
+    modifier onlyGov() {
+        require(msg.sender == gov);
         _;
     }
 
     function _initialize(
         IERC20 _steak,
         address _node,
-        address _controller
+        TenderTokenConfig calldata _tenderTokenConfig,
+        TenderSwapConfig calldata _tenderSwapConfig
     ) internal initializer {
         steak = _steak;
         node = _node;
         protocolFee = 25 * 1e15; // 2.5%
-        controller = _controller;
+
+        // Clone TenderToken
+        ITenderToken tenderToken_ = ITenderToken(Clones.clone(_tenderTokenConfig.tenderTokenTarget));
+        require(
+            tenderToken_.initialize(
+                _tenderTokenConfig.name,
+                _tenderTokenConfig.symbol,
+                address(this)
+            ),
+            "FAIL_INIT_TENDERTOKEN"
+        );
+        tenderToken = tenderToken_;
+        gov = msg.sender;
+
+        // Clone an existing LP token deployment in an immutable way
+        // see https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.2.0/contracts/proxy/Clones.sol
+        tenderSwap = ITenderSwap(Clones.clone(_tenderSwapConfig.tenderSwapTarget));
+        require(
+            tenderSwap.initialize(
+                IERC20(address(tenderToken_)),
+                _steak,
+                _tenderSwapConfig.lpTokenName,
+                _tenderSwapConfig.lpTokenSymbol,
+                _tenderSwapConfig.amplifier,
+                _tenderSwapConfig.fee,
+                _tenderSwapConfig.adminFee,
+                _tenderSwapConfig.lpTokenTarget
+            ),
+            "FAIL_INIT_TENDERSWAP"
+        );
     }
 
     /// @inheritdoc ITenderizer
-    function deposit(address _from, uint256 _amount) external override onlyController {
-        _deposit(_from, _amount);
+    function deposit(uint256 _amount) external override {
+         require(_amount > 0, "ZERO_AMOUNT");
+
+        // Calculate tenderTokens to be minted
+        uint256 amountOut = calcDepositOut(_amount);
+        
+        // mint tenderTokens
+        require(tenderToken.mint(msg.sender, amountOut), "TENDER_MINT_FAILED");
+
+        _deposit(msg.sender, _amount);
+
+        // Transfer tokens to tenderizer
+        require(steak.transferFrom(msg.sender, address(this), _amount), "STEAK_TRANSFERFROM_FAILED");
     }
 
     /// @inheritdoc ITenderizer
-    function stake(address _account, uint256 _amount) external override onlyController {
+    function gulp() public override {
+        // Execute state updates
+        // approve pendingTokens for staking
+        // Stake tokens
+        _stake(address(0), 0);
+    }
+
+    /// @inheritdoc ITenderizer
+    function stake(address _account, uint256 _amount) external override onlyGov {
         // Execute state updates
         // approve pendingTokens for staking
         // Stake tokens
@@ -67,26 +137,40 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     }
 
     /// @inheritdoc ITenderizer
-    function unstake(address _account, uint256 _amount)
+    function unstake(uint256 _amount)
         external
         override
-        onlyController
         returns (uint256 unstakeLockID)
     {
+        // Burn tenderTokens if not gov
+        // TODO: CHECK THIS!
+        if(msg.sender != gov) {
+            require(tenderToken.burn(msg.sender, _amount), "TENDER_BURN_FAILED");
+        }
+
         // Execute state updates to pending withdrawals
         // Unstake tokens
-        return _unstake(_account, address(0), _amount);
+        return _unstake(msg.sender, address(0), _amount); // Make public function??
     }
 
     /// @inheritdoc ITenderizer
-    function withdraw(address _account, uint256 _unstakeLockID) external override onlyController {
+    function withdraw(uint256 _unstakeLockID) external override {
         // Execute state updates to pending withdrawals
         // Transfer tokens to _account
-        _withdraw(_account, _unstakeLockID);
+        _withdraw(msg.sender, _unstakeLockID);
     }
 
     /// @inheritdoc ITenderizer
-    function claimRewards() external override onlyController {
+    function rebase() public override {
+        // claim rewards
+        claimRewards();
+
+        // stake tokens
+        gulp();
+    }
+
+    /// @inheritdoc ITenderizer
+    function claimRewards() public override {
         // Claim rewards
         // If received staking rewards in steak don't automatically compound, add to pendingTokens
         // Swap tokens with address != steak to steak
@@ -99,53 +183,84 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         return _totalStakedTokens();
     }
 
-    // Setter functions
-    function setController(address _controller) external override onlyController {
-        require(_controller != address(0), "ZERO_ADDRESS");
-        controller = _controller;
-        emit GovernanceUpdate("CONTROLLER");
-    }
-
-    function setNode(address _node) external virtual override onlyController {
+    function setNode(address _node) external virtual override onlyGov {
         require(_node != address(0), "ZERO_ADDRESS");
         node = _node;
         emit GovernanceUpdate("NODE");
     }
 
-    function setSteak(IERC20 _steak) external virtual override onlyController {
+    function setSteak(IERC20 _steak) external virtual override onlyGov {
         require(address(_steak) != address(0), "ZERO_ADDRESS");
         steak = _steak;
         emit GovernanceUpdate("STEAK");
     }
 
-    function setProtocolFee(uint256 _protocolFee) external virtual override onlyController {
+    function setProtocolFee(uint256 _protocolFee) external virtual override onlyGov {
         protocolFee = _protocolFee;
         emit GovernanceUpdate("PROTOCOL_FEE");
     }
 
-    function setLiquidityFee(uint256 _liquidityFee) external virtual override onlyController {
+    function setLiquidityFee(uint256 _liquidityFee) external virtual override onlyGov {
         liquidityFee = _liquidityFee;
         emit GovernanceUpdate("LIQUIDITY_FEE");
     }
 
-    function setStakingContract(address _stakingContract) external override onlyController {
+    function setStakingContract(address _stakingContract) external override onlyGov {
         _setStakingContract(_stakingContract);
+    }
+
+    function setTenderFarm(ITenderFarm _tenderFarm) external override onlyGov {
+        require(address(_tenderFarm) != address(0), "ZERO_ADDRESS");
+        tenderFarm = _tenderFarm;
+        emit GovernanceUpdate("TENDERFARM");
     }
 
     // Fee collection
     /// @inheritdoc ITenderizer
-    function collectFees() external override onlyController returns (uint256) {
+    function collectFees() external override onlyGov returns (uint256) {
+        // mint tenderToken to fee distributor (governance)
+        tenderToken.mint(gov, pendingFees);
+
         return _collectFees();
     }
 
     /// @inheritdoc ITenderizer
-    function collectLiquidityFees() external override onlyController returns (uint256) {
-        return _collectLiquidityFees();
+    function collectLiquidityFees() external override onlyGov returns (uint256 amount) {
+        if (tenderFarm.nextTotalStake() == 0) return 0;
+
+        // mint tenderToken and transfer to tenderFarm
+        amount = pendingLiquidityFees;
+        tenderToken.mint(address(this), amount);
+        _collectLiquidityFees();
+
+        // TODO: Move this approval to infinite approval in initialize()?
+        tenderToken.approve(address(tenderFarm), amount);
+        tenderFarm.addRewards(amount);
     }
 
     /// @inheritdoc ITenderizer
     function calcDepositOut(uint256 amountIn) override public virtual returns (uint256);
 
+    /// @inheritdoc ITenderizer
+    function execute (
+        address _target,
+        uint256 _value,
+        bytes calldata _data
+    ) external override onlyGov {
+        _execute(_target, _value, _data);
+    }
+
+    /// @inheritdoc ITenderizer
+    function batchExecute(
+        address[] calldata _targets,
+        uint256[] calldata _values,
+        bytes[] calldata _datas
+    ) external override onlyGov {
+        require(_targets.length == _values.length && _targets.length == _datas.length, "INVALID_ARGUMENTS");
+        for (uint256 i = 0; i < _targets.length; i++) {
+            _execute(_targets[i], _values[i], _datas[i]);
+        }
+    }
 
     // Internal functions
     function _deposit(address _account, uint256 _amount) internal virtual;
@@ -185,4 +300,13 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     function _totalStakedTokens() internal view virtual returns (uint256);
 
     function _setStakingContract(address _stakingContract) internal virtual;
+
+    function _execute(
+        address _target,
+        uint256 _value,
+        bytes calldata _data
+    ) internal {
+        (bool success, bytes memory returnData) = _target.call{ value: _value }(_data);
+        require(success, string(returnData));
+    }
 }

@@ -1,7 +1,7 @@
 import hre, { ethers } from 'hardhat'
 import { MockContract, smockit } from '@eth-optimism/smock'
 import {
-  SimpleToken, Controller, Tenderizer, TenderToken, IAudius, TenderFarm, TenderSwap, LiquidityPoolToken
+  SimpleToken, Tenderizer, TenderToken, IAudius, TenderFarm, TenderSwap, LiquidityPoolToken
 } from '../../typechain'
 import { percOf2 } from '../util/helpers'
 import chai from 'chai'
@@ -93,24 +93,21 @@ describe('Audius Integration Test', () => {
     Audius = await hre.deployments.fixture(['Audius'], {
       keepExistingDeployments: false
     })
-    this.Controller = (await ethers.getContractAt('Controller', Audius.Controller.address)) as Controller
     this.Tenderizer = (await ethers.getContractAt('Tenderizer', Audius.Audius.address)) as Tenderizer
     this.TenderizerImpl = (await ethers.getContractAt('Tenderizer', Audius.Audius_Implementation.address)) as Tenderizer
-    this.TenderToken = (await ethers.getContractAt('TenderToken', await this.Controller.tenderToken())) as TenderToken
-    this.TenderSwap = (await ethers.getContractAt('TenderSwap', await this.Controller.tenderSwap())) as TenderSwap
+    this.TenderToken = (await ethers.getContractAt('TenderToken', await this.Tenderizer.tenderToken())) as TenderToken
+    this.TenderSwap = (await ethers.getContractAt('TenderSwap', await this.Tenderizer.tenderSwap())) as TenderSwap
     this.TenderFarm = (await ethers.getContractAt('TenderFarm', Audius.TenderFarm.address)) as TenderFarm
     this.LpToken = (await ethers.getContractAt('LiquidityPoolToken', await this.TenderSwap.lpToken())) as LiquidityPoolToken
-    await this.Controller.batchExecute(
-      [this.Tenderizer.address, this.Tenderizer.address],
-      [0, 0],
-      [this.Tenderizer.interface.encodeFunctionData('setProtocolFee', [protocolFeesPercent]),
-        this.Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent])]
-    )
+
+    // Set contract variables
+    await this.Tenderizer.setProtocolFee(protocolFeesPercent)
+    await this.Tenderizer.setLiquidityFee(liquidityFeesPercent)
 
     // Deposit initial stake
-    await this.Steak.approve(this.Controller.address, this.initialStake)
-    await this.Controller.deposit(this.initialStake)
-    await this.Controller.gulp()
+    await this.Steak.approve(this.Tenderizer.address, this.initialStake)
+    await this.Tenderizer.deposit(this.initialStake)
+    await this.Tenderizer.gulp()
     // Add initial liquidity
     await this.Steak.approve(this.TenderSwap.address, this.initialStake)
     await this.TenderToken.approve(this.TenderSwap.address, this.initialStake)
