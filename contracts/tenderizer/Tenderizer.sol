@@ -30,9 +30,9 @@ abstract contract Tenderizer is Initializable, ITenderizer {
 
     uint256 public protocolFee;
     uint256 public liquidityFee;
-    uint256 public override pendingFees; // pending protocol fees since last distribution
+    uint256 public override pendingFees;
     uint256 public override pendingLiquidityFees;
-    uint256 public currentPrincipal; // Principal since last claiming earnings
+    uint256 public currentPrincipal;
 
     mapping(uint256 => UnstakeLock) public unstakeLocks;
     uint256 nextUnstakeLockID;

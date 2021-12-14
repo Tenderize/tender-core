@@ -171,21 +171,29 @@ contract Graph is Tenderizer {
 
         uint256 stake = delShares * totalTokens / totalShares;
 
-        uint256 rewards;
-        if (stake >= currentPrincipal_) {
-            rewards = stake - currentPrincipal_ - pendingFees - pendingLiquidityFees;
-        }
+        int256 rewards = int256(stake + steak.balanceOf(address(this))) 
+        - int256(currentPrincipal_ +  pendingFees + pendingLiquidityFees);
 
         // Substract protocol fee amount and add it to pendingFees
-        uint256 _pendingFees = pendingFees + MathUtils.percOf(rewards, protocolFee);
-        pendingFees = _pendingFees;
-        uint256 _liquidityFees = pendingLiquidityFees + MathUtils.percOf(rewards, liquidityFee);
-        pendingLiquidityFees = _liquidityFees;
-        // Add current pending stake minus fees and set it as current principal
-        uint256 newPrincipal = stake - _pendingFees - _liquidityFees;
+        uint256 newPrincipal;
+        if(rewards > 0){
+            uint256 _rewards = uint256(rewards);
+            uint256 _pendingFees = pendingFees + MathUtils.percOf(_rewards, protocolFee);
+            pendingFees = _pendingFees;
+            uint256 _liquidityFees = pendingLiquidityFees + MathUtils.percOf(_rewards, liquidityFee);
+            pendingLiquidityFees = _liquidityFees;
+
+            // Add current pending stake minus fees and set it as current principal
+            newPrincipal = currentPrincipal_ + _rewards - _pendingFees - _liquidityFees;
+        } else {
+            // Slashed, deduct from principal
+            newPrincipal = currentPrincipal_ - uint256(-rewards);
+        }
+
+        // Update state
         currentPrincipal = newPrincipal;
 
-        emit RewardsClaimed(rewards, newPrincipal, currentPrincipal_);
+        emit RewardsClaimed(int256(rewards), newPrincipal, currentPrincipal_);
     }
 
     function _totalStakedTokens() internal view override returns (uint256) {

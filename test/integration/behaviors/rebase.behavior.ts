@@ -124,6 +124,6 @@ export function stakeDecreaseTests () {
   })
 
   it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
-    await expect(tx).to.emit(ctx.Tenderizer, 'RewardsClaimed').withArgs('0', ctx.expectedCP, oldPrinciple)
+    await expect(tx).to.emit(ctx.Tenderizer, 'RewardsClaimed').withArgs(ctx.expectedCP.sub(oldPrinciple), ctx.expectedCP, oldPrinciple)
   })
 }

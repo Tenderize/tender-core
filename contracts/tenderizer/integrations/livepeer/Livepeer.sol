@@ -139,10 +139,8 @@ contract Livepeer is Tenderizer {
         uint256 ethFees = livepeer.pendingFees(del, MAX_ROUND);
         uint256 currentPrincipal_ = currentPrincipal;
 
-        uint256 rewards;
-        if (stake >= currentPrincipal_) {
-            rewards = stake - currentPrincipal_ -  pendingFees - pendingLiquidityFees;
-        }
+        int256 rewards = int256(stake + steak.balanceOf(address(this))) 
+        - int256(currentPrincipal_ +  pendingFees + pendingLiquidityFees);
 
         // withdraw fees
         uint256 swappedLPT;
@@ -172,17 +170,27 @@ contract Livepeer is Tenderizer {
                 } catch {}
                 
                 // Add swapped LPT to rewards
-                rewards += swappedLPT;
+                rewards += int256(swappedLPT);
             }
         }
 
         // Substract protocol fee amount and add it to pendingFees
-        uint256 _pendingFees = pendingFees + MathUtils.percOf(rewards, protocolFee);
-        pendingFees = _pendingFees;
-        uint256 _liquidityFees = pendingLiquidityFees + MathUtils.percOf(rewards, liquidityFee);
-        pendingLiquidityFees = _liquidityFees;
-        // Add current pending stake minus fees and set it as current principal
-        uint256 newPrincipal = stake + swappedLPT - _pendingFees - _liquidityFees;
+        uint256 newPrincipal;
+        if(rewards > 0){
+            uint256 _rewards = uint256(rewards);
+            uint256 _pendingFees = pendingFees + MathUtils.percOf(_rewards, protocolFee);
+            pendingFees = _pendingFees;
+            uint256 _liquidityFees = pendingLiquidityFees + MathUtils.percOf(_rewards, liquidityFee);
+            pendingLiquidityFees = _liquidityFees;
+
+            // Add current pending stake minus fees and set it as current principal
+            newPrincipal = currentPrincipal_ + _rewards - _pendingFees - _liquidityFees;
+        } else {
+            // Slashed, deduct from principal
+            newPrincipal = currentPrincipal_ - uint256(-rewards);
+        }
+
+        // Update state
         currentPrincipal = newPrincipal;
 
         emit RewardsClaimed(rewards, newPrincipal, currentPrincipal_);

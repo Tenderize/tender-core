@@ -329,7 +329,7 @@ describe('Audius Mainnet Fork Test', () => {
       })
 
       it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
-        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs('0', newStake, oldPrinciple)
+        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs(newStake.sub(oldPrinciple), newStake, oldPrinciple)
       })
     })
   })
