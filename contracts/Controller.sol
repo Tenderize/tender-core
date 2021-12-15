@@ -62,7 +62,7 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
             tenderToken_.initialize(
                 _tenderTokenConfig.name,
                 _tenderTokenConfig.symbol,
-                address(tenderizer)
+                ITotalStakedReader(address(_tenderizer))
             ),
             "FAIL_INIT_TENDERTOKEN"
         );

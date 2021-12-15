@@ -22,13 +22,13 @@ interface ITenderToken {
      * @notice Initilize the TenderToken Contract
      * @param _name name of the token (steak)
      * @param _symbol symbol of the token (steak)
-     * @param _tenderizer address of the tenderizer
+     * @param _stakedReader contract address implementing the ITotalStakedReader interface
      * @return a boolean value indicating whether the init succeeded.
      */
     function initialize(
         string memory _name,
         string memory _symbol,
-        address _tenderizer
+        ITotalStakedReader _stakedReader
     ) external returns (bool);
     
     /**
@@ -193,4 +193,12 @@ interface ITenderToken {
      * @dev '_recipient' should also withdraw from Tenderizer atomically
      */
     function burn(address _account, uint256 _amount) external returns (bool);
+
+    /**
+     * @notice sets a TotalStakedReader to read the total staked tokens from
+     * @param _stakedReader contract address implementing the ITotalStakedReader interface
+     * @dev Only callable by contract owner.
+     * @dev Used to determine TenderToken total supply.
+     */
+    function setTotalStakedReader(ITotalStakedReader _stakedReader) external;
 }

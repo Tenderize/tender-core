@@ -34,11 +34,6 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
     uint256 private totalShares;
 
     /**
-     * @dev Total amount of underlying tokens pooled
-     */
-    uint256 private totalPooledTokens;
-
-    /**
      * @dev Nominal amount of shares held by each account
      */
     mapping(address => uint256) private shares;
@@ -51,13 +46,13 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
     /**
      * @dev Tendeizer address, to pull totalStakedTokens
      */
-    ITotalStakedReader private tenderizer;
+    ITotalStakedReader public totalStakedReader;
 
     /// @inheritdoc ITenderToken
     function initialize(
         string memory _name,
         string memory _symbol,
-        address _tenderizer
+        ITotalStakedReader _totalStakedReader
     ) external override initializer returns (bool)  
     {   
         __Context_init_unchained();
@@ -65,7 +60,7 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
         __ERC20_init_unchained(string(abi.encodePacked("tender ", _name)), string(abi.encodePacked("t", _symbol)));
         __EIP712_init_unchained(string(abi.encodePacked("tender ", _name)), "1");
         __ERC20Permit_init_unchained(string(abi.encodePacked("tender ", _name)));
-        tenderizer = ITotalStakedReader(_tenderizer);
+        totalStakedReader = _totalStakedReader;
         return true;
     }
 
@@ -198,6 +193,12 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
         return true;
     }
 
+    /// @inheritdoc ITenderToken
+    function setTotalStakedReader(ITotalStakedReader _totalStakedReader) public onlyOwner override {
+        require(address(_totalStakedReader) != address(0));
+        totalStakedReader = _totalStakedReader;
+    }
+
     // INTERNAL FUNCTIONS
 
     /**
@@ -206,7 +207,7 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
      * @dev This function is required to be implemented in a derived contract.
      */
     function _getTotalPooledTokens() internal view returns (uint256) {
-        return tenderizer.totalStakedTokens();
+        return totalStakedReader.totalStakedTokens();
     }
 
     /**

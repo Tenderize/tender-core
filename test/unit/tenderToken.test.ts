@@ -25,6 +25,7 @@ describe('TenderToken', () => {
   let snapshotId: any
 
   let tenderToken: TenderToken
+  let TenderizerFactory: ethersTypes.ethers.ContractFactory
   let tenderizerMock: MockContract
   let signers: ethersTypes.Signer[]
 
@@ -44,7 +45,7 @@ describe('TenderToken', () => {
     // 1
     signers = await ethers.getSigners()
     // 2
-    const TenderizerFactory = await ethers.getContractFactory(
+    TenderizerFactory = await ethers.getContractFactory(
       'Livepeer',
       signers[0]
     )
@@ -156,6 +157,26 @@ describe('TenderToken', () => {
 
         expect(await tenderToken.totalSupply()).to.eq(amount)
         expect(await tenderToken.balanceOf(to)).to.eq(ethers.constants.Zero)
+      })
+    })
+
+    describe('setTotalStakedReader', async () => {
+      it('initial stakedReader is set correctly', async () => {
+        expect(await tenderToken.totalStakedReader()).to.eq(tenderizerMock.address)
+      })
+
+      it('setts new tenderizer correctly', async () => {
+        const newTenderizer = (await TenderizerFactory.deploy()) as Livepeer
+        const newtenderizerMock = await smockit(newTenderizer)
+        await tenderToken.setTotalStakedReader(newtenderizerMock.address)
+        expect(await tenderToken.totalStakedReader()).to.eq(newtenderizerMock.address)
+      })
+
+      it('reverts if not set by owner', async () => {
+        const newTenderizer = (await TenderizerFactory.deploy()) as Livepeer
+        const newtenderizerMock = await smockit(newTenderizer)
+        await expect(tenderToken.connect(signers[1]).setTotalStakedReader(newtenderizerMock.address))
+          .to.be.reverted
       })
     })
 
