@@ -73,9 +73,10 @@ describe('TenderFarm', () => {
     account2 = await signers[2].getAddress()
 
     lpToken = (await LPTokenFactory.deploy('LP token', 'LP', ethers.utils.parseEther('1000000000000000'))) as SimpleToken
-    tenderToken = (await TenderTokenFactory.deploy('Tender Token', 'Tender', tenderizerMock.address)) as TenderToken
+    tenderToken = (await TenderTokenFactory.deploy()) as TenderToken
     await lpToken.deployed()
     await tenderToken.deployed()
+    await tenderToken.initialize('Tender Token', 'Tender', tenderizerMock.address)
 
     tenderFarm = await upgrades.deployProxy(TenderFarmFactory, [lpToken.address, tenderToken.address, account0])
     await tenderFarm.deployed()

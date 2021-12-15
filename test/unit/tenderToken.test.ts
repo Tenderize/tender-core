@@ -54,19 +54,6 @@ describe('TenderToken', () => {
   })
 
   beforeEach('Deploy TenderToken', async () => {
-    // 1
-    signers = await ethers.getSigners()
-    // 2
-    const TenderizerFactory = await ethers.getContractFactory(
-      'Livepeer',
-      signers[0]
-    )
-
-    const tenderizer = (await TenderizerFactory.deploy()) as Livepeer
-    tenderizerMock = await smockit(tenderizer)
-  })
-
-  beforeEach('Deploy TenderToken', async () => {
     const TokenFactory = await ethers.getContractFactory(
       'TenderToken',
       signers[0]
@@ -76,8 +63,9 @@ describe('TenderToken', () => {
     account1 = await signers[1].getAddress()
     account2 = await signers[2].getAddress()
 
-    tenderToken = (await TokenFactory.deploy('Mock', 'MCK', tenderizerMock.address)) as TenderToken
+    tenderToken = (await TokenFactory.deploy()) as TenderToken
     await tenderToken.deployed()
+    await tenderToken.initialize('Mock', 'MCK', tenderizerMock.address)
   })
 
   describe('ERC20 methods', () => {

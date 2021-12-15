@@ -40,11 +40,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     }
   })
 
-  const tenderToken = await deploy('TenderToken', {
-    from: deployer,
-    args: [NAME, SYMBOL, tenderizer.address],
-    log: true // display the address and gas used in the console (not when run in test though)
-  })
+  const tenderTokenConfig = {
+    name: NAME,
+    symbol: SYMBOL,
+    tenderTokenTarget: (await deployments.get('TenderToken')).address
+  }
 
   const tenderSwapConfig = {
     tenderSwapTarget: (await deployments.get('TenderSwap')).address,
@@ -59,7 +59,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   const controller = await deploy('Controller', {
     from: deployer,
     log: true,
-    args: [process.env.TOKEN, tenderizer.address, tenderToken.address, tenderSwapConfig],
+    args: [process.env.TOKEN, tenderizer.address, tenderSwapConfig, tenderTokenConfig],
     proxy: {
       proxyContract: 'EIP173ProxyWithReceive',
       owner: deployer,
@@ -74,20 +74,24 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     await Controller.tenderSwap()
   )) as TenderSwap
 
+  const TenderToken: TenderToken = (await ethers.getContractAt(
+    'TenderToken',
+    await Controller.tenderToken()
+  )) as TenderToken
+
   const LiquidityPoolToken = (await ethers.getContractAt(
     'LiquidityPoolToken',
     await TenderSwap.lpToken()
   )) as LiquidityPoolToken
 
-  const TenderToken: TenderToken = (await ethers.getContractAt('TenderToken', tenderToken.address)) as TenderToken
   const Tenderizer: Tenderizer = (await ethers.getContractAt('Tenderizer', tenderizer.address)) as Tenderizer
   const Proxy: EIP173Proxy = (await ethers.getContractAt('EIP173Proxy', tenderizer.address)) as EIP173Proxy
 
   console.log('Setting controller on Tenderizer')
   await Tenderizer.setController(controller.address)
   await Proxy.transferOwnership(Controller.address)
-  console.log('Transferring ownership for TenderToken to Controller')
-  await TenderToken.transferOwnership(controller.address)
+  // console.log('Transferring ownership for TenderToken to Controller')
+  // await TenderToken.transferOwnership(controller.address)
 
   // console.log('Approving tokens for depositing in Tenderizer')
 
@@ -108,7 +112,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   const tenderFarm = await deploy('TenderFarm', {
     from: deployer,
     log: true,
-    args: [LiquidityPoolToken.address, tenderToken.address, Controller.address],
+    args: [LiquidityPoolToken.address, TenderToken.address, Controller.address],
     proxy: {
       proxyContract: 'EIP173ProxyWithReceive',
       owner: deployer,
@@ -170,6 +174,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   }
 }
 
-func.dependencies = ['Registry', 'TenderSwap']
+func.dependencies = ['Registry', 'TenderToken', 'TenderSwap']
 func.tags = [NAME, 'Deploy'] // this setup a tag so you can execute the script on its own (and its dependencies)
 export default func

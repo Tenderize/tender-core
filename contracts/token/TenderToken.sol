@@ -5,11 +5,15 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "../libs/MathUtils.sol";
 import "../tenderizer/ITotalStakedReader.sol";
-import {ERC20, ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "./ITenderToken.sol";
+// solhint-disable-next-line max-line-length
+import {
+    ERC20Upgradeable,
+    ERC20PermitUpgradeable
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/draft-ERC20PermitUpgradeable.sol";
 
 /**
  * @title Interest-bearing ERC20-like token for Tenderize protocol.
@@ -21,7 +25,7 @@ import "./ITenderToken.sol";
  *
  * shares[account] * _getTotalPooledTokens() / _getTotalShares()
  */
-contract TenderToken is Ownable, ERC20Permit, ITenderToken {
+contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken {
     uint8 internal constant DECIMALS = 18;
 
     /**
@@ -47,22 +51,31 @@ contract TenderToken is Ownable, ERC20Permit, ITenderToken {
     /**
      * @dev Tendeizer address, to pull totalStakedTokens
      */
-    ITotalStakedReader immutable private tenderizer;
+    ITotalStakedReader private tenderizer;
 
-    constructor(string memory _name, string memory _symbol, ITotalStakedReader _tenderizer) 
-        ERC20(string(abi.encodePacked("tender ", _name)), string(abi.encodePacked("t", _symbol)))
-        ERC20Permit(string(abi.encodePacked("tender ", _name)))
-    {
-        tenderizer = _tenderizer;
+    /// @inheritdoc ITenderToken
+    function initialize(
+        string memory _name,
+        string memory _symbol,
+        address _tenderizer
+    ) external override initializer returns (bool)  
+    {   
+        __Context_init_unchained();
+        __Ownable_init_unchained();
+        __ERC20_init_unchained(string(abi.encodePacked("tender ", _name)), string(abi.encodePacked("t", _symbol)));
+        __EIP712_init_unchained(string(abi.encodePacked("tender ", _name)), "1");
+        __ERC20Permit_init_unchained(string(abi.encodePacked("tender ", _name)));
+        tenderizer = ITotalStakedReader(_tenderizer);
+        return true;
     }
 
     /// @inheritdoc ITenderToken
-    function decimals() public override(ITenderToken, ERC20) pure returns (uint8) {
+    function decimals() public override(ITenderToken, ERC20Upgradeable) pure returns (uint8) {
         return DECIMALS;
     }
 
     /// @inheritdoc ITenderToken
-    function totalSupply() public view override(ITenderToken, ERC20) returns (uint256) {
+    function totalSupply() public view override(ITenderToken, ERC20Upgradeable) returns (uint256) {
         return _getTotalPooledTokens();
     }
 
@@ -77,7 +90,7 @@ contract TenderToken is Ownable, ERC20Permit, ITenderToken {
     }
 
     /// @inheritdoc ITenderToken
-    function balanceOf(address _account) public view override(ITenderToken, ERC20) returns (uint256) {
+    function balanceOf(address _account) public view override(ITenderToken, ERC20Upgradeable) returns (uint256) {
         return sharesToTokens(_sharesOf(_account));
     }
 
@@ -87,7 +100,10 @@ contract TenderToken is Ownable, ERC20Permit, ITenderToken {
     }
 
     /// @inheritdoc ITenderToken
-    function allowance(address _owner, address _spender) public view override(ITenderToken, ERC20) returns (uint256) {
+    function allowance(
+        address _owner,
+        address _spender
+    ) public view override(ITenderToken, ERC20Upgradeable) returns (uint256) {
         return allowances[_owner][_spender];
     }
 
@@ -115,13 +131,16 @@ contract TenderToken is Ownable, ERC20Permit, ITenderToken {
     }
 
     /// @inheritdoc ITenderToken
-    function transfer(address _recipient, uint256 _amount) public override(ITenderToken, ERC20) returns (bool) {
+    function transfer(
+        address _recipient,
+        uint256 _amount
+    ) public override(ITenderToken, ERC20Upgradeable) returns (bool) {
         _transfer(msg.sender, _recipient, _amount);
         return true;
     }
 
     /// @inheritdoc ITenderToken
-    function approve(address _spender, uint256 _amount) public override(ITenderToken, ERC20) returns (bool) {
+    function approve(address _spender, uint256 _amount) public override(ITenderToken, ERC20Upgradeable) returns (bool) {
         _approve(msg.sender, _spender, _amount);
         return true;
     }
@@ -131,7 +150,7 @@ contract TenderToken is Ownable, ERC20Permit, ITenderToken {
         address _sender,
         address _recipient,
         uint256 _amount
-    ) public override(ITenderToken, ERC20) returns (bool) {
+    ) public override(ITenderToken, ERC20Upgradeable) returns (bool) {
         uint256 currentAllowance = allowances[_sender][msg.sender];
         require(currentAllowance >= _amount, "TRANSFER_AMOUNT_EXCEEDS_ALLOWANCE");
 
@@ -144,7 +163,7 @@ contract TenderToken is Ownable, ERC20Permit, ITenderToken {
     function increaseAllowance(
         address _spender,
         uint256 _addedValue
-    ) public override(ITenderToken, ERC20) returns (bool) {
+    ) public override(ITenderToken, ERC20Upgradeable) returns (bool) {
         _approve(msg.sender, _spender, allowances[msg.sender][_spender] + _addedValue);
         return true;
     }
@@ -153,7 +172,7 @@ contract TenderToken is Ownable, ERC20Permit, ITenderToken {
     function decreaseAllowance(
         address _spender,
         uint256 _subtractedValue
-    ) public override(ITenderToken, ERC20) returns (bool) {
+    ) public override(ITenderToken, ERC20Upgradeable) returns (bool) {
         uint256 currentAllowance = allowances[msg.sender][_spender];
         require(currentAllowance >= _subtractedValue, "DECREASED_ALLOWANCE_BELOW_ZERO");
         _approve(msg.sender, _spender, currentAllowance - _subtractedValue);
