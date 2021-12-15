@@ -6,7 +6,7 @@
     "compile": "npx hardhat compile",
     "test": "npx hardhat test",
     "test:unit": "npx hardhat test test/unit/*",
-    "test:integration": "npx hardhat test test/integration/*",
+    "test:integration": "npx hardhat test test/integration/*.test.ts",
     "test:mainnet": "npx hardhat test test/mainnet/*.ts",
     "test:gas": "REPORT_GAS=true npx hardhat test",
     "test:coverage": "npx hardhat coverage --testfiles \"test/!(mainnet)/**/*.ts\"",
