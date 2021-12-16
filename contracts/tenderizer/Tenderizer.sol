@@ -79,7 +79,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
             tenderToken_.initialize(
                 _tenderTokenConfig.name,
                 _tenderTokenConfig.symbol,
-                address(this)
+                ITotalStakedReader(address(this))
             ),
             "FAIL_INIT_TENDERTOKEN"
         );
