@@ -1,7 +1,7 @@
 import hre, { ethers } from 'hardhat'
 
 import {
-  Controller, TenderToken, ILivepeer, Livepeer, ERC20, TenderFarm, TenderSwap, LiquidityPoolToken
+  TenderToken, ILivepeer, Livepeer, ERC20, TenderFarm, TenderSwap, LiquidityPoolToken
 } from '../../typechain'
 
 import bondingManagerAbi from './abis/livepeer/BondingManager.json'
@@ -29,7 +29,6 @@ const {
 describe('Livepeer Mainnet Fork Test', () => {
   let LivepeerStaking: ILivepeer
   let LivepeerToken: ERC20
-  let Controller: Controller
   let Tenderizer: Livepeer
   let TenderToken: TenderToken
   let TenderSwap: TenderSwap
@@ -40,8 +39,6 @@ describe('Livepeer Mainnet Fork Test', () => {
 
   let signers: SignerWithAddress[]
   let deployer: string
-
-  let withdrawAmount: BigNumber
 
   let tx: ContractTransaction
   const lockID = 0
@@ -115,24 +112,19 @@ describe('Livepeer Mainnet Fork Test', () => {
     Livepeer = await hre.deployments.fixture(['Livepeer'], {
       keepExistingDeployments: false
     })
-    Controller = (await ethers.getContractAt('Controller', Livepeer.Controller.address)) as Controller
     Tenderizer = (await ethers.getContractAt('Livepeer', Livepeer.Livepeer.address)) as Livepeer
-    TenderToken = (await ethers.getContractAt('TenderToken', await Controller.tenderToken())) as TenderToken
-    TenderSwap = (await ethers.getContractAt('TenderSwap', await Controller.tenderSwap())) as TenderSwap
+    TenderToken = (await ethers.getContractAt('TenderToken', await Tenderizer.tenderToken())) as TenderToken
+    TenderSwap = (await ethers.getContractAt('TenderSwap', await Tenderizer.tenderSwap())) as TenderSwap
     TenderFarm = (await ethers.getContractAt('TenderFarm', Livepeer.TenderFarm.address)) as TenderFarm
     LpToken = (await ethers.getContractAt('LiquidityPoolToken', await TenderSwap.lpToken())) as LiquidityPoolToken
-    await Controller.batchExecute(
-      [Tenderizer.address, Tenderizer.address, Tenderizer.address],
-      [0, 0, 0],
-      [Tenderizer.interface.encodeFunctionData('setProtocolFee', [protocolFeesPercent]),
-        Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent]),
-        Tenderizer.interface.encodeFunctionData('setUniswapRouter', [uniswapRouter])]
-    )
+    await Tenderizer.setProtocolFee(protocolFeesPercent)
+    await Tenderizer.setLiquidityFee(liquidityFeesPercent)
+    await Tenderizer.setUniswapRouter(uniswapRouter)
 
     // Deposit initial stake
-    await LivepeerToken.approve(Controller.address, initialStake)
-    await Controller.deposit(initialStake, { gasLimit: 500000 })
-    await Controller.gulp()
+    await LivepeerToken.approve(Tenderizer.address, initialStake)
+    await Tenderizer.deposit(initialStake, { gasLimit: 500000 })
+    await Tenderizer.gulp()
     // Add initial liquidity
     await LivepeerToken.approve(TenderSwap.address, initialStake)
     await TenderToken.approve(TenderSwap.address, initialStake)
@@ -148,16 +140,17 @@ describe('Livepeer Mainnet Fork Test', () => {
   const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
 
   const deposit = ethers.utils.parseEther('100')
+  const withdrawAmount = ethers.utils.parseEther('100')
 
   describe('deposit', () => {
     it('reverts because transfer amount exceeds allowance', async () => {
-      await expect(Controller.deposit(deposit)).to.be.reverted
+      await expect(Tenderizer.deposit(deposit)).to.be.reverted
     })
 
     describe('deposits funds succesfully', async () => {
       before(async () => {
-        await LivepeerToken.approve(Controller.address, deposit)
-        tx = await Controller.deposit(deposit)
+        await LivepeerToken.approve(Tenderizer.address, deposit)
+        tx = await Tenderizer.deposit(deposit)
       })
 
       it('increases TenderToken supply', async () => {
@@ -183,7 +176,7 @@ describe('Livepeer Mainnet Fork Test', () => {
     before(async function () {
       this.timeout(testTimeout)
       stakeBefore = await LivepeerStaking.pendingStake(Tenderizer.address, MAX_ROUND)
-      tx = await Controller.gulp()
+      tx = await Tenderizer.gulp()
     })
 
     it('bond succeeds', async () => {
@@ -259,7 +252,7 @@ describe('Livepeer Mainnet Fork Test', () => {
         const protocolFees = percOf2(increase.add(swappedLPTRewards), protocolFeesPercent)
         newStake = deposit.add(initialStake).add(increase)
         newStakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
-        tx = await Controller.rebase()
+        tx = await Tenderizer.rebase()
       })
 
       it('updates currentPrincipal', async () => {
@@ -310,7 +303,7 @@ describe('Livepeer Mainnet Fork Test', () => {
       otherAcc = signers[3]
       fees = await Tenderizer.pendingFees()
       ownerBalBefore = await TenderToken.balanceOf(deployer)
-      tx = await Controller.collectFees()
+      tx = await Tenderizer.collectFees()
       otherAccBalBefore = await TenderToken.balanceOf(otherAcc.address)
       await tx.wait()
     })
@@ -342,7 +335,7 @@ describe('Livepeer Mainnet Fork Test', () => {
       otherAcc = signers[3]
       fees = await Tenderizer.pendingLiquidityFees()
       farmBalanceBefore = await TenderToken.balanceOf(TenderFarm.address)
-      tx = await Controller.collectLiquidityFees()
+      tx = await Tenderizer.collectLiquidityFees()
       otherAccBalBefore = await TenderToken.balanceOf(otherAcc.address)
       await tx.wait()
     })
@@ -385,10 +378,16 @@ describe('Livepeer Mainnet Fork Test', () => {
 
   describe('unlock', async () => {
     let delBefore: BigNumber
+
+    before('stake with another account', async () => {
+      await LivepeerToken.transfer(signers[2].address, withdrawAmount)
+      await LivepeerToken.connect(signers[2]).approve(Tenderizer.address, withdrawAmount)
+      await Tenderizer.connect(signers[2]).deposit(withdrawAmount)
+    })
+
     before(async () => {
-      withdrawAmount = await TenderToken.balanceOf(deployer)
       delBefore = await LivepeerStaking.pendingStake(Tenderizer.address, MAX_ROUND)
-      tx = await Controller.connect(signers[0]).unlock(withdrawAmount)
+      tx = await Tenderizer.connect(signers[2]).unstake(withdrawAmount)
     })
 
     it('unbond() succeeds', async () => {
@@ -397,12 +396,12 @@ describe('Livepeer Mainnet Fork Test', () => {
 
     it('reduces TenderToken Balance', async () => {
       // lte to account for any roundoff error in tokenToShare calcualtion during burn
-      expect(await TenderToken.balanceOf(deployer)).to.lte(acceptableDelta)
+      expect(await TenderToken.balanceOf(signers[2].address)).to.lte(acceptableDelta)
     })
 
     it('should create unstakeLock on Tenderizer', async () => {
       const lock = await Tenderizer.unstakeLocks(lockID)
-      expect(lock.account).to.eq(deployer)
+      expect(lock.account).to.eq(signers[2].address)
       expect(lock.amount).to.eq(withdrawAmount)
     })
 
@@ -412,15 +411,13 @@ describe('Livepeer Mainnet Fork Test', () => {
     })
 
     it('should emit Unstake event from Tenderizer', async () => {
-      expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(deployer, NODE, withdrawAmount, lockID)
+      expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(signers[2].address, NODE, withdrawAmount, lockID)
     })
   })
 
   describe('withdraw', async () => {
-    let lptBalBefore : BigNumber
-
     it('reverts if wihtdraw() reverts - unbond period not complete', async () => {
-      await expect(Controller.withdraw(lockID)).to.be.reverted
+      await expect(Tenderizer.withdraw(lockID)).to.be.reverted
     })
 
     it('wihtdraw() succeeeds - unstake lock is deleted', async () => {
@@ -430,8 +427,7 @@ describe('Livepeer Mainnet Fork Test', () => {
         await hre.ethers.provider.send('evm_mine', [])
       }
       await roundsManager.connect(multisigSigner).initializeRound()
-      lptBalBefore = await LivepeerToken.balanceOf(deployer)
-      tx = await Controller.withdraw(lockID)
+      tx = await Tenderizer.connect(signers[2]).withdraw(lockID)
       const lock = await Tenderizer.unstakeLocks(lockID)
       expect(lock.account).to.eq(ethers.constants.AddressZero)
       expect(lock.amount).to.eq(0)
@@ -443,11 +439,11 @@ describe('Livepeer Mainnet Fork Test', () => {
     })
 
     it('increases LPT balance', async () => {
-      expect(await LivepeerToken.balanceOf(deployer)).to.eq(lptBalBefore.add(withdrawAmount))
+      expect(await LivepeerToken.balanceOf(signers[2].address)).to.eq(withdrawAmount)
     })
 
     it('should emit Withdraw event from Tenderizer', async () => {
-      expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(deployer, withdrawAmount, lockID)
+      expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(signers[2].address, withdrawAmount, lockID)
     })
   })
 })
