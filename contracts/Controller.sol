@@ -40,18 +40,33 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
         uint256 adminFee;
     }
 
+    struct TenderTokenConfig {
+        address tenderTokenTarget;
+        string name;
+        string symbol; 
+    }
+
     function initialize(
         IERC20 _steak,
         ITenderizer _tenderizer,
-        ITenderToken _tenderToken,
-        TenderSwapConfig calldata _tenderSwapConfig
+        TenderSwapConfig calldata _tenderSwapConfig,
+        TenderTokenConfig calldata _tenderTokenConfig
     ) public initializer {
         __ReentrancyGuard_init_unchained();
         steak = _steak;
         tenderizer = _tenderizer;
-        // TODO: consider deploying these contracts using factories and proxies
-        // from the constructutor so that deploying a new system is only deploying a single contract
-        tenderToken = _tenderToken;
+
+        // Clone TenderToken
+        ITenderToken tenderToken_ = ITenderToken(Clones.clone(_tenderTokenConfig.tenderTokenTarget));
+        require(
+            tenderToken_.initialize(
+                _tenderTokenConfig.name,
+                _tenderTokenConfig.symbol,
+                ITotalStakedReader(address(_tenderizer))
+            ),
+            "FAIL_INIT_TENDERTOKEN"
+        );
+        tenderToken = tenderToken_;
         gov = msg.sender;
 
         // Clone an existing LP token deployment in an immutable way
@@ -59,7 +74,7 @@ contract Controller is Initializable, ReentrancyGuardUpgradeable {
         tenderSwap = ITenderSwap(Clones.clone(_tenderSwapConfig.tenderSwapTarget));
         require(
             tenderSwap.initialize(
-                IERC20(address(_tenderToken)),
+                IERC20(address(tenderToken_)),
                 _steak,
                 _tenderSwapConfig.lpTokenName,
                 _tenderSwapConfig.lpTokenSymbol,

@@ -114,7 +114,7 @@ describe('Audius Mainnet Fork Test', () => {
     })
     Controller = (await ethers.getContractAt('Controller', Audius.Controller.address)) as Controller
     Tenderizer = (await ethers.getContractAt('Audius', Audius.Audius.address)) as Audius
-    TenderToken = (await ethers.getContractAt('TenderToken', Audius.TenderToken.address)) as TenderToken
+    TenderToken = (await ethers.getContractAt('TenderToken', await Controller.tenderToken())) as TenderToken
     TenderSwap = (await ethers.getContractAt('TenderSwap', await Controller.tenderSwap())) as TenderSwap
     TenderFarm = (await ethers.getContractAt('TenderFarm', Audius.TenderFarm.address)) as TenderFarm
     LpToken = (await ethers.getContractAt('LiquidityPoolToken', await TenderSwap.lpToken())) as LiquidityPoolToken

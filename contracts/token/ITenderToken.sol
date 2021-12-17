@@ -4,6 +4,8 @@
 
 pragma solidity 0.8.4;
 
+import "../tenderizer/ITotalStakedReader.sol";
+
 /**
  * @title Interest-bearing ERC20-like token for Tenderize protocol.
  * @author Tenderize <info@tenderize.me>
@@ -15,6 +17,20 @@ pragma solidity 0.8.4;
  * shares[account] * _getTotalPooledTokens() / _getTotalShares()
  */
 interface ITenderToken {
+
+    /**
+     * @notice Initilize the TenderToken Contract
+     * @param _name name of the token (steak)
+     * @param _symbol symbol of the token (steak)
+     * @param _stakedReader contract address implementing the ITotalStakedReader interface
+     * @return a boolean value indicating whether the init succeeded.
+     */
+    function initialize(
+        string memory _name,
+        string memory _symbol,
+        ITotalStakedReader _stakedReader
+    ) external returns (bool);
+    
     /**
      * @notice The number of decimals the TenderToken uses.
      * @return the number of decimals for getting user representation of a token amount.
@@ -177,4 +193,12 @@ interface ITenderToken {
      * @dev '_recipient' should also withdraw from Tenderizer atomically
      */
     function burn(address _account, uint256 _amount) external returns (bool);
+
+    /**
+     * @notice sets a TotalStakedReader to read the total staked tokens from
+     * @param _stakedReader contract address implementing the ITotalStakedReader interface
+     * @dev Only callable by contract owner.
+     * @dev Used to determine TenderToken total supply.
+     */
+    function setTotalStakedReader(ITotalStakedReader _stakedReader) external;
 }
