@@ -114,10 +114,10 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         // mint tenderTokens
         require(tenderToken.mint(msg.sender, amountOut), "TENDER_MINT_FAILED");
 
-        _deposit(msg.sender, _amount);
-
         // Transfer tokens to tenderizer
         require(steak.transferFrom(msg.sender, address(this), _amount), "STEAK_TRANSFERFROM_FAILED");
+
+        _deposit(msg.sender, _amount);
     }
 
     /// @inheritdoc ITenderizer
@@ -239,7 +239,9 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     }
 
     /// @inheritdoc ITenderizer
-    function calcDepositOut(uint256 amountIn) override public virtual returns (uint256);
+    function calcDepositOut(uint256 _amountIn) override public view virtual returns (uint256 amountOut) {
+        return _calcDepositOut(_amountIn);
+    }
 
     /// @inheritdoc ITenderizer
     function execute (
@@ -263,6 +265,11 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     }
 
     // Internal functions
+
+    function _calcDepositOut(uint256 _amountIn) internal view virtual returns (uint256 amountOut) {
+        return _amountIn;
+    }
+
     function _deposit(address _account, uint256 _amount) internal virtual;
 
     function _stake(address _account, uint256 _amount) internal virtual;
