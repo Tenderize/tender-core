@@ -43,9 +43,6 @@ contract Audius is Tenderizer {
     function _stake(address _node, uint256 _amount) internal override {
         // if no amount is specified, stake all available tokens
         uint256 amount = _amount;
-        if (amount == 0) {
-            amount = IERC20(steak).balanceOf(address(this));
-        }
 
         if (amount == 0) {
             return;

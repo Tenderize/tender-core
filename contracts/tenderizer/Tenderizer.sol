@@ -125,7 +125,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         // Execute state updates
         // approve pendingTokens for staking
         // Stake tokens
-        _stake(address(0), 0);
+        _stake(node, steak.balanceOf(address(this)));
     }
 
     /// @inheritdoc ITenderizer
@@ -150,7 +150,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
 
         // Execute state updates to pending withdrawals
         // Unstake tokens
-        return _unstake(msg.sender, address(0), _amount); // Make public function??
+        return _unstake(msg.sender, address(0), _amount);
     }
 
     /// @inheritdoc ITenderizer
