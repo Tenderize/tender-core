@@ -41,7 +41,7 @@ export default function suite () {
     } else {
       newNodeAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751' // dummy
     }
-    await ctx.Tenderizer.stake(newNodeAddress, ethers.utils.parseEther('0'))
+    await ctx.Tenderizer.stake(newNodeAddress, ctx.deposit.add(ctx.initialStake))
     // TODO: Antipattern - Refactor
     if (ctx.NAME === 'Matic') {
       expect(newValidatorShare.smocked.buyVoucher.calls.length).to.eq(1)
@@ -56,25 +56,8 @@ export default function suite () {
     expect(ctx.stakeMock.function.calls[0][ctx.stakeMock.amountParam]).to.eq(amount)
   })
 
-  it('returns without calling bond() if no balance', async () => {
-    await hre.network.provider.request({
-      method: 'hardhat_impersonateAccount',
-      params: [ctx.Tenderizer.address]
-    }
-    )
-    const signer = await ethers.provider.getSigner(ctx.Tenderizer.address)
-    await hre.network.provider.send('hardhat_setBalance', [
-      ctx.Tenderizer.address,
-          `0x${ethers.utils.parseEther('10')}`
-    ])
-    await ctx.Steak.connect(signer).transfer(ctx.NODE, ctx.deposit.add(ctx.initialStake))
-    await hre.network.provider.request({
-      method: 'hardhat_stopImpersonatingAccount',
-      params: [ctx.Tenderizer.address]
-    }
-    )
-
-    await ctx.Tenderizer.gulp()
+  it('returns without calling bond() if zero balance is passed', async () => {
+    await ctx.Tenderizer.stake(ctx.NODE, ethers.constants.Zero)
     expect(ctx.stakeMock.function.calls.length).to.eq(0)
   })
 }
