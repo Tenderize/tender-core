@@ -124,7 +124,7 @@ describe('Livepeer Mainnet Fork Test', () => {
     // Deposit initial stake
     await LivepeerToken.approve(Tenderizer.address, initialStake)
     await Tenderizer.deposit(initialStake, { gasLimit: 500000 })
-    await Tenderizer.gulp()
+    await Tenderizer.claimRewards()
     // Add initial liquidity
     await LivepeerToken.approve(TenderSwap.address, initialStake)
     await TenderToken.approve(TenderSwap.address, initialStake)
@@ -176,7 +176,7 @@ describe('Livepeer Mainnet Fork Test', () => {
     before(async function () {
       this.timeout(testTimeout)
       stakeBefore = await LivepeerStaking.pendingStake(Tenderizer.address, MAX_ROUND)
-      tx = await Tenderizer.gulp()
+      tx = await Tenderizer.claimRewards()
     })
 
     it('bond succeeds', async () => {

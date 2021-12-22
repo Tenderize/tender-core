@@ -122,7 +122,7 @@ describe('Audius Mainnet Fork Test', () => {
     // Deposit initial stake
     await AudiusToken.approve(Tenderizer.address, initialStake)
     await Tenderizer.deposit(initialStake, { gasLimit: 500000 })
-    await Tenderizer.gulp()
+    await Tenderizer.claimRewards()
     // Add initial liquidity
     await AudiusToken.approve(TenderSwap.address, initialStake)
     await TenderToken.approve(TenderSwap.address, initialStake)
@@ -169,7 +169,7 @@ describe('Audius Mainnet Fork Test', () => {
 
   describe('stake', () => {
     before(async () => {
-      tx = await Tenderizer.gulp()
+      tx = await Tenderizer.claimRewards()
       await tx.wait()
     })
 

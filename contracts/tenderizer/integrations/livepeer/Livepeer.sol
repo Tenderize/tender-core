@@ -13,6 +13,8 @@ import "./ILivepeer.sol";
 import '../../../token/IWETH.sol';
 import '../../../liquidity/ISwapRouter.sol';
 
+import "hardhat/console.sol";
+
 contract Livepeer is Tenderizer {
     uint256 private constant MAX_ROUND = 2**256 - 1;
 
@@ -120,67 +122,92 @@ contract Livepeer is Tenderizer {
     }
 
     function _claimRewards() internal override {
-        // Livepeer automatically compounds
-        // The rewards is the difference between
-        // pending stake and the latest cached stake amount
+        int256 stakeDiff;
+        address this_ = address(this);
 
-        // TODO: Oh god this is going to be so costly
-        // What if we gulp before this call so we have the updated state in getDelegator ? bond might be more costly
-        // Let's just code this with everything we need and benchmark gas
+        // TODO: can move this into a helper that returns the amount, then add that to stakeDiff 
+        {        
+            uint256 ethFees = livepeer.pendingFees(this_, MAX_ROUND);
+            // First claim any fees that are not underlying tokens
+            // withdraw fees
+            if (ethFees >= ethFees_threshold) {
+                uint256 swappedLPT;
+                livepeer.withdrawFees();
 
-        // Account for LPT rewards
-        address del = address(this);
-        uint256 stake = livepeer.pendingStake(del, MAX_ROUND);
-        uint256 ethFees = livepeer.pendingFees(del, MAX_ROUND);
-        uint256 currentPrincipal_ = currentPrincipal;
+                // Wrap ETH
+                uint256 bal = address(this).balance;
+                WETH.deposit{value: bal}();
+                WETH.approve(address(uniswapRouter), bal);
 
-        uint256 rewards;
-        if (stake >= currentPrincipal_) {
-            rewards = stake - currentPrincipal_ -  pendingFees - pendingLiquidityFees;
-        }
-
-        // withdraw fees
-        uint256 swappedLPT;
-        if (ethFees >= ethFees_threshold) {
-            livepeer.withdrawFees();
-
-            // Wrap ETH
-            uint256 bal = address(this).balance;
-            WETH.deposit{value: bal}();
-            WETH.approve(address(uniswapRouter), bal);
-
-            // swap ETH fees for LPT
-            if (address(uniswapRouter) != address(0)) {
-                ISwapRouter.ExactInputSingleParams memory params =
-                ISwapRouter.ExactInputSingleParams({
-                    tokenIn: address(WETH),
-                    tokenOut: address(steak),
-                    fee: UNISWAP_POOL_FEE,
-                    recipient: address(this),
-                    deadline: block.timestamp,
-                    amountIn: bal,
-                    amountOutMinimum: 0, // TODO: Set5% max slippage
-                    sqrtPriceLimitX96: 0
-                });
-                try uniswapRouter.exactInputSingle(params) returns (uint256 _swappedLPT) {
-                    swappedLPT = _swappedLPT;
-                } catch {}
-                
-                // Add swapped LPT to rewards
-                rewards += swappedLPT;
+                // swap ETH fees for LPT
+                if (address(uniswapRouter) != address(0)) {
+                    ISwapRouter.ExactInputSingleParams memory params =
+                    ISwapRouter.ExactInputSingleParams({
+                        tokenIn: address(WETH),
+                        tokenOut: address(steak),
+                        fee: UNISWAP_POOL_FEE,
+                        recipient: address(this),
+                        deadline: block.timestamp,
+                        amountIn: bal,
+                        amountOutMinimum: 0, // TODO: Set5% max slippage
+                        sqrtPriceLimitX96: 0
+                    });
+                    try uniswapRouter.exactInputSingle(params) returns (uint256 _swappedLPT) {
+                        swappedLPT = _swappedLPT;
+                    } catch {}
+                    
+                    // Add swapped LPT to rewards
+                    stakeDiff += int256(swappedLPT);
+                }
             }
         }
 
-        // Substract protocol fee amount and add it to pendingFees
-        uint256 _pendingFees = pendingFees + MathUtils.percOf(rewards, protocolFee);
-        pendingFees = _pendingFees;
-        uint256 _liquidityFees = pendingLiquidityFees + MathUtils.percOf(rewards, liquidityFee);
-        pendingLiquidityFees = _liquidityFees;
-        // Add current pending stake minus fees and set it as current principal
-        uint256 newPrincipal = stake + swappedLPT - _pendingFees - _liquidityFees;
-        currentPrincipal = newPrincipal;
+        // Account for LPT rewards
+        uint256 stake = livepeer.pendingStake(this_, MAX_ROUND);
 
-        emit RewardsClaimed(rewards, newPrincipal, currentPrincipal_);
+        // TODO: all of the below could be a general internal function in Tenderizer.sol
+        uint256 currentPrincipal_ = currentPrincipal;
+
+        // adjust for potential protocol specific taxes or staking fees
+        uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)));
+
+        console.log("current principal %s", currentPrincipal_  / 1 ether);
+        console.log("pending balance to stake %s", currentBal / 1 ether);
+        console.log("current staked including rewards %s", stake / 1 ether);
+        console.log("pending fees and lp fees %s %s", pendingFees, pendingLiquidityFees);
+  
+
+        // calculate what the new currentPrinciple would be after the call
+        // minus existing fees (which are not included in currentPrinciple)
+        // but excluding fees from rewards for this rebase
+        // which still need to be calculated if stakeDiff is positive
+        stake = stake + currentBal - pendingFees - pendingLiquidityFees;
+
+        // calculate the stakeDiff
+        stakeDiff = stakeDiff + int256(stake) - int256(currentPrincipal_);
+
+        // if stakeDiff > 0 , calculate fees and subtract them
+        if (stakeDiff > 0) {
+            // Substract protocol fee amount and add it to pendingFees
+            uint256 stakeDiff_ = uint256(stakeDiff);
+            uint256 fees = MathUtils.percOf(stakeDiff_, protocolFee);
+            pendingFees += fees;
+            uint256 liquidityFees = MathUtils.percOf(stakeDiff_, liquidityFee);
+            pendingLiquidityFees += liquidityFees;
+            stakeDiff -= int256(fees + liquidityFees);     
+        }
+        
+        console.logInt(stakeDiff);
+
+        // calculate new currentPrinciple using stakeDiff
+        uint256 newPrincipal;
+        if (stakeDiff > 0) {
+            newPrincipal = currentPrincipal_ + uint256(stakeDiff);
+        } else {
+            newPrincipal = currentPrincipal_ - uint256(stakeDiff);
+        }
+        currentPrincipal = newPrincipal;
+        emit RewardsClaimed(stakeDiff, newPrincipal, currentPrincipal_);
     }
 
     function _totalStakedTokens() internal view override returns (uint256) {

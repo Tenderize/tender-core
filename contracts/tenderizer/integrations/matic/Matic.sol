@@ -156,7 +156,7 @@ contract Matic is Tenderizer {
         // Add current pending stake minus fees and set it as current principal
         currentPrincipal = stake - _pendingFees - _liquidityFees;
 
-        emit RewardsClaimed(rewards, currentPrincipal, currentPrincipal_);
+        emit RewardsClaimed(int256(rewards), currentPrincipal, currentPrincipal_);
     }
 
     function _totalStakedTokens() internal view override returns (uint256) {

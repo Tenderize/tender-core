@@ -11,8 +11,8 @@ export default function suite () {
   })
 
   it('bond succeeds', async () => {
-    ctx.stakeMock.function.will.return()
-    tx = await ctx.Tenderizer.gulp()
+    // ctx.stakeMock.function.will.return()
+    tx = await ctx.Tenderizer.rebase()
     expect(ctx.stakeMock.function.calls.length).to.eq(1)
     // TODO: Antipattern - Refactor, possibly have assertion function defined
     // in main test file that are then called from here

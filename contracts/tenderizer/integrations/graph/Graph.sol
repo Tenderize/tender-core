@@ -183,7 +183,7 @@ contract Graph is Tenderizer {
         uint256 newPrincipal = stake - _pendingFees - _liquidityFees;
         currentPrincipal = newPrincipal;
 
-        emit RewardsClaimed(rewards, newPrincipal, currentPrincipal_);
+        emit RewardsClaimed(int256(rewards), newPrincipal, currentPrincipal_);
     }
 
     function _totalStakedTokens() internal view override returns (uint256) {

@@ -125,7 +125,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         // Execute state updates
         // approve pendingTokens for staking
         // Stake tokens
-        _stake(node, steak.balanceOf(address(this)));
+        // _stake(node, steak.balanceOf(address(this)));
     }
 
     /// @inheritdoc ITenderizer
@@ -166,7 +166,8 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         claimRewards();
 
         // stake tokens
-        gulp();
+        // gulp();
+        _stake(node, steak.balanceOf(address(this)));
     }
 
     /// @inheritdoc ITenderizer

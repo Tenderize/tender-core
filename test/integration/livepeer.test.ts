@@ -106,7 +106,7 @@ describe('Livepeer Integration Test', () => {
 
     process.env.NAME = 'Livepeer'
     process.env.SYMBOL = 'LPT'
-    process.env.CONTRACT = LivepeerMock.address
+    process.env.CONTRACT = LivepeerNoMock.address
     process.env.TOKEN = this.Steak.address
     process.env.VALIDATOR = this.NODE
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
@@ -139,7 +139,7 @@ describe('Livepeer Integration Test', () => {
     // Deposit initial stake
     await this.Steak.approve(this.Tenderizer.address, this.initialStake)
     await this.Tenderizer.deposit(this.initialStake)
-    await this.Tenderizer.gulp()
+    // await this.Tenderizer.claimRewards()
     // Add initial liquidity
     await this.Steak.approve(this.TenderSwap.address, this.initialStake)
     await this.TenderToken.approve(this.TenderSwap.address, this.initialStake)
@@ -154,7 +154,7 @@ describe('Livepeer Integration Test', () => {
     // Setup Mocks for assertions
     // Note: Mocks not needed for assertions can be set in before hooks here
     this.stakeMock = {}
-    this.stakeMock.function = LivepeerMock.smocked.bond
+    this.stakeMock.function = LivepeerNoMock.bond
     // TODO: Use name everywhere and just pass entire LivepeerMock.smocked
     this.stakeMock.functionName = 'bond'
     this.stakeMock.nodeParam = '_to'
@@ -174,20 +174,22 @@ describe('Livepeer Integration Test', () => {
   describe('Deposit', depositTests.bind(this))
   describe('Stake', stakeTests.bind(this))
 
-  const swappedLPTRewards = ethers.BigNumber.from('100000000')
+  const swappedLPTRewards = ethers.utils.parseEther('10')
   let liquidityFees: BigNumber
   let protocolFees: BigNumber
   let newStake: BigNumber
   describe('Rebases', async function () {
     context('Positive Rebase', async function () {
       before(async function () {
-        this.increase = ethers.BigNumber.from('10000000000')
+        this.increase = ethers.utils.parseEther('90')
         liquidityFees = percOf2(this.increase.add(swappedLPTRewards), liquidityFeesPercent)
         protocolFees = percOf2(this.increase.add(swappedLPTRewards), protocolFeesPercent)
         newStake = this.deposit.add(this.initialStake).add(this.increase)
         this.newStakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
-        this.increase = this.increase.add(swappedLPTRewards)
-        LivepeerMock.smocked.pendingStake.will.return.with(newStake)
+        LivepeerMock.smocked.pendingStake.will.return.with(this.increase)
+        // With mock values set correctly, adjust increase with fees
+        // for assertions
+        this.increase = this.increase.add(swappedLPTRewards).sub(protocolFees.add(liquidityFees))
         LivepeerMock.smocked.pendingFees.will.return.with(ethers.utils.parseEther('0.1'))
         WethMock.smocked.deposit.will.return()
         WethMock.smocked.approve.will.return.with(true)
@@ -199,7 +201,7 @@ describe('Livepeer Integration Test', () => {
     context('Neutral Rebase', async function () {
       before(async function () {
         this.stakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
-        LivepeerMock.smocked.pendingStake.will.return.with(newStake.add(swappedLPTRewards))
+        LivepeerMock.smocked.pendingStake.will.return.with(this.newStakeMinusFees)
         LivepeerMock.smocked.pendingFees.will.return.with(ethers.constants.Zero)
       })
       describe('Stake stays the same', stakeStaysSameTests.bind(this))

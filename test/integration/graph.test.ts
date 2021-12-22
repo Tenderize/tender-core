@@ -112,7 +112,7 @@ describe('Graph Integration Test', () => {
     // Deposit initial stake
     await this.Steak.approve(this.Tenderizer.address, this.initialStake)
     await this.Tenderizer.deposit(this.initialStake)
-    await this.Tenderizer.gulp()
+    // await this.Tenderizer.claimRewards()
     // Add initial liquidity
     const tokensAfterTax = this.initialStake.sub(this.initialStake.mul(this.DELEGATION_TAX).div(this.MAX_PPM))
     await this.Steak.approve(this.TenderSwap.address, tokensAfterTax)

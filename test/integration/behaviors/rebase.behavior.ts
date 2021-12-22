@@ -62,7 +62,7 @@ export function stakeStaysSameTests () {
   })
 
   it('currentPrincipal stays the same', async () => {
-    expect(await ctx.Tenderizer.currentPrincipal()).to.eq(ctx.stakeMinusFees)
+    expect(await ctx.Tenderizer.currentPrincipal()).to.eq(ctx.newStakeMinusFees)
   })
 
   it('pending fees stay the same', async () => {
