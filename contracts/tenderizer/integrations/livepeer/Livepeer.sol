@@ -122,10 +122,11 @@ contract Livepeer is Tenderizer {
     }
 
     function _claimRewards() internal override {
-        int256 stakeDiff;
         address this_ = address(this);
 
         // TODO: can move this into a helper that returns the amount, then add that to stakeDiff 
+        uint256 secondaryRewards;
+
         {        
             uint256 ethFees = livepeer.pendingFees(this_, MAX_ROUND);
             // First claim any fees that are not underlying tokens
@@ -157,7 +158,7 @@ contract Livepeer is Tenderizer {
                     } catch {}
                     
                     // Add swapped LPT to rewards
-                    stakeDiff += int256(swappedLPT);
+                    secondaryRewards += swappedLPT;
                 }
             }
         }
@@ -168,46 +169,49 @@ contract Livepeer is Tenderizer {
         // TODO: all of the below could be a general internal function in Tenderizer.sol
         uint256 currentPrincipal_ = currentPrincipal;
 
-        // adjust for potential protocol specific taxes or staking fees
+        // adjust current token balance for potential protocol specific taxes or staking fees
         uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)));
 
-        console.log("current principal %s", currentPrincipal_  / 1 ether);
-        console.log("pending balance to stake %s", currentBal / 1 ether);
-        console.log("current staked including rewards %s", stake / 1 ether);
-        console.log("pending fees and lp fees %s %s", pendingFees, pendingLiquidityFees);
-  
+        // adjust secondary rewards for potential protocol specific taxes or staking feees
+        secondaryRewards = _calcDepositOut(secondaryRewards); 
 
         // calculate what the new currentPrinciple would be after the call
-        // minus existing fees (which are not included in currentPrinciple)
         // but excluding fees from rewards for this rebase
-        // which still need to be calculated if stakeDiff is positive
-        stake = stake + currentBal - pendingFees - pendingLiquidityFees;
+        // which still need to be calculated if stake >= currentPrincipal
+        stake = stake + currentBal + secondaryRewards - pendingFees - pendingLiquidityFees;
 
-        // calculate the stakeDiff
-        stakeDiff = stakeDiff + int256(stake) - int256(currentPrincipal_);
+        // Difference is negative, no rewards have been earnt
+        // So no fees are charged
+        if (stake <= currentPrincipal_) {
+            currentPrincipal = stake;
+            emit RewardsClaimed(
+                int256(currentPrincipal_ - stake),
+                stake,
+                currentPrincipal_
+            );
 
-        // if stakeDiff > 0 , calculate fees and subtract them
-        if (stakeDiff > 0) {
-            // Substract protocol fee amount and add it to pendingFees
-            uint256 stakeDiff_ = uint256(stakeDiff);
-            uint256 fees = MathUtils.percOf(stakeDiff_, protocolFee);
-            pendingFees += fees;
-            uint256 liquidityFees = MathUtils.percOf(stakeDiff_, liquidityFee);
-            pendingLiquidityFees += liquidityFees;
-            stakeDiff -= int256(fees + liquidityFees);     
+            return;
         }
-        
-        console.logInt(stakeDiff);
 
-        // calculate new currentPrinciple using stakeDiff
-        uint256 newPrincipal;
-        if (stakeDiff > 0) {
-            newPrincipal = currentPrincipal_ + uint256(stakeDiff);
-        } else {
-            newPrincipal = currentPrincipal_ - uint256(stakeDiff);
-        }
-        currentPrincipal = newPrincipal;
-        emit RewardsClaimed(stakeDiff, newPrincipal, currentPrincipal_);
+        // Difference is positive, calculate the rewards 
+        uint256 totalRewards = stake - currentPrincipal_;
+
+        // calculate the protocol fees
+        uint256 fees = MathUtils.percOf(totalRewards, protocolFee);
+        pendingFees += fees;
+
+        // calculate the liquidity provider fees
+        uint256 liquidityFees = MathUtils.percOf(totalRewards, liquidityFee);
+        pendingLiquidityFees += liquidityFees;
+
+        stake = stake - fees - liquidityFees;
+        currentPrincipal = stake;
+
+        emit RewardsClaimed(
+            int256(stake - currentPrincipal_),
+            stake,
+            currentPrincipal_
+        );
     }
 
     function _totalStakedTokens() internal view override returns (uint256) {

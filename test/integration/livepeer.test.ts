@@ -106,7 +106,7 @@ describe('Livepeer Integration Test', () => {
 
     process.env.NAME = 'Livepeer'
     process.env.SYMBOL = 'LPT'
-    process.env.CONTRACT = LivepeerNoMock.address
+    process.env.CONTRACT = LivepeerMock.address
     process.env.TOKEN = this.Steak.address
     process.env.VALIDATOR = this.NODE
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
@@ -154,7 +154,7 @@ describe('Livepeer Integration Test', () => {
     // Setup Mocks for assertions
     // Note: Mocks not needed for assertions can be set in before hooks here
     this.stakeMock = {}
-    this.stakeMock.function = LivepeerNoMock.bond
+    this.stakeMock.function = LivepeerMock.smocked.bond
     // TODO: Use name everywhere and just pass entire LivepeerMock.smocked
     this.stakeMock.functionName = 'bond'
     this.stakeMock.nodeParam = '_to'
@@ -201,7 +201,7 @@ describe('Livepeer Integration Test', () => {
     context('Neutral Rebase', async function () {
       before(async function () {
         this.stakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
-        LivepeerMock.smocked.pendingStake.will.return.with(this.newStakeMinusFees)
+        LivepeerMock.smocked.pendingStake.will.return.with(ethers.constants.Zero) // adjust for tokens not being transferred
         LivepeerMock.smocked.pendingFees.will.return.with(ethers.constants.Zero)
       })
       describe('Stake stays the same', stakeStaysSameTests.bind(this))
