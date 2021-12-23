@@ -67,6 +67,7 @@ contract Livepeer is Tenderizer {
         emit Stake(node_, amount);
     }
 
+    // TODO: is unstaking when front running a negative rebase exploitable ? 
     function _unstake(
         address _account,
         address _node,
@@ -124,6 +125,15 @@ contract Livepeer is Tenderizer {
     function _claimRewards() internal override {
         address this_ = address(this);
 
+        // Account for LPT rewards
+        uint256 stake = livepeer.pendingStake(this_, MAX_ROUND);
+
+        // TODO: all of the below could be a general internal function in Tenderizer.sol
+        uint256 currentPrincipal_ = currentPrincipal;
+
+        // adjust current token balance for potential protocol specific taxes or staking fees
+        uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)));
+
         // TODO: can move this into a helper that returns the amount, then add that to stakeDiff 
         uint256 secondaryRewards;
 
@@ -163,29 +173,25 @@ contract Livepeer is Tenderizer {
             }
         }
 
-        // Account for LPT rewards
-        uint256 stake = livepeer.pendingStake(this_, MAX_ROUND);
-
-        // TODO: all of the below could be a general internal function in Tenderizer.sol
-        uint256 currentPrincipal_ = currentPrincipal;
-
-        // adjust current token balance for potential protocol specific taxes or staking fees
-        uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)));
-
         // adjust secondary rewards for potential protocol specific taxes or staking feees
         secondaryRewards = _calcDepositOut(secondaryRewards); 
+
+        console.log("secondary rewards normalised %s", secondaryRewards / 1e9);
+        console.log("staked including rewards %s", stake / 1e9);
+        console.log("current balance normalised %s", currentBal / 1e9);
 
         // calculate what the new currentPrinciple would be after the call
         // but excluding fees from rewards for this rebase
         // which still need to be calculated if stake >= currentPrincipal
         stake = stake + currentBal + secondaryRewards - pendingFees - pendingLiquidityFees;
+        console.log("new principal excluding fees %s", stake / 1e9);
 
         // Difference is negative, no rewards have been earnt
         // So no fees are charged
         if (stake <= currentPrincipal_) {
             currentPrincipal = stake;
             emit RewardsClaimed(
-                int256(currentPrincipal_ - stake),
+                -int256(currentPrincipal_ - stake),
                 stake,
                 currentPrincipal_
             );
@@ -206,6 +212,8 @@ contract Livepeer is Tenderizer {
 
         stake = stake - fees - liquidityFees;
         currentPrincipal = stake;
+
+        console.log("new principal with fees %s", stake / 1e9);
 
         emit RewardsClaimed(
             int256(stake - currentPrincipal_),

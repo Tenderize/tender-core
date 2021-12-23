@@ -1,8 +1,7 @@
 import { ethers } from 'hardhat'
 import { expect } from 'chai'
 import { BigNumber, ContractTransaction } from 'ethers'
-
-const acceptableDelta = 2
+import { getSighash } from '../../util/helpers'
 
 // For protocols where unlocks are tracked per user
 export function userBasedUnlockByUser () {
@@ -28,12 +27,12 @@ export function userBasedUnlockByUser () {
   })
 
   it('reverts if unbond() reverts', async () => {
-    ctx.unbondMock.function.will.revert()
-    await expect(ctx.Tenderizer.connect(ctx.signers[2]).unstake(withdrawAmount)).to.be.reverted
+    await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, 'unbond'), true)
+    await expect(ctx.Tenderizer.connect(ctx.signers[2]).unstake()).to.be.reverted
+    await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, 'unbond'), false)
   })
 
   it('reverts if requested amount exceeds balance', async () => {
-    ctx.unbondMock.function.will.return()
     withdrawAmount = await ctx.TenderToken.balanceOf(ctx.signers[2].address)
     await expect(ctx.Tenderizer.connect(ctx.signers[2]).unstake(withdrawAmount.add(ethers.utils.parseEther('1')))).to.be.revertedWith('BURN_AMOUNT_EXCEEDS_BALANCE')
   })
@@ -43,9 +42,11 @@ export function userBasedUnlockByUser () {
   })
 
   it('unbond() succeeds', async () => {
+    const stakedBefore = await ctx.StakingContract.staked()
+    const cpBefore = await ctx.Tenderizer.totalStakedTokens()
     tx = await ctx.Tenderizer.connect(ctx.signers[2]).unstake(withdrawAmount)
-    expect(ctx.unbondMock.function.calls.length).to.eq(1)
-    expect(ctx.unbondMock.function.calls[0][ctx.unbondMock.amountParam]).to.eq(withdrawAmount)
+    expect(stakedBefore.sub(withdrawAmount)).to.eq(await ctx.StakingContract.staked())
+    expect(cpBefore.sub(withdrawAmount)).to.eq(await ctx.Tenderizer.totalStakedTokens())
   })
 
   it('reduces TenderToken Balance', async () => {
@@ -83,7 +84,7 @@ export function govUnbondRevertIfNoStake () {
 // For protocols where unlocks are tracked per user
 export function userBasedUnlockByGov () {
   let ctx: any
-
+  let tx: any
   before(async function () {
     ctx = this.test?.ctx
   })
@@ -97,22 +98,31 @@ export function userBasedUnlockByGov () {
       otherAccBalBefore = await ctx.TenderToken.balanceOf(ctx.signers[2].address)
       const totalStaked = await ctx.Tenderizer.totalStakedTokens()
       govWithdrawAmount = totalStaked.div(2)
-      await ctx.Tenderizer.unstake(govWithdrawAmount)
     })
 
     it('Gov unbond() succeeds', async () => {
-      expect(ctx.unbondMock.function.calls.length).to.eq(1)
-      expect(ctx.unbondMock.function.calls[0][ctx.unbondMock.amountParam]).to.eq(govWithdrawAmount)
+      const stakedBefore = await ctx.StakingContract.staked()
+      console.log('stakedBefore', ethers.utils.formatEther(stakedBefore))
+      const cpBefore = await ctx.Tenderizer.totalStakedTokens()
+      console.log('cpBefore', ethers.utils.formatEther(cpBefore))
+      tx = await ctx.Tenderizer.unstake(govWithdrawAmount)
+      expect(stakedBefore.sub(govWithdrawAmount)).to.eq(await ctx.StakingContract.staked())
+      expect(cpBefore.sub(govWithdrawAmount)).to.eq(await ctx.Tenderizer.totalStakedTokens())
     })
 
     it('TenderToken balance of other account halves', async () => {
+      console.log(ethers.utils.formatEther(poolBalBefore), ethers.utils.formatEther(await ctx.TenderToken.balanceOf(ctx.TenderSwap.address)))
+      console.log(ethers.utils.formatEther(await ctx.Tenderizer.totalStakedTokens()))
+
       expect(await ctx.TenderToken.balanceOf(ctx.signers[2].address))
         .to.eq(otherAccBalBefore.div(2))
     })
 
     it('TenderToken balance of TenderSwap account halves', async () => {
-      expect((await ctx.TenderToken.balanceOf(ctx.TenderSwap.address)).sub(poolBalBefore.div(2)).abs())
-        .to.lte(acceptableDelta * 15)
+      console.log(ethers.utils.formatEther(poolBalBefore), ethers.utils.formatEther(await ctx.TenderToken.balanceOf(ctx.TenderSwap.address)))
+      console.log(ethers.utils.formatEther(await ctx.Tenderizer.totalStakedTokens()))
+      expect(await ctx.TenderToken.balanceOf(ctx.TenderSwap.address))
+        .to.eq(poolBalBefore.div(2))
     })
   })
 
@@ -120,12 +130,12 @@ export function userBasedUnlockByGov () {
     let govWithdrawAmount: BigNumber
     before('perform full unbond', async () => {
       govWithdrawAmount = (await ctx.Tenderizer.totalStakedTokens())
-      await ctx.Tenderizer.unstake(govWithdrawAmount)
     })
 
     it('Gov unbond() succeeds', async () => {
-      expect(ctx.unbondMock.function.calls.length).to.eq(1)
-      expect(ctx.unbondMock.function.calls[0][ctx.unbondMock.amountParam]).to.eq(govWithdrawAmount)
+      tx = await ctx.Tenderizer.unstake(govWithdrawAmount)
+      expect(ethers.constants.Zero).to.eq(await ctx.StakingContract.staked())
+      expect(ethers.constants.Zero).to.eq(await ctx.Tenderizer.totalStakedTokens())
     })
 
     it('TenderToken balance of other account becomes 0', async () => {

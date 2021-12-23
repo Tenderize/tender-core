@@ -11,7 +11,7 @@ export default function suite () {
   })
   describe('setting staking contract', () => {
     it('sets staking contract', async () => {
-      const newStakingContract = await smockit(ctx.StakingContractNoMock)
+      const newStakingContract = await smockit(ctx.StakingContract)
 
       // TODO: Anti-pattern, refactor!
       if (ctx.NAME === 'Audius') {
@@ -25,7 +25,6 @@ export default function suite () {
       // Except for matic, TODO: Anti-pattern, Improve this?
       if (ctx.NAME !== 'Matic') {
         await ctx.Tenderizer.rebase()
-        expect(ctx.stakeMock.function.calls.length).to.eq(0)
         expect(newStakingContract.smocked[ctx.stakeMock.functionName].calls.length).to.eq(1)
       }
     })

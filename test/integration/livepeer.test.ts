@@ -3,7 +3,7 @@ import hre, { ethers } from 'hardhat'
 import { MockContract, smockit } from '@eth-optimism/smock'
 
 import {
-  SimpleToken, TenderToken, ILivepeer, Livepeer, ISwapRouterWithWETH, IWETH, TenderFarm, TenderSwap, LiquidityPoolToken
+  SimpleToken, TenderToken, Livepeer, ISwapRouterWithWETH, IWETH, TenderFarm, TenderSwap, LiquidityPoolToken, LivepeerMock
 } from '../../typechain/'
 
 import chai from 'chai'
@@ -40,8 +40,7 @@ chai.use(solidity)
 
 describe('Livepeer Integration Test', () => {
   // Mocks
-  let LivepeerNoMock: ILivepeer
-  let LivepeerMock: MockContract
+  let LivepeerMock: LivepeerMock
   let UniswapRouterMock: MockContract
   let WethMock: MockContract
 
@@ -72,10 +71,8 @@ describe('Livepeer Integration Test', () => {
       this.signers[0]
     )
 
-    LivepeerNoMock = (await LivepeerFac.deploy(this.Steak.address)) as ILivepeer
-    this.StakingContractNoMock = LivepeerNoMock
-
-    LivepeerMock = await smockit(LivepeerNoMock)
+    LivepeerMock = (await LivepeerFac.deploy(this.Steak.address)) as LivepeerMock
+    this.StakingContract = LivepeerMock
   })
 
   before('deploy Uniswap Router Mock', async function () {
@@ -154,20 +151,20 @@ describe('Livepeer Integration Test', () => {
     // Setup Mocks for assertions
     // Note: Mocks not needed for assertions can be set in before hooks here
     this.stakeMock = {}
-    this.stakeMock.function = LivepeerMock.smocked.bond
+    this.stakeMock.function = LivepeerMock.bond
     // TODO: Use name everywhere and just pass entire LivepeerMock.smocked
     this.stakeMock.functionName = 'bond'
     this.stakeMock.nodeParam = '_to'
     this.stakeMock.amountParam = '_amount'
 
-    this.withdrawRewardsMock = LivepeerMock.smocked.withdrawFees
+    this.withdrawRewardsMock = LivepeerMock.withdrawFees
 
     this.unbondMock = {}
-    this.unbondMock.function = LivepeerMock.smocked.unbond
+    this.unbondMock.function = LivepeerMock.unbond
     this.unbondMock.amountParam = '_amount'
 
     this.withdrawMock = {}
-    this.withdrawMock.function = LivepeerMock.smocked.withdrawStake
+    this.withdrawMock.function = LivepeerMock.withdrawStake
   })
 
   // Run tests
@@ -186,11 +183,16 @@ describe('Livepeer Integration Test', () => {
         protocolFees = percOf2(this.increase.add(swappedLPTRewards), protocolFeesPercent)
         newStake = this.deposit.add(this.initialStake).add(this.increase)
         this.newStakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
-        LivepeerMock.smocked.pendingStake.will.return.with(this.increase)
+
+        // set increase on mock
+        await this.StakingContract.setStaked(this.increase.add(await this.StakingContract.staked()))
+
         // With mock values set correctly, adjust increase with fees
         // for assertions
         this.increase = this.increase.add(swappedLPTRewards).sub(protocolFees.add(liquidityFees))
-        LivepeerMock.smocked.pendingFees.will.return.with(ethers.utils.parseEther('0.1'))
+
+        // Set secondary rewards
+        await this.StakingContract.setSecondaryRewards(swappedLPTRewards)
         WethMock.smocked.deposit.will.return()
         WethMock.smocked.approve.will.return.with(true)
         UniswapRouterMock.smocked.exactInputSingle.will.return.with(swappedLPTRewards)
@@ -200,20 +202,19 @@ describe('Livepeer Integration Test', () => {
 
     context('Neutral Rebase', async function () {
       before(async function () {
+        UniswapRouterMock.smocked.exactInputSingle.will.return.with(ethers.constants.Zero)
         this.stakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
-        LivepeerMock.smocked.pendingStake.will.return.with(ethers.constants.Zero) // adjust for tokens not being transferred
-        LivepeerMock.smocked.pendingFees.will.return.with(ethers.constants.Zero)
       })
       describe('Stake stays the same', stakeStaysSameTests.bind(this))
     })
 
     context('Negative Rebase', async function () {
       before(async function () {
-        const reducedStake = this.deposit.add(this.initialStake)
-        const oldStake = this.deposit.add(this.initialStake).add(swappedLPTRewards)
-        this.expectedCP = oldStake.sub(liquidityFees).sub(protocolFees)
-        LivepeerMock.smocked.pendingStake.will.return.with(reducedStake.add(swappedLPTRewards))
-        LivepeerMock.smocked.pendingFees.will.return.with(ethers.constants.AddressZero)
+        // reduced stake is current stake - 90 from rewards previously
+        const reducedStake = this.deposit.add(this.initialStake).add(swappedLPTRewards)
+        this.expectedCP = reducedStake.sub(liquidityFees).sub(protocolFees)
+        // reduce staked on mock
+        await this.StakingContract.setStaked(reducedStake)
       })
       describe('Stake decreases', stakeDecreaseTests.bind(this))
     })
@@ -222,19 +223,21 @@ describe('Livepeer Integration Test', () => {
   describe('Collect fees', protocolFeeTests.bind(this))
   describe('Collect Liquidity fees', liquidityFeeTests.bind(this))
   describe('Swap', swapTests.bind(this))
+
   describe('Unlock and Withdraw', async function () {
     describe('User unlock', userBasedUnlockByUser.bind(this))
     describe('Gov unlock', async function () {
       context('Zero stake', async function () {
         before(async function () {
-          LivepeerMock.smocked.pendingStake.will.return.with(ethers.constants.Zero)
+          await this.StakingContract.setStaked(0)
         })
         describe('No pending stake', govUnbondRevertIfNoStake.bind(this))
       })
       context('>0 Stake', async function () {
         before(async function () {
-          LivepeerMock.smocked.pendingStake.will.return
-            .with(await this.Tenderizer.totalStakedTokens())
+          await this.StakingContract.setStaked(
+            await this.Tenderizer.totalStakedTokens()
+          )
         })
         describe('Gov unlocks', userBasedUnlockByGov.bind(this))
       })
