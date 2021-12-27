@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./ITenderizer.sol";
 import "../token/ITenderToken.sol";
 import "../liquidity/ITenderSwap.sol";
+import "../liquidity/ITenderFarm.sol";
 
 /**
  * @title Tenderizer is the base contract to be implemented.
@@ -67,13 +68,15 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         IERC20 _steak,
         address _node,
         TenderTokenConfig calldata _tenderTokenConfig,
-        TenderSwapConfig calldata _tenderSwapConfig
+        TenderSwapConfig calldata _tenderSwapConfig,
+        address _tenderFarmTarget
     ) internal initializer {
         steak = _steak;
         node = _node;
-        protocolFee = 25 * 1e15; // 2.5%
+        // protocolFee = 25 * 1e15; // 2.5%
 
-        // Clone TenderToken
+        // Clone an existing deployments in an immutable way
+        // see https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.2.0/contracts/proxy/Clones.sol
         ITenderToken tenderToken_ = ITenderToken(Clones.clone(_tenderTokenConfig.tenderTokenTarget));
         require(
             tenderToken_.initialize(
@@ -86,8 +89,6 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         tenderToken = tenderToken_;
         gov = msg.sender;
 
-        // Clone an existing LP token deployment in an immutable way
-        // see https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.2.0/contracts/proxy/Clones.sol
         tenderSwap = ITenderSwap(Clones.clone(_tenderSwapConfig.tenderSwapTarget));
         require(
             tenderSwap.initialize(
@@ -101,6 +102,16 @@ abstract contract Tenderizer is Initializable, ITenderizer {
                 _tenderSwapConfig.lpTokenTarget
             ),
             "FAIL_INIT_TENDERSWAP"
+        );
+
+        tenderFarm = ITenderFarm(Clones.clone(_tenderFarmTarget));
+        require(
+            tenderFarm.initialize(
+                IERC20(address(tenderSwap.lpToken())),
+                tenderToken_,
+                address(this)
+            ),
+            "FAIL_INIT_TENDERFARM"
         );
     }
 
@@ -189,9 +200,9 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         emit GovernanceUpdate("NODE");
     }
 
-    function setSteak(IERC20 _steak) external virtual override onlyGov {
-        require(address(_steak) != address(0), "ZERO_ADDRESS");
-        steak = _steak;
+    function setSteak(address _steak) external virtual override onlyGov {
+        require(_steak != address(0), "ZERO_ADDRESS");
+        steak = IERC20(_steak);
         emit GovernanceUpdate("STEAK");
     }
 

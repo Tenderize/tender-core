@@ -30,9 +30,10 @@ contract Graph is Tenderizer {
         IGraph _graph,
         address _node,
         TenderTokenConfig calldata _tenderTokenConfig,
-        TenderSwapConfig calldata _tenderSwapConfig
+        TenderSwapConfig calldata _tenderSwapConfig,
+        address _tenderFarmTarget
     ) public {
-        Tenderizer._initialize(_steak, _node, _tenderTokenConfig, _tenderSwapConfig);
+        Tenderizer._initialize(_steak, _node, _tenderTokenConfig, _tenderSwapConfig, _tenderFarmTarget);
         graph = _graph;
         resetDelegationTaxPercentage();
     }

@@ -4,6 +4,9 @@
 
 pragma solidity 0.8.4;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "../token/ITenderToken.sol";
+
 /**
  * @title TenderFarm
  * @notice TenderFarm is responsible for incetivizing liquidity providers, by accepting LP Tokens 
@@ -80,4 +83,16 @@ interface ITenderFarm {
      * @return _nextTotalStake - LP Tokens staked for next round
      */
     function nextTotalStake() external view returns (uint256 _nextTotalStake);
+
+    /**
+     * @notice Initializes the farm
+     * @param _stakeToken LP Token address
+     * @param _rewardToken TenderToken address
+     * @param _tenderizer Tenderizer address
+     */
+    function initialize(
+        IERC20 _stakeToken,
+        ITenderToken _rewardToken,
+        address _tenderizer
+    ) external returns (bool success);
 }

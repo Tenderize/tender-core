@@ -5,7 +5,7 @@ import {
 } from 'hardhat'
 
 import {
-  Tenderizer, ERC20, TenderSwap, TenderFarm, Registry, LiquidityPoolToken
+  Tenderizer, ERC20, TenderSwap, Registry
 } from '../typechain'
 import { constants } from 'ethers'
 
@@ -43,7 +43,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   const tenderizer = await deploy(NAME, {
     from: deployer,
-    args: [process.env.TOKEN, process.env.CONTRACT, process.env.VALIDATOR, tenderTokenConfig, tenderSwapConfig],
+    args: [
+      process.env.TOKEN,
+      process.env.CONTRACT,
+      process.env.VALIDATOR,
+      tenderTokenConfig,
+      tenderSwapConfig,
+      (await deployments.get('TenderFarm')).address
+    ],
     log: true, // display the address and gas used in the console (not when run in test though),
     proxy: {
       proxyContract: 'EIP173ProxyWithReceive',
@@ -55,22 +62,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   const Tenderizer: Tenderizer = (await ethers.getContractAt('Tenderizer', tenderizer.address)) as Tenderizer
   const swapAddress = await Tenderizer.tenderSwap()
   const tenderTokenAddress = await Tenderizer.tenderToken()
-  const TenderSwap: TenderSwap = (await ethers.getContractAt('TenderSwap', swapAddress)) as TenderSwap
-  const LpToken: LiquidityPoolToken = (await ethers.getContractAt('LiquidityPoolToken', await TenderSwap.lpToken())) as LiquidityPoolToken
-
-  const tenderFarm = await deploy('TenderFarm', {
-    from: deployer,
-    log: true,
-    args: [LpToken.address, tenderTokenAddress, Tenderizer.address],
-    proxy: {
-      proxyContract: 'EIP173ProxyWithReceive',
-      owner: deployer,
-      methodName: 'initialize'
-    }
-  })
-  const TenderFarm: TenderFarm = (await ethers.getContractAt('TenderFarm', tenderFarm.address)) as TenderFarm
-
-  await Tenderizer.setTenderFarm(TenderFarm.address)
+  const tenderFarmAddress = await Tenderizer.tenderFarm()
 
   console.log('Succesfully Deployed ! ')
 
@@ -86,7 +78,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
       tenderizer: Tenderizer.address,
       tenderToken: tenderTokenAddress,
       tenderSwap: swapAddress,
-      tenderFarm: TenderFarm.address
+      tenderFarm: tenderFarmAddress
     })
   } else if (hre.network.name === 'mainnet' || hre.network.name === 'rinkeby') {
     throw new Error('can not register Tenderizer, Registry not deployed')
@@ -117,6 +109,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   }
 }
 
-func.dependencies = ['Registry', 'TenderToken', 'TenderSwap']
+func.dependencies = ['Registry', 'TenderToken', 'TenderSwap', 'TenderFarm']
 func.tags = [NAME, 'Deploy'] // this setup a tag so you can execute the script on its own (and its dependencies)
 export default func

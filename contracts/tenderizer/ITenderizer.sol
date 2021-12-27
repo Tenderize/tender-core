@@ -4,7 +4,6 @@
 
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../liquidity/ITenderFarm.sol";
 
 /**
@@ -143,7 +142,7 @@ interface ITenderizer {
 
     function setNode(address _node) external;
 
-    function setSteak(IERC20 _steak) external;
+    function setSteak(address _steak) external;
 
     function setProtocolFee(uint256 _protocolFee) external;
 
