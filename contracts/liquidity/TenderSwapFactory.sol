@@ -20,11 +20,7 @@ contract TenderSwapFactory is ITenderSwapFactory {
     function deploy (
         address _tenderToken,
         address _steak,
-        string calldata _lpTokenName,
-        string calldata _lpTokenSymbol,
-        uint256 _amplifier,
-        uint256 _fee,
-        uint256 _adminFee 
+        ITenderSwap.Config calldata _config
     ) external override returns (ITenderSwap) {
         ITenderSwap tenderSwap = ITenderSwap(Clones.clone(address(tenderSwapTarget)));
 
@@ -32,11 +28,11 @@ contract TenderSwapFactory is ITenderSwapFactory {
             tenderSwap.initialize(
                 IERC20(_tenderToken),
                 IERC20(_steak),
-                _lpTokenName,
-                _lpTokenSymbol,
-                _amplifier,
-                _fee,
-                _adminFee,
+                _config.lpTokenName,
+                _config.lpTokenSymbol,
+                _config.amplifier,
+                _config.fee,
+                _config.adminFee,
                 address(lpTokenTarget)
             ),
             "FAIL_INIT_TENDERSWAP"
@@ -44,7 +40,7 @@ contract TenderSwapFactory is ITenderSwapFactory {
 
         tenderSwap.transferOwnership(msg.sender);
 
-        emit NewTenderSwap(address(tenderSwap), _lpTokenName, _amplifier, _fee, _adminFee);
+        emit NewTenderSwap(address(tenderSwap), _config.lpTokenName, _config.amplifier, _config.fee, _config.adminFee);
 
         return tenderSwap;
     }

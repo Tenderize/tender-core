@@ -23,20 +23,6 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         address account;
     }
 
-      struct TenderTokenConfig {
-        address tenderTokenTarget;
-        string name;
-        string symbol; 
-    }
-
-    struct TenderSwapConfig {
-        string lpTokenName;
-        string lpTokenSymbol;
-        uint256 amplifier;
-        uint256 fee;
-        uint256 adminFee;
-    }
-
     address constant ZERO_ADDRESS = address(0);
 
     IERC20 public steak;
@@ -66,8 +52,8 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         IERC20 _steak,
         address _node,
         ITenderSwapFactory tenderSwapfactory,
-        TenderTokenConfig calldata _tenderTokenConfig,
-        TenderSwapConfig calldata _tenderSwapConfig
+        ITenderToken.Config calldata _tenderTokenConfig,
+        ITenderSwap.Config calldata _tenderSwapConfig
     ) internal initializer {
         steak = _steak;
         node = _node;
@@ -86,15 +72,11 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         tenderToken = tenderToken_;
         gov = msg.sender;
 
-        tenderSwap = ITenderSwap(tenderSwapfactory.deploy(
+        tenderSwap = tenderSwapfactory.deploy(
             address(tenderToken_),
             address(_steak),
-            _tenderSwapConfig.lpTokenName,
-            _tenderSwapConfig.lpTokenSymbol,
-            _tenderSwapConfig.amplifier,
-            _tenderSwapConfig.fee,
-            _tenderSwapConfig.adminFee
-        ));
+            _tenderSwapConfig
+        );
     }
 
     /// @inheritdoc ITenderizer

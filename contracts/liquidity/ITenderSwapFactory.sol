@@ -13,10 +13,6 @@ interface ITenderSwapFactory {
     function deploy (
         address tenderToken,
         address steak,
-        string calldata lpTokenName,
-        string calldata lpTokenSymbol,
-        uint256 amplifier,
-        uint256 fee,
-        uint256 adminFee 
+        ITenderSwap.Config calldata _config
     ) external returns (ITenderSwap);
 }

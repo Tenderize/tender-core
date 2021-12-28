@@ -27,8 +27,8 @@ contract Audius is Tenderizer {
         IAudius _audius,
         address _node,
         ITenderSwapFactory _tenderSwapfactory,
-        TenderTokenConfig calldata _tenderTokenConfig,
-        TenderSwapConfig calldata _tenderSwapConfig
+        ITenderToken.Config calldata _tenderTokenConfig,
+        ITenderSwap.Config calldata _tenderSwapConfig
     ) public {
         Tenderizer._initialize(_steak, _node, _tenderSwapfactory, _tenderTokenConfig, _tenderSwapConfig);
         audius = _audius;

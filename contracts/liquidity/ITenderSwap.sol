@@ -18,6 +18,14 @@ pragma solidity 0.8.4;
  
 interface ITenderSwap {
 
+    struct Config {
+        string lpTokenName;
+        string lpTokenSymbol;
+        uint256 amplifier;
+        uint256 fee;
+        uint256 adminFee;
+    }
+
     /*** EVENTS ***/
 
     // events replicated from SwapUtils to make the ABI easier for dumb

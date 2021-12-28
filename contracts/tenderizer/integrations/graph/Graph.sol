@@ -30,8 +30,8 @@ contract Graph is Tenderizer {
         IGraph _graph,
         address _node,
         ITenderSwapFactory _tenderSwapfactory,
-        TenderTokenConfig calldata _tenderTokenConfig,
-        TenderSwapConfig calldata _tenderSwapConfig
+        ITenderToken.Config calldata _tenderTokenConfig,
+        ITenderSwap.Config calldata _tenderSwapConfig
     ) public {
         Tenderizer._initialize(_steak, _node, _tenderSwapfactory, _tenderTokenConfig, _tenderSwapConfig);
         graph = _graph;

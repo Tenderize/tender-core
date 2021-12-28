@@ -18,6 +18,12 @@ import "../tenderizer/ITotalStakedReader.sol";
  */
 interface ITenderToken {
 
+    struct Config {
+        address tenderTokenTarget;
+        string name;
+        string symbol; 
+    }
+
     /**
      * @notice Initilize the TenderToken Contract
      * @param _name name of the token (steak)
