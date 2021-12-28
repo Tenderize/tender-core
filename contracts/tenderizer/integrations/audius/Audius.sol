@@ -26,11 +26,11 @@ contract Audius is Tenderizer {
         IERC20 _steak,
         IAudius _audius,
         address _node,
-        IFactory factory,
+        ITenderSwapFactory _tenderSwapfactory,
         TenderTokenConfig calldata _tenderTokenConfig,
         TenderSwapConfig calldata _tenderSwapConfig
     ) public {
-        Tenderizer._initialize(_steak, _node, factory, _tenderTokenConfig, _tenderSwapConfig);
+        Tenderizer._initialize(_steak, _node, _tenderSwapfactory, _tenderTokenConfig, _tenderSwapConfig);
         audius = _audius;
         audiusStaking = audius.getStakingAddress();
     }

@@ -45,7 +45,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
       process.env.TOKEN,
       process.env.CONTRACT,
       process.env.VALIDATOR,
-      (await deployments.get('Factory')).address,
+      (await deployments.get('TenderSwapFactory')).address,
       tenderTokenConfig,
       tenderSwapConfig
     ],
@@ -122,6 +122,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   }
 }
 
-func.dependencies = ['Registry', 'TenderToken', 'TenderSwap', 'TenderFarm', 'Factory']
+func.dependencies = ['Registry', 'TenderToken', 'TenderSwap', 'TenderFarm']
 func.tags = [NAME, 'Deploy'] // this setup a tag so you can execute the script on its own (and its dependencies)
 export default func

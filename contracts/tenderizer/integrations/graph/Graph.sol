@@ -29,11 +29,11 @@ contract Graph is Tenderizer {
         IERC20 _steak,
         IGraph _graph,
         address _node,
-        IFactory factory,
+        ITenderSwapFactory _tenderSwapfactory,
         TenderTokenConfig calldata _tenderTokenConfig,
         TenderSwapConfig calldata _tenderSwapConfig
     ) public {
-        Tenderizer._initialize(_steak, _node, factory, _tenderTokenConfig, _tenderSwapConfig);
+        Tenderizer._initialize(_steak, _node, _tenderSwapfactory, _tenderTokenConfig, _tenderSwapConfig);
         graph = _graph;
         resetDelegationTaxPercentage();
     }

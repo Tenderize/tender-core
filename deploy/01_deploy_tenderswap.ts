@@ -24,6 +24,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       SwapUtils: SwapUtils.address
     }
   })
+
+  await deploy('TenderSwapFactory', {
+    from: deployer,
+    log: true,
+    skipIfAlreadyDeployed: true,
+    args: [(await deployments.get('TenderSwap')).address,
+      (await deployments.get('LiquidityPoolToken')).address]
+  })
 }
 
 func.tags = ['TenderSwap']

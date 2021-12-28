@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./ITenderizer.sol";
 import "../token/ITenderToken.sol";
 import "../liquidity/ITenderSwap.sol";
-import "../IFactory.sol";
+import "../liquidity/ITenderSwapFactory.sol";
 
 /**
  * @title Tenderizer is the base contract to be implemented.
@@ -65,7 +65,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     function _initialize(
         IERC20 _steak,
         address _node,
-        IFactory factory,
+        ITenderSwapFactory tenderSwapfactory,
         TenderTokenConfig calldata _tenderTokenConfig,
         TenderSwapConfig calldata _tenderSwapConfig
     ) internal initializer {
@@ -86,7 +86,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         tenderToken = tenderToken_;
         gov = msg.sender;
 
-        tenderSwap = ITenderSwap(factory.deployTenderSwap(
+        tenderSwap = ITenderSwap(tenderSwapfactory.deploy(
             address(tenderToken_),
             address(_steak),
             _tenderSwapConfig.lpTokenName,

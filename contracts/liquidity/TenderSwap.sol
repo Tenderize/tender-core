@@ -355,10 +355,9 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
         amplificationParams.stopRampA();
     }
 
-    // TODO: Check, added cuz needed it in the interface and had override here
     /// @inheritdoc ITenderSwap
-    function transferOwnership(address newOwnner) public override(OwnableUpgradeable, ITenderSwap) onlyOwner {
-        OwnableUpgradeable.transferOwnership(newOwnner);
+    function transferOwnership(address _newOwnner) public override(OwnableUpgradeable, ITenderSwap) onlyOwner {
+        OwnableUpgradeable.transferOwnership(_newOwnner);
     }
 
     /*** INTERNAL FUNCTIONS ***/

@@ -4,12 +4,13 @@
 
 pragma solidity 0.8.4;
 
-interface IFactory {
+import "./ITenderSwap.sol";
 
-    // TODO: Add/Remove fields?
+interface ITenderSwapFactory {
+
     event NewTenderSwap(address tenderSwap, string lpTokenName, uint256 amplifier, uint256 fee, uint256 adminFee);
 
-    function deployTenderSwap (
+    function deploy (
         address tenderToken,
         address steak,
         string calldata lpTokenName,
@@ -17,5 +18,5 @@ interface IFactory {
         uint256 amplifier,
         uint256 fee,
         uint256 adminFee 
-    ) external returns (address);
+    ) external returns (ITenderSwap);
 }
