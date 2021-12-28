@@ -32,18 +32,23 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   }
 
   const tenderSwapConfig = {
-    tenderSwapTarget: (await deployments.get('TenderSwap')).address,
     lpTokenName: `t${SYMBOL}-${SYMBOL} TenderSwap Token v1`,
     lpTokenSymbol: `t${SYMBOL}-${SYMBOL}-SWAP`,
     amplifier: 85,
     fee: 5e6,
-    adminFee: 0,
-    lpTokenTarget: (await deployments.get('LiquidityPoolToken')).address
+    adminFee: 0
   }
 
   const tenderizer = await deploy(NAME, {
     from: deployer,
-    args: [process.env.TOKEN, process.env.CONTRACT, process.env.VALIDATOR, tenderTokenConfig, tenderSwapConfig],
+    args: [
+      process.env.TOKEN,
+      process.env.CONTRACT,
+      process.env.VALIDATOR,
+      (await deployments.get('Factory')).address,
+      tenderTokenConfig,
+      tenderSwapConfig
+    ],
     log: true, // display the address and gas used in the console (not when run in test though),
     proxy: {
       proxyContract: 'EIP173ProxyWithReceive',
@@ -117,6 +122,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   }
 }
 
-func.dependencies = ['Registry', 'TenderToken', 'TenderSwap']
+func.dependencies = ['Registry', 'TenderToken', 'TenderSwap', 'TenderFarm', 'Factory']
 func.tags = [NAME, 'Deploy'] // this setup a tag so you can execute the script on its own (and its dependencies)
 export default func

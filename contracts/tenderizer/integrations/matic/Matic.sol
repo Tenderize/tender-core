@@ -25,10 +25,11 @@ contract Matic is Tenderizer {
         IERC20 _steak,
         address _matic,
         address _node,
+        IFactory factory,
         TenderTokenConfig calldata _tenderTokenConfig,
         TenderSwapConfig calldata _tenderSwapConfig
     ) public {
-        Tenderizer._initialize(_steak, _node, _tenderTokenConfig, _tenderSwapConfig);
+        Tenderizer._initialize(_steak, _node, factory, _tenderTokenConfig, _tenderSwapConfig);
         maticStakeManager = _matic;
         matic = IMatic(_node);
     }

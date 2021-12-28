@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./ITenderizer.sol";
 import "../token/ITenderToken.sol";
 import "../liquidity/ITenderSwap.sol";
+import "../IFactory.sol";
 
 /**
  * @title Tenderizer is the base contract to be implemented.
@@ -29,10 +30,8 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     }
 
     struct TenderSwapConfig {
-        address tenderSwapTarget;
-        address lpTokenTarget;
         string lpTokenName;
-        string lpTokenSymbol; // e.g. tLPT-LPT-SWAP
+        string lpTokenSymbol;
         uint256 amplifier;
         uint256 fee;
         uint256 adminFee;
@@ -66,6 +65,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     function _initialize(
         IERC20 _steak,
         address _node,
+        IFactory factory,
         TenderTokenConfig calldata _tenderTokenConfig,
         TenderSwapConfig calldata _tenderSwapConfig
     ) internal initializer {
@@ -86,22 +86,15 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         tenderToken = tenderToken_;
         gov = msg.sender;
 
-        // Clone an existing LP token deployment in an immutable way
-        // see https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.2.0/contracts/proxy/Clones.sol
-        tenderSwap = ITenderSwap(Clones.clone(_tenderSwapConfig.tenderSwapTarget));
-        require(
-            tenderSwap.initialize(
-                IERC20(address(tenderToken_)),
-                _steak,
-                _tenderSwapConfig.lpTokenName,
-                _tenderSwapConfig.lpTokenSymbol,
-                _tenderSwapConfig.amplifier,
-                _tenderSwapConfig.fee,
-                _tenderSwapConfig.adminFee,
-                _tenderSwapConfig.lpTokenTarget
-            ),
-            "FAIL_INIT_TENDERSWAP"
-        );
+        tenderSwap = ITenderSwap(factory.deployTenderSwap(
+            address(tenderToken_),
+            address(_steak),
+            _tenderSwapConfig.lpTokenName,
+            _tenderSwapConfig.lpTokenSymbol,
+            _tenderSwapConfig.amplifier,
+            _tenderSwapConfig.fee,
+            _tenderSwapConfig.adminFee
+        ));
     }
 
     /// @inheritdoc ITenderizer
