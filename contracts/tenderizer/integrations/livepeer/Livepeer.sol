@@ -10,8 +10,8 @@ import "../../../libs/MathUtils.sol";
 import "../../Tenderizer.sol";
 import "./ILivepeer.sol";
 
-import '../../../token/IWETH.sol';
-import '../../../liquidity/ISwapRouter.sol';
+import '../../../interfaces/IWETH.sol';
+import '../../../interfaces/ISwapRouter.sol';
 
 import "hardhat/console.sol";
 

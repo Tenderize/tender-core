@@ -5,7 +5,7 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../liquidity/ITenderFarm.sol";
+import "../tenderfarm/ITenderFarm.sol";
 
 /**
  * @title Tenderizer is the base contract to be implemented.

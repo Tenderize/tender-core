@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 
 import "./ITenderizer.sol";
 import "../token/ITenderToken.sol";
-import "../liquidity/ITenderSwap.sol";
+import "../tenderswap/ITenderSwap.sol";
 import "hardhat/console.sol";
 import "../libs/MathUtils.sol";
 

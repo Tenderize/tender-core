@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.4;
 
-import "../liquidity/ITenderSwap.sol";
+import "../tenderswap/ITenderSwap.sol";
 import "hardhat/console.sol";
 
 contract TestSwapReturnValues {
