@@ -76,7 +76,7 @@ describe('Audius Mainnet Fork Test', () => {
       method: 'hardhat_reset',
       params: [{
         forking: {
-          jsonRpcUrl: process.env.ALCHEMY_URL || 'https://eth-mainnet.alchemyapi.io/v2/s93KFT7TnttkCPdNS2Fg_HAoCpP6dEda'
+          jsonRpcUrl: process.env.ALCHEMY_URL || 'https://eth-mainnet.alchemyapi.io/v2/_zIq0VgpYJ8sVLCgsOhsOxD_-HTMPOA6'
         }
       }]
     })
@@ -122,7 +122,6 @@ describe('Audius Mainnet Fork Test', () => {
     // Deposit initial stake
     await AudiusToken.approve(Tenderizer.address, initialStake)
     await Tenderizer.deposit(initialStake, { gasLimit: 500000 })
-    await Tenderizer.claimRewards()
     // Add initial liquidity
     await AudiusToken.approve(TenderSwap.address, initialStake)
     await TenderToken.approve(TenderSwap.address, initialStake)
@@ -169,8 +168,7 @@ describe('Audius Mainnet Fork Test', () => {
 
   describe('stake', () => {
     before(async () => {
-      tx = await Tenderizer.claimRewards()
-      await tx.wait()
+      tx = await Tenderizer.rebase()
     })
 
     it('bond succeeds', async () => {
@@ -178,7 +176,7 @@ describe('Audius Mainnet Fork Test', () => {
     })
 
     it('emits Stake event from tenderizer', async () => {
-      expect(tx).to.emit(Tenderizer, 'Stake').withArgs(NODE, deposit)
+      await expect(tx).to.emit(Tenderizer, 'Stake').withArgs(NODE, deposit)
     })
   })
 

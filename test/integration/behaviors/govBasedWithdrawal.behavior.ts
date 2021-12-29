@@ -1,6 +1,7 @@
 import { BigNumber, Transaction } from 'ethers/lib/ethers'
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
+import { getSighash } from '../../util/helpers'
 
 export default function suite () {
   let tx: Transaction
@@ -19,14 +20,16 @@ export default function suite () {
     })
 
     it('reverts if undelegateStake() reverts', async () => {
-      ctx.withdrawMock.function.will.revert()
+      await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.withdrawStake), true)
       await expect(ctx.Tenderizer.withdraw(ctx.govUnboundLockID)).to.be.reverted
+      await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.withdrawStake), false)
     })
 
     it('undelegateStake() succeeds', async () => {
-      ctx.withdrawMock.function.will.return()
+      const balBefore = await ctx.Steak.balanceOf(ctx.Tenderizer.address)
       tx = await ctx.Tenderizer.withdraw(ctx.govUnboundLockID)
-      expect(ctx.withdrawMock.function.calls.length).to.eq(1)
+      const balAfter = await ctx.Steak.balanceOf(ctx.Tenderizer.address)
+      expect(balBefore.add(ctx.withdrawAmount)).to.eq(balAfter)
     })
 
     it('should emit Withdraw event from Tenderizer', async () => {

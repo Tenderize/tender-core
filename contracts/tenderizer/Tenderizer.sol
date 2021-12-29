@@ -9,6 +9,9 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./ITenderizer.sol";
 import "../token/ITenderToken.sol";
 import "../liquidity/ITenderSwap.sol";
+import "hardhat/console.sol";
+import "../libs/MathUtils.sol";
+
 
 /**
  * @title Tenderizer is the base contract to be implemented.
@@ -284,6 +287,58 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     function _withdraw(address _account, uint256 _unstakeLockID) internal virtual;
 
     function _claimRewards() internal virtual;
+
+    function _processNewStake(uint256 _newStake) internal {
+        // TODO: all of the below could be a general internal function in Tenderizer.sol
+        uint256 currentPrincipal_ = currentPrincipal;
+
+        // adjust current token balance for potential protocol specific taxes or staking fees
+        uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)));
+
+        console.log("staked including rewards %s", _newStake / 1e9);
+        console.log("current balance normalised %s", currentBal / 1e9);
+
+        // calculate what the new currentPrinciple would be after the call
+        // but excluding fees from rewards for this rebase
+        // which still need to be calculated if stake >= currentPrincipal
+        uint256 stake = _newStake + currentBal - pendingFees - pendingLiquidityFees;
+        console.log("new principal excluding fees %s", stake / 1e9);
+
+        // Difference is negative, no rewards have been earnt
+        // So no fees are charged
+        if (stake <= currentPrincipal_) {
+            currentPrincipal = stake;
+            emit RewardsClaimed(
+                -int256(currentPrincipal_ - stake),
+                stake,
+                currentPrincipal_
+            );
+
+            return;
+        }
+
+        // Difference is positive, calculate the rewards 
+        uint256 totalRewards = stake - currentPrincipal_;
+
+        // calculate the protocol fees
+        uint256 fees = MathUtils.percOf(totalRewards, protocolFee);
+        pendingFees += fees;
+
+        // calculate the liquidity provider fees
+        uint256 liquidityFees = MathUtils.percOf(totalRewards, liquidityFee);
+        pendingLiquidityFees += liquidityFees;
+
+        stake = stake - fees - liquidityFees;
+        currentPrincipal = stake;
+
+        console.log("new principal with fees %s", stake / 1e9);
+
+        emit RewardsClaimed(
+            int256(stake - currentPrincipal_),
+            stake,
+            currentPrincipal_
+        );
+    }
 
     function _collectFees() internal virtual returns (uint256) {
         // set pendingFees to 0

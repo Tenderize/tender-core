@@ -27,9 +27,9 @@ export function userBasedUnlockByUser () {
   })
 
   it('reverts if unbond() reverts', async () => {
-    await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, 'unbond'), true)
+    await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.unstake), true)
     await expect(ctx.Tenderizer.connect(ctx.signers[2]).unstake()).to.be.reverted
-    await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, 'unbond'), false)
+    await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.unstake), false)
   })
 
   it('reverts if requested amount exceeds balance', async () => {
@@ -119,8 +119,6 @@ export function userBasedUnlockByGov () {
     })
 
     it('TenderToken balance of TenderSwap account halves', async () => {
-      console.log(ethers.utils.formatEther(poolBalBefore), ethers.utils.formatEther(await ctx.TenderToken.balanceOf(ctx.TenderSwap.address)))
-      console.log(ethers.utils.formatEther(await ctx.Tenderizer.totalStakedTokens()))
       expect(await ctx.TenderToken.balanceOf(ctx.TenderSwap.address))
         .to.eq(poolBalBefore.div(2))
     })

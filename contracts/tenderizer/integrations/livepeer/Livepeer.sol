@@ -122,104 +122,56 @@ contract Livepeer is Tenderizer {
         emit Withdraw(account, amount, _unstakeID);
     }
 
-    function _claimRewards() internal override {
-        address this_ = address(this);
+    /**
+     * @notice claims secondary rewards
+     * these are rewards that are not from staking
+     * but from fees that do not directly accumulate
+     * towards stake. These could either be liquid
+     * underlying tokens, or other tokens that then
+     * need to be swapped using a DEX. 
+     * Secondary claimed fees will be immeadiatly
+     * added to the balance of this contract
+     * @dev this is implementation specific
+     */
+    function _claimSecondaryRewards() internal {
+        uint256 ethFees = livepeer.pendingFees(address(this), MAX_ROUND);
+        // First claim any fees that are not underlying tokens
+        // withdraw fees
+        if (ethFees >= ethFees_threshold) {
+            livepeer.withdrawFees();
 
-        // Account for LPT rewards
-        uint256 stake = livepeer.pendingStake(this_, MAX_ROUND);
+            // Wrap ETH
+            uint256 bal = address(this).balance;
+            WETH.deposit{value: bal}();
+            WETH.approve(address(uniswapRouter), bal);
 
-        // TODO: all of the below could be a general internal function in Tenderizer.sol
-        uint256 currentPrincipal_ = currentPrincipal;
-
-        // adjust current token balance for potential protocol specific taxes or staking fees
-        uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)));
-
-        // TODO: can move this into a helper that returns the amount, then add that to stakeDiff 
-        uint256 secondaryRewards;
-
-        {        
-            uint256 ethFees = livepeer.pendingFees(this_, MAX_ROUND);
-            // First claim any fees that are not underlying tokens
-            // withdraw fees
-            if (ethFees >= ethFees_threshold) {
-                uint256 swappedLPT;
-                livepeer.withdrawFees();
-
-                // Wrap ETH
-                uint256 bal = address(this).balance;
-                WETH.deposit{value: bal}();
-                WETH.approve(address(uniswapRouter), bal);
-
-                // swap ETH fees for LPT
-                if (address(uniswapRouter) != address(0)) {
-                    ISwapRouter.ExactInputSingleParams memory params =
-                    ISwapRouter.ExactInputSingleParams({
-                        tokenIn: address(WETH),
-                        tokenOut: address(steak),
-                        fee: UNISWAP_POOL_FEE,
-                        recipient: address(this),
-                        deadline: block.timestamp,
-                        amountIn: bal,
-                        amountOutMinimum: 0, // TODO: Set5% max slippage
-                        sqrtPriceLimitX96: 0
-                    });
-                    try uniswapRouter.exactInputSingle(params) returns (uint256 _swappedLPT) {
-                        swappedLPT = _swappedLPT;
-                    } catch {}
-                    
-                    // Add swapped LPT to rewards
-                    secondaryRewards += swappedLPT;
-                }
+            // swap ETH fees for LPT
+            if (address(uniswapRouter) != address(0)) {
+                ISwapRouter.ExactInputSingleParams memory params =
+                ISwapRouter.ExactInputSingleParams({
+                    tokenIn: address(WETH),
+                    tokenOut: address(steak),
+                    fee: UNISWAP_POOL_FEE,
+                    recipient: address(this),
+                    deadline: block.timestamp,
+                    amountIn: bal,
+                    amountOutMinimum: 0, // TODO: Set5% max slippage
+                    sqrtPriceLimitX96: 0
+                });
+                try uniswapRouter.exactInputSingle(params) returns (uint256 /*_swappedLPT*/) {
+                } catch {}
             }
         }
+    }
 
-        // adjust secondary rewards for potential protocol specific taxes or staking feees
-        secondaryRewards = _calcDepositOut(secondaryRewards); 
+    function _claimRewards() internal override {
 
-        console.log("secondary rewards normalised %s", secondaryRewards / 1e9);
-        console.log("staked including rewards %s", stake / 1e9);
-        console.log("current balance normalised %s", currentBal / 1e9);
+        _claimSecondaryRewards();
 
-        // calculate what the new currentPrinciple would be after the call
-        // but excluding fees from rewards for this rebase
-        // which still need to be calculated if stake >= currentPrincipal
-        stake = stake + currentBal + secondaryRewards - pendingFees - pendingLiquidityFees;
-        console.log("new principal excluding fees %s", stake / 1e9);
+        // Account for LPT rewards
+        uint256 stake = livepeer.pendingStake(address(this), MAX_ROUND);
 
-        // Difference is negative, no rewards have been earnt
-        // So no fees are charged
-        if (stake <= currentPrincipal_) {
-            currentPrincipal = stake;
-            emit RewardsClaimed(
-                -int256(currentPrincipal_ - stake),
-                stake,
-                currentPrincipal_
-            );
-
-            return;
-        }
-
-        // Difference is positive, calculate the rewards 
-        uint256 totalRewards = stake - currentPrincipal_;
-
-        // calculate the protocol fees
-        uint256 fees = MathUtils.percOf(totalRewards, protocolFee);
-        pendingFees += fees;
-
-        // calculate the liquidity provider fees
-        uint256 liquidityFees = MathUtils.percOf(totalRewards, liquidityFee);
-        pendingLiquidityFees += liquidityFees;
-
-        stake = stake - fees - liquidityFees;
-        currentPrincipal = stake;
-
-        console.log("new principal with fees %s", stake / 1e9);
-
-        emit RewardsClaimed(
-            int256(stake - currentPrincipal_),
-            stake,
-            currentPrincipal_
-        );
+        Tenderizer._processNewStake(stake);
     }
 
     function _totalStakedTokens() internal view override returns (uint256) {

@@ -10,6 +10,8 @@ import "../../../libs/MathUtils.sol";
 import "../../Tenderizer.sol";
 import "./IAudius.sol";
 
+import "hardhat/console.sol";
+
 contract Audius is Tenderizer {
     IAudius audius;
 
@@ -131,29 +133,13 @@ contract Audius is Tenderizer {
     }
 
     function _claimRewards() internal override {
-        uint256 currentPrincipal_ = currentPrincipal;
-
         // Process the rewards for the nodes that we have staked to
         try audius.claimRewards(node) {} catch {}
 
         // Get the new total delegator stake
         uint256 stake = audius.getTotalDelegatorStake(address(this));
 
-        uint256 rewards;
-        if (stake >= currentPrincipal_) {
-            rewards = stake - currentPrincipal_ - pendingFees - pendingLiquidityFees;
-        }
-
-        // Substract protocol fee amount and add it to pendingFees
-        uint256 _pendingFees = pendingFees + MathUtils.percOf(rewards, protocolFee);
-        pendingFees = _pendingFees;
-        uint256 _liquidityFees = pendingLiquidityFees + MathUtils.percOf(rewards, liquidityFee);
-        pendingLiquidityFees = _liquidityFees;
-        // Add current pending stake minus fees and set it as current principal
-        uint256 newPrincipal = stake - _pendingFees - _liquidityFees;
-        currentPrincipal = newPrincipal;
-
-        emit RewardsClaimed(int256(rewards), newPrincipal, currentPrincipal_);
+        Tenderizer._processNewStake(stake);
     }
 
     function _totalStakedTokens() internal view override returns (uint256) {

@@ -1,7 +1,5 @@
 import { Transaction } from 'ethers/lib/ethers'
 import { expect } from 'chai'
-import hre, { ethers } from 'hardhat'
-import { smockit } from '@eth-optimism/smock'
 
 export default function suite () {
   let tx: Transaction
@@ -13,7 +11,11 @@ export default function suite () {
   it('bond succeeds', async () => {
     // ctx.StakingContract.function.will.return()
     tx = await ctx.Tenderizer.rebase()
-    expect(await ctx.StakingContract.staked()).to.eq(ctx.initialStake.add(ctx.deposit))
+    expect(await ctx.StakingContract.staked()).to.eq(
+      ctx.initialStake.add(ctx.deposit).sub(
+        ctx.initialStake.add(ctx.deposit).mul(ctx.DELEGATION_TAX || 0).div(ctx.MAX_PPM || 1)
+      )
+    )
     // expect(ctx.StakingContract.function.calls.length).to.eq(1)
     // // TODO: Antipattern - Refactor, possibly have assertion function defined
     // // in main test file that are then called from here

@@ -13,9 +13,9 @@ export default function suite () {
   })
 
   it('reverts if wihtdraw() reverts', async () => {
-    await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, 'withdrawStake'), true)
+    await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.withdrawStake), true)
     await expect(ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.lockID)).to.be.reverted
-    await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, 'withdrawStake'), false)
+    await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.withdrawStake), false)
   })
 
   it('withdraw() succeeds', async () => {

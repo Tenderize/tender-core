@@ -108,6 +108,12 @@ describe('Livepeer Integration Test', () => {
     process.env.VALIDATOR = this.NODE
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
 
+    this.methods = {
+      stake: 'bond',
+      unstake: 'unbond',
+      withdrawStake: 'withdrawStake'
+    }
+
     this.NAME = process.env.NAME
     this.initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
     this.deposit = ethers.utils.parseEther('100')
@@ -147,24 +153,6 @@ describe('Livepeer Integration Test', () => {
     await this.LpToken.approve(this.TenderFarm.address, lpTokensOut)
     await this.TenderFarm.farm(lpTokensOut)
     console.log('farmed LP tokens')
-
-    // Setup Mocks for assertions
-    // Note: Mocks not needed for assertions can be set in before hooks here
-    this.stakeMock = {}
-    this.stakeMock.function = LivepeerMock.bond
-    // TODO: Use name everywhere and just pass entire LivepeerMock.smocked
-    this.stakeMock.functionName = 'bond'
-    this.stakeMock.nodeParam = '_to'
-    this.stakeMock.amountParam = '_amount'
-
-    this.withdrawRewardsMock = LivepeerMock.withdrawFees
-
-    this.unbondMock = {}
-    this.unbondMock.function = LivepeerMock.unbond
-    this.unbondMock.amountParam = '_amount'
-
-    this.withdrawMock = {}
-    this.withdrawMock.function = LivepeerMock.withdrawStake
   })
 
   // Run tests
@@ -210,8 +198,10 @@ describe('Livepeer Integration Test', () => {
 
     context('Negative Rebase', async function () {
       before(async function () {
+        const stake = await this.StakingContract.staked()
+        this.decrease = ethers.utils.parseEther('10')
         // reduced stake is current stake - 90 from rewards previously
-        const reducedStake = this.deposit.add(this.initialStake).add(swappedLPTRewards)
+        const reducedStake = stake.sub(this.decrease)
         this.expectedCP = reducedStake.sub(liquidityFees).sub(protocolFees)
         // reduce staked on mock
         await this.StakingContract.setStaked(reducedStake)

@@ -13,20 +13,20 @@ export default function suite () {
     it('sets staking contract', async () => {
       const newStakingContract = await smockit(ctx.StakingContract)
 
-      // TODO: Anti-pattern, refactor!
-      if (ctx.NAME === 'Audius') {
-        const dummyStakingAddress = '0xfA668FB97697200FA56ce98E246db61Cc7E14Bd5'
-        newStakingContract.smocked.getStakingAddress.will.return.with(dummyStakingAddress)
-      }
+      // // TODO: Anti-pattern, refactor!
+      // if (ctx.NAME === 'Audius') {
+      //   const dummyStakingAddress = '0xfA668FB97697200FA56ce98E246db61Cc7E14Bd5'
+      //   newStakingContract.smocked.getStakingAddress.will.return.with(dummyStakingAddress)
+      // }
 
       tx = await ctx.Tenderizer.setStakingContract(newStakingContract.address)
 
       // assert that bond() call is made to new staking contract on gulp()
       // Except for matic, TODO: Anti-pattern, Improve this?
-      if (ctx.NAME !== 'Matic') {
-        await ctx.Tenderizer.rebase()
-        expect(newStakingContract.smocked[ctx.stakeMock.functionName].calls.length).to.eq(1)
-      }
+      // if (ctx.NAME !== 'Matic') {
+      //   await ctx.Tenderizer.rebase()
+      //   expect(newStakingContract.smocked[ctx.stakeMock.functionName].calls.length).to.eq(1)
+      // }
     })
 
     it('should emit GovernanceUpdate event', async () => {

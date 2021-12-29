@@ -72,14 +72,18 @@ describe('Livepeer Mainnet Fork Test', () => {
 
   const ONE = ethers.utils.parseEther('1')
 
+  const ALCHEMY_URL = process.env.ALCHEMY_URL || 'https://eth-mainnet.alchemyapi.io/v2/s93KFT7TnttkCPdNS2Fg_HAoCpP6dEda'
+
   before('deploy Livepeer Tenderizer', async function () {
-    this.timeout(testTimeout)
+    const blockNo = await (new ethers.providers.JsonRpcProvider(ALCHEMY_URL)).getBlockNumber()
+    // this.timeout(testTimeout)
     // Fork from mainnet
     await hre.network.provider.request({
       method: 'hardhat_reset',
       params: [{
         forking: {
-          jsonRpcUrl: process.env.ALCHEMY_URL || 'https://eth-mainnet.alchemyapi.io/v2/s93KFT7TnttkCPdNS2Fg_HAoCpP6dEda'
+          jsonRpcUrl: ALCHEMY_URL,
+          blockNumber: blockNo - 1000
         }
       }]
     })
@@ -89,10 +93,6 @@ describe('Livepeer Mainnet Fork Test', () => {
     process.env.CONTRACT = bondingManagerAddr
     process.env.TOKEN = '0x58b6A8A3302369DAEc383334672404Ee733aB239'
     process.env.VALIDATOR = NODE
-    process.env.BFACTORY = '0x9424B1412450D0f8Fc2255FAf6046b98213B76Bd'
-    process.env.B_SAFEMATH = '0xCfE28868F6E0A24b7333D22D8943279e76aC2cdc'
-    process.env.B_RIGHTS_MANAGER = '0xCfE28868F6E0A24b7333D22D8943279e76aC2cdc'
-    process.env.B_SMART_POOL_MANAGER = '0xA3F9145CB0B50D907930840BB2dcfF4146df8Ab4'
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
 
     const uniswapRouter = '0xE592427A0AEce92De3Edee1F18E0157C05861564'
@@ -124,7 +124,6 @@ describe('Livepeer Mainnet Fork Test', () => {
     // Deposit initial stake
     await LivepeerToken.approve(Tenderizer.address, initialStake)
     await Tenderizer.deposit(initialStake, { gasLimit: 500000 })
-    await Tenderizer.claimRewards()
     // Add initial liquidity
     await LivepeerToken.approve(TenderSwap.address, initialStake)
     await TenderToken.approve(TenderSwap.address, initialStake)
@@ -133,8 +132,10 @@ describe('Livepeer Mainnet Fork Test', () => {
     console.log('added liquidity')
     console.log('calculated', lpTokensOut.toString(), 'actual', (await LpToken.balanceOf(deployer)).toString())
     await LpToken.approve(TenderFarm.address, lpTokensOut)
-    await TenderFarm.farm(lpTokensOut)
+    await (await TenderFarm.farm(lpTokensOut)).wait()
     console.log('farmed LP tokens')
+    const pendingStake = await LivepeerStaking.pendingStake(Tenderizer.address, MAX_ROUND)
+    console.log(pendingStake)
   })
 
   const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
@@ -172,19 +173,18 @@ describe('Livepeer Mainnet Fork Test', () => {
   })
 
   describe('stake', () => {
-    let stakeBefore:BigNumber
     before(async function () {
-      this.timeout(testTimeout)
-      stakeBefore = await LivepeerStaking.pendingStake(Tenderizer.address, MAX_ROUND)
-      tx = await Tenderizer.claimRewards()
+      tx = await Tenderizer.rebase()
+      await tx.wait()
     })
 
     it('bond succeeds', async () => {
-      expect(await LivepeerStaking.pendingStake(Tenderizer.address, MAX_ROUND)).to.eq(stakeBefore.add(deposit))
+      const pendingStake = await LivepeerStaking.pendingStake(Tenderizer.address, MAX_ROUND)
+      expect(pendingStake).to.eq(initialStake.add(deposit))
     })
 
     it('emits Stake event from tenderizer', async () => {
-      expect(tx).to.emit(Tenderizer, 'Stake').withArgs(NODE, deposit)
+      expect(tx).to.emit(Tenderizer, 'Stake').withArgs(NODE, initialStake.add(deposit))
     })
   })
 
@@ -198,7 +198,8 @@ describe('Livepeer Mainnet Fork Test', () => {
 
       before(async function () {
         dyBefore = await TenderSwap.calculateSwap(TenderToken.address, ONE)
-        this.timeout(testTimeout * 10)
+        console.log('dyBefore', dyBefore)
+        // this.timeout(testTimeout * 1)
         bondingManager = new ethers.Contract(bondingManagerAddr, bondingManagerAbi, ethers.provider)
         roundsManager = new ethers.Contract(roundsManagerAddr, adjustableRoundsManagerAbi, ethers.provider)
 
@@ -252,7 +253,7 @@ describe('Livepeer Mainnet Fork Test', () => {
         const protocolFees = percOf2(increase.add(swappedLPTRewards), protocolFeesPercent)
         newStake = deposit.add(initialStake).add(increase)
         newStakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
-        tx = await Tenderizer.rebase()
+        tx = await Tenderizer.claimRewards()
       })
 
       it('updates currentPrincipal', async () => {

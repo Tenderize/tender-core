@@ -10,6 +10,8 @@ import "../../../libs/MathUtils.sol";
 import "../../Tenderizer.sol";
 import "./IMatic.sol";
 
+import "hardhat/console.sol";
+
 contract Matic is Tenderizer {
     // Matic exchange rate precision
     uint256 constant EXCHANGE_RATE_PRECISION = 100; // For Validator ID < 8
@@ -133,30 +135,12 @@ contract Matic is Tenderizer {
 
     function _claimRewards() internal override {
         // restake to compound rewards
-
         try matic.restake() {} catch {}
 
-        // calculate rewards and fees
-        uint256 rewards;
-        uint256 stake;
-
         uint256 shares = matic.balanceOf(address(this));
-        stake = (shares * _getExchangeRate(matic)) / _getExchangeRatePrecision(matic);
+        uint256 stake = (shares * _getExchangeRate(matic)) / _getExchangeRatePrecision(matic);
 
-        uint256 currentPrincipal_ = currentPrincipal;
-
-        if (stake >= currentPrincipal_) {
-            rewards = stake - currentPrincipal_ - pendingFees - pendingLiquidityFees;
-        }
-        // Substract protocol fee amount and add it to pendingFees
-        uint256 _pendingFees = pendingFees + MathUtils.percOf(rewards, protocolFee);
-        pendingFees = _pendingFees;
-        uint256 _liquidityFees = pendingLiquidityFees + MathUtils.percOf(rewards, liquidityFee);
-        pendingLiquidityFees = _liquidityFees;
-        // Add current pending stake minus fees and set it as current principal
-        currentPrincipal = stake - _pendingFees - _liquidityFees;
-
-        emit RewardsClaimed(int256(rewards), currentPrincipal, currentPrincipal_);
+        Tenderizer._processNewStake(stake);
     }
 
     function _totalStakedTokens() internal view override returns (uint256) {
