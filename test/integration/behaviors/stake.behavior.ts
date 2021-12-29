@@ -10,7 +10,7 @@ export default function suite () {
 
   it('bond succeeds', async () => {
     // ctx.StakingContract.function.will.return()
-    tx = await ctx.Tenderizer.rebase()
+    tx = await ctx.Tenderizer.claimRewards()
     expect(await ctx.StakingContract.staked()).to.eq(
       ctx.initialStake.add(ctx.deposit).sub(
         ctx.initialStake.add(ctx.deposit).mul(ctx.DELEGATION_TAX || 0).div(ctx.MAX_PPM || 1)
@@ -61,7 +61,7 @@ export default function suite () {
 
   it('returns without calling bond() if zero balance is passed', async () => {
     const before = await ctx.StakingContract.staked()
-    await ctx.Tenderizer.rebase()
+    await ctx.Tenderizer.claimRewards()
     expect(await ctx.StakingContract.staked()).to.eq(before)
   })
 }

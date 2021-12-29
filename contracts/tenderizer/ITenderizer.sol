@@ -35,13 +35,6 @@ interface ITenderizer {
     function deposit(uint256 _amount) external;
 
     /**
-     * @notice Gulp or Stake all tokens
-     * @dev Staked towards the default address.
-     * @dev stakes the entire current token balance of the Tenderizer.
-     */
-    function gulp() external;
-
-    /**
      * @notice Stake '_amount' of tokens to '_node'.
      * @param _node account to stake to in the underlying protocol
      * @param _amount amount to stake
@@ -68,15 +61,11 @@ interface ITenderizer {
     function withdraw(uint256 _unstakeLockID) external;
 
     /**
-     * @notice Claim staking rewards for the underlying protocol.
+     * @notice Compound all the rewards and new deposits. 
+     * Claim staking rewards and earned fees for the underlying protocol and stake
+     * any leftover token balance. Process Tender protocol fees if revenue is positive.
      */
     function claimRewards() external;
-
-    /**
-     * @notice Rebase will stake pending deposits, claim rewards, 
-     * resync the liquidity pool and collect fees.
-     */
-     function rebase() external;
 
     /**
      * @notice Collect fees pulls any pending governance fees from the Tenderizer to the governance treasury.

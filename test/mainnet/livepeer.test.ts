@@ -174,7 +174,7 @@ describe('Livepeer Mainnet Fork Test', () => {
 
   describe('stake', () => {
     before(async function () {
-      tx = await Tenderizer.rebase()
+      tx = await Tenderizer.claimRewards()
       await tx.wait()
     })
 

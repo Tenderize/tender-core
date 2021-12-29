@@ -16,7 +16,7 @@ export function stakeIncreaseTests () {
     ctx = this.test?.ctx
     dyBefore = await ctx.TenderSwap.calculateSwap(ctx.TenderToken.address, ONE)
     swapStakeBalBefore = await ctx.Steak.balanceOf(ctx.TenderSwap.address)
-    tx = await ctx.Tenderizer.rebase()
+    tx = await ctx.Tenderizer.claimRewards()
   })
 
   it('updates currentPrincipal', async () => {
@@ -58,7 +58,7 @@ export function stakeStaysSameTests () {
   before(async function () {
     ctx = this.test?.ctx
     feesBefore = await ctx.Tenderizer.pendingFees()
-    await ctx.Tenderizer.rebase()
+    await ctx.Tenderizer.claimRewards()
   })
 
   it('currentPrincipal stays the same', async () => {
@@ -85,7 +85,7 @@ export function stakeDecreaseTests () {
     oldPrinciple = await ctx.Tenderizer.currentPrincipal()
     dyBefore = await ctx.TenderSwap.calculateSwap(ctx.TenderToken.address, ONE)
     swapStakeBalBefore = await ctx.Steak.balanceOf(ctx.TenderSwap.address)
-    tx = await ctx.Tenderizer.rebase()
+    tx = await ctx.Tenderizer.claimRewards()
   })
 
   it('updates currentPrincipal', async () => {

@@ -24,7 +24,7 @@ export default function suite () {
       // assert that bond() call is made to new staking contract on gulp()
       // Except for matic, TODO: Anti-pattern, Improve this?
       // if (ctx.NAME !== 'Matic') {
-      //   await ctx.Tenderizer.rebase()
+      //   await ctx.Tenderizer.claimRewards()
       //   expect(newStakingContract.smocked[ctx.stakeMock.functionName].calls.length).to.eq(1)
       // }
     })

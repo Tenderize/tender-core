@@ -124,14 +124,6 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     }
 
     /// @inheritdoc ITenderizer
-    function gulp() public override {
-        // Execute state updates
-        // approve pendingTokens for staking
-        // Stake tokens
-        // _stake(node, steak.balanceOf(address(this)));
-    }
-
-    /// @inheritdoc ITenderizer
     function stake(address _account, uint256 _amount) external override onlyGov {
         // Execute state updates
         // approve pendingTokens for staking
@@ -164,22 +156,13 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     }
 
     /// @inheritdoc ITenderizer
-    function rebase() public override {
-        // claim rewards
-        claimRewards();
-
-        // stake tokens
-        // gulp();
-        _stake(node, steak.balanceOf(address(this)));
-    }
-
-    /// @inheritdoc ITenderizer
     function claimRewards() public override {
         // Claim rewards
         // If received staking rewards in steak don't automatically compound, add to pendingTokens
         // Swap tokens with address != steak to steak
         // Add steak from swap to pendingTokens
         _claimRewards();
+        _stake(node, steak.balanceOf(address(this)));
     }
 
     /// @inheritdoc ITenderizer

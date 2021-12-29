@@ -168,7 +168,7 @@ describe('Audius Mainnet Fork Test', () => {
 
   describe('stake', () => {
     before(async () => {
-      tx = await Tenderizer.rebase()
+      tx = await Tenderizer.claimRewards()
     })
 
     it('bond succeeds', async () => {
@@ -212,7 +212,7 @@ describe('Audius Mainnet Fork Test', () => {
         const nodeSigner = await ethers.provider.getSigner(NODE)
         await claimsManager.connect(nodeSigner).initiateRound()
 
-        tx = await Tenderizer.rebase()
+        tx = await Tenderizer.claimRewards()
         const stakeAfter = await AudiusStaking.getTotalDelegatorStake(Tenderizer.address)
         increase = stakeAfter.sub(stakeBefore)
         liquidityFees = percOf2(increase, liquidityFeesPercent)
@@ -289,7 +289,7 @@ describe('Audius Mainnet Fork Test', () => {
         newStake = await AudiusStaking.getTotalDelegatorStake(Tenderizer.address)
         // Subtract protocol fees from last +ve rebase
         newStake = newStake.sub(liquidityFees.add(protocolFees))
-        tx = await Tenderizer.rebase()
+        tx = await Tenderizer.claimRewards()
       })
 
       it('updates currentPrincipal', async () => {
