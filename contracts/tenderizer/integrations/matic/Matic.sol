@@ -143,10 +143,6 @@ contract Matic is Tenderizer {
         Tenderizer._processNewStake(stake);
     }
 
-    function _totalStakedTokens() internal view override returns (uint256) {
-        return currentPrincipal;
-    }
-
     function _setStakingContract(address _stakingContract) internal override {
         maticStakeManager = _stakingContract;
 

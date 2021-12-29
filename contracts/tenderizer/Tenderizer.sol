@@ -124,14 +124,6 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     }
 
     /// @inheritdoc ITenderizer
-    function stake(address _account, uint256 _amount) external override onlyGov {
-        // Execute state updates
-        // approve pendingTokens for staking
-        // Stake tokens
-        _stake(_account, _amount);
-    }
-
-    /// @inheritdoc ITenderizer
     function unstake(uint256 _amount)
         external
         override
@@ -168,6 +160,14 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     /// @inheritdoc ITenderizer
     function totalStakedTokens() external view override returns (uint256) {
         return _totalStakedTokens();
+    }
+
+    /// @inheritdoc ITenderizer
+    function stake(address _account, uint256 _amount) external override onlyGov {
+        // Execute state updates
+        // approve pendingTokens for staking
+        // Stake tokens
+        _stake(_account, _amount);
     }
 
     function setNode(address _node) external virtual override onlyGov {
@@ -343,7 +343,9 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         return before;
     }
 
-    function _totalStakedTokens() internal view virtual returns (uint256);
+    function _totalStakedTokens() internal view virtual returns (uint256) {
+        return currentPrincipal;
+    }
 
     function _setStakingContract(address _stakingContract) internal virtual;
 
