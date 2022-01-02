@@ -72,22 +72,19 @@ describe('Livepeer Mainnet Fork Test', () => {
 
   const ONE = ethers.utils.parseEther('1')
 
-  const ALCHEMY_URL = process.env.ALCHEMY_URL || 'https://eth-mainnet.alchemyapi.io/v2/s93KFT7TnttkCPdNS2Fg_HAoCpP6dEda'
+  const ALCHEMY_URL = process.env.ALCHEMY_URL || 'https://eth-mainnet.alchemyapi.io/v2/_zIq0VgpYJ8sVLCgsOhsOxD_-HTMPOA6'
 
   before('deploy Livepeer Tenderizer', async function () {
-    const blockNo = await (new ethers.providers.JsonRpcProvider(ALCHEMY_URL)).getBlockNumber()
-    // this.timeout(testTimeout)
+    this.timeout(testTimeout)
     // Fork from mainnet
     await hre.network.provider.request({
       method: 'hardhat_reset',
       params: [{
         forking: {
-          jsonRpcUrl: ALCHEMY_URL,
-          blockNumber: blockNo - 1000
+          jsonRpcUrl: ALCHEMY_URL
         }
       }]
     })
-
     process.env.NAME = 'Livepeer'
     process.env.SYMBOL = 'LPT'
     process.env.CONTRACT = bondingManagerAddr
@@ -132,10 +129,8 @@ describe('Livepeer Mainnet Fork Test', () => {
     console.log('added liquidity')
     console.log('calculated', lpTokensOut.toString(), 'actual', (await LpToken.balanceOf(deployer)).toString())
     await LpToken.approve(TenderFarm.address, lpTokensOut)
-    await (await TenderFarm.farm(lpTokensOut)).wait()
+    await TenderFarm.farm(lpTokensOut)
     console.log('farmed LP tokens')
-    const pendingStake = await LivepeerStaking.pendingStake(Tenderizer.address, MAX_ROUND)
-    console.log(pendingStake)
   })
 
   const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
@@ -174,13 +169,12 @@ describe('Livepeer Mainnet Fork Test', () => {
 
   describe('stake', () => {
     before(async function () {
+      this.timeout(testTimeout * 10)
       tx = await Tenderizer.claimRewards()
-      await tx.wait()
     })
 
     it('bond succeeds', async () => {
-      const pendingStake = await LivepeerStaking.pendingStake(Tenderizer.address, MAX_ROUND)
-      expect(pendingStake).to.eq(initialStake.add(deposit))
+      expect(await LivepeerStaking.pendingStake(Tenderizer.address, MAX_ROUND)).to.eq(initialStake.add(deposit))
     })
 
     it('emits Stake event from tenderizer', async () => {
@@ -198,8 +192,8 @@ describe('Livepeer Mainnet Fork Test', () => {
 
       before(async function () {
         dyBefore = await TenderSwap.calculateSwap(TenderToken.address, ONE)
-        console.log('dyBefore', dyBefore)
-        // this.timeout(testTimeout * 1)
+        console.log('dyBefore', dyBefore.toString())
+        this.timeout(testTimeout * 10)
         bondingManager = new ethers.Contract(bondingManagerAddr, bondingManagerAbi, ethers.provider)
         roundsManager = new ethers.Contract(roundsManagerAddr, adjustableRoundsManagerAbi, ethers.provider)
 
