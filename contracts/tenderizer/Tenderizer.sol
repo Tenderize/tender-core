@@ -5,10 +5,11 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/proxy/Clones.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 import "./ITenderizer.sol";
 import "../token/ITenderToken.sol";
-import "../tenderswap/ITenderSwap.sol";
+import {ITenderSwapFactory, ITenderSwap} from "../tenderswap/TenderSwapFactory.sol";
 import "../libs/MathUtils.sol";
 
 
@@ -30,22 +31,12 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         string symbol; 
     }
 
-    struct TenderSwapConfig {
-        address tenderSwapTarget;
-        address lpTokenTarget;
-        string lpTokenName;
-        string lpTokenSymbol; // e.g. tLPT-LPT-SWAP
-        uint256 amplifier;
-        uint256 fee;
-        uint256 adminFee;
-    }
-
     address constant ZERO_ADDRESS = address(0);
 
     IERC20 public steak;
     ITenderToken public tenderToken;
-    ITenderSwap public tenderSwap;
     ITenderFarm public tenderFarm;
+    ITenderSwap public tenderSwap;
 
     address public node;
 
@@ -67,9 +58,10 @@ abstract contract Tenderizer is Initializable, ITenderizer {
 
     function _initialize(
         IERC20 _steak,
+        string memory _symbol,
         address _node,
         TenderTokenConfig calldata _tenderTokenConfig,
-        TenderSwapConfig calldata _tenderSwapConfig
+        ITenderSwapFactory _tenderSwapFactory
     ) internal initializer {
         steak = _steak;
         node = _node;
@@ -88,21 +80,13 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         tenderToken = tenderToken_;
         gov = msg.sender;
 
-        // Clone an existing LP token deployment in an immutable way
-        // see https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.2.0/contracts/proxy/Clones.sol
-        tenderSwap = ITenderSwap(Clones.clone(_tenderSwapConfig.tenderSwapTarget));
-        require(
-            tenderSwap.initialize(
-                IERC20(address(tenderToken_)),
-                _steak,
-                _tenderSwapConfig.lpTokenName,
-                _tenderSwapConfig.lpTokenSymbol,
-                _tenderSwapConfig.amplifier,
-                _tenderSwapConfig.fee,
-                _tenderSwapConfig.adminFee,
-                _tenderSwapConfig.lpTokenTarget
-            ),
-            "FAIL_INIT_TENDERSWAP"
+        tenderSwap = _tenderSwapFactory.deploy(
+            ITenderSwapFactory.Config({
+                token0: IERC20(address(tenderToken_)),
+                token1: _steak,
+                lpTokenName: string(abi.encodePacked(_tenderTokenConfig.symbol, "-", _symbol, " Swap Token")),
+                lpTokenSymbol: string(abi.encodePacked(_tenderTokenConfig.symbol, "-", _symbol, "-SWAP"))
+            })
         );
     }
 

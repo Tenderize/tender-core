@@ -10,6 +10,8 @@ import "../../../libs/MathUtils.sol";
 import "../../Tenderizer.sol";
 import "./IMatic.sol";
 
+import {ITenderSwapFactory} from "../../../tenderswap/TenderSwapFactory.sol";
+
 contract Matic is Tenderizer {
     // Matic exchange rate precision
     uint256 constant EXCHANGE_RATE_PRECISION = 100; // For Validator ID < 8
@@ -23,12 +25,13 @@ contract Matic is Tenderizer {
 
     function initialize(
         IERC20 _steak,
+        string calldata _symbol,
         address _matic,
         address _node,
         TenderTokenConfig calldata _tenderTokenConfig,
-        TenderSwapConfig calldata _tenderSwapConfig
+        ITenderSwapFactory _tenderSwapFactory
     ) public {
-        Tenderizer._initialize(_steak, _node, _tenderTokenConfig, _tenderSwapConfig);
+        Tenderizer._initialize(_steak, _symbol, _node, _tenderTokenConfig, _tenderSwapFactory);
         maticStakeManager = _matic;
         matic = IMatic(_node);
     }

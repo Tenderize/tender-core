@@ -88,7 +88,7 @@ interface ITenderSwap {
         uint256 _a,
         uint256 _fee,
         uint256 _adminFee,
-        address lpTokenTargetAddress) external returns (bool);
+        LiquidityPoolToken lpTokenTargetAddress) external returns (bool);
 
     /*** VIEW FUNCTIONS ***/
     function lpToken() external view returns(LiquidityPoolToken);
@@ -309,4 +309,10 @@ interface ITenderSwap {
      * @notice Stop ramping A immediately. Reverts if ramp A is already stopped.
      */
     function stopRampA() external;
+
+    /**
+     * @notice Changes the owner of the contract
+     * @param _newOwner address of the new owner
+     */
+    function transferOwnership(address _newOwner) external;
 }

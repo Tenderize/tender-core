@@ -10,6 +10,8 @@ import "../../../libs/MathUtils.sol";
 import "../../Tenderizer.sol";
 import "./IAudius.sol";
 
+import {ITenderSwapFactory} from "../../../tenderswap/TenderSwapFactory.sol";
+
 contract Audius is Tenderizer {
     IAudius audius;
 
@@ -24,12 +26,13 @@ contract Audius is Tenderizer {
 
     function initialize(
         IERC20 _steak,
+        string calldata _symbol,
         IAudius _audius,
         address _node,
         TenderTokenConfig calldata _tenderTokenConfig,
-        TenderSwapConfig calldata _tenderSwapConfig
+        ITenderSwapFactory _tenderSwapFactory
     ) public {
-        Tenderizer._initialize(_steak, _node, _tenderTokenConfig, _tenderSwapConfig);
+        Tenderizer._initialize(_steak, _symbol, _node, _tenderTokenConfig, _tenderSwapFactory);
         audius = _audius;
         audiusStaking = audius.getStakingAddress();
     }

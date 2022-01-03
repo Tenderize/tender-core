@@ -10,6 +10,8 @@ import "../../../libs/MathUtils.sol";
 import "../../Tenderizer.sol";
 import "./IGraph.sol";
 
+import {ITenderSwapFactory} from "../../../tenderswap/TenderSwapFactory.sol";
+
 contract Graph is Tenderizer {
     // 100% in parts per million
     uint32 private constant MAX_PPM = 1000000;
@@ -25,12 +27,13 @@ contract Graph is Tenderizer {
 
     function initialize(
         IERC20 _steak,
+        string calldata _symbol,
         IGraph _graph,
         address _node,
         TenderTokenConfig calldata _tenderTokenConfig,
-        TenderSwapConfig calldata _tenderSwapConfig
+        ITenderSwapFactory _tenderSwapFactory
     ) public {
-        Tenderizer._initialize(_steak, _node, _tenderTokenConfig, _tenderSwapConfig);
+        Tenderizer._initialize(_steak, _symbol, _node, _tenderTokenConfig, _tenderSwapFactory);
         graph = _graph;
     }
 

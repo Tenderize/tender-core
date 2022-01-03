@@ -66,7 +66,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
         uint256 _a,
         uint256 _fee,
         uint256 _adminFee,
-        address lpTokenTargetAddress
+        LiquidityPoolToken lpTokenTargetAddress
     ) public override initializer returns (bool) {
         __Context_init_unchained();
         __Ownable_init_unchained();
@@ -110,7 +110,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
 
         // Clone an existing LP token deployment in an immutable way
         // see https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.2.0/contracts/proxy/Clones.sol
-        lpToken = LiquidityPoolToken(Clones.clone(lpTokenTargetAddress));
+        lpToken = LiquidityPoolToken(Clones.clone(address(lpTokenTargetAddress)));
         require(
             lpToken.initialize(lpTokenName, lpTokenSymbol),
             "could not init lpToken clone"
@@ -359,5 +359,10 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
 
     function _deadlineCheck(uint256 _deadline) internal view {
         require(block.timestamp <= _deadline, "Deadline not met");
+    }
+
+    /// @inheritdoc ITenderSwap
+    function transferOwnership(address _newOwnner) public override(OwnableUpgradeable, ITenderSwap) onlyOwner {
+        OwnableUpgradeable.transferOwnership(_newOwnner);
     }
 }

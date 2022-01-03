@@ -31,19 +31,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     tenderTokenTarget: (await deployments.get('TenderToken')).address
   }
 
-  const tenderSwapConfig = {
-    tenderSwapTarget: (await deployments.get('TenderSwap')).address,
-    lpTokenName: `t${SYMBOL}-${SYMBOL} TenderSwap Token v1`,
-    lpTokenSymbol: `t${SYMBOL}-${SYMBOL}-SWAP`,
-    amplifier: 85,
-    fee: 5e6,
-    adminFee: 0,
-    lpTokenTarget: (await deployments.get('LiquidityPoolToken')).address
-  }
-
   const tenderizer = await deploy(NAME, {
     from: deployer,
-    args: [process.env.TOKEN, process.env.CONTRACT, process.env.VALIDATOR, tenderTokenConfig, tenderSwapConfig],
+    args: [
+      process.env.TOKEN,
+      process.env.SYMBOL,
+      process.env.CONTRACT,
+      process.env.VALIDATOR,
+      tenderTokenConfig,
+      (await deployments.get('TenderSwapFactoryV1')).address
+    ],
     log: true, // display the address and gas used in the console (not when run in test though),
     proxy: {
       proxyContract: 'EIP173ProxyWithReceive',

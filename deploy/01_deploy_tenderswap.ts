@@ -24,6 +24,23 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       SwapUtils: SwapUtils.address
     }
   })
+
+  const ADMIN_FEE = 0
+  const FEE = 5e6
+  const AMP = 85
+
+  await deploy('TenderSwapFactoryV1', {
+    from: deployer,
+    log: true,
+    skipIfAlreadyDeployed: true,
+    args: [
+      (await deployments.get('TenderSwap')).address,
+      (await deployments.get('LiquidityPoolToken')).address,
+      AMP,
+      FEE,
+      ADMIN_FEE
+    ]
+  })
 }
 
 func.tags = ['TenderSwap']

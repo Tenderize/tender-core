@@ -13,6 +13,8 @@ import "./ILivepeer.sol";
 import '../../../interfaces/IWETH.sol';
 import '../../../interfaces/ISwapRouter.sol';
 
+import {ITenderSwapFactory} from "../../../tenderswap/TenderSwapFactory.sol";
+
 contract Livepeer is Tenderizer {
     uint256 private constant MAX_ROUND = 2**256 - 1;
 
@@ -26,12 +28,13 @@ contract Livepeer is Tenderizer {
 
     function initialize(
         IERC20 _steak,
+        string calldata _symbol,
         ILivepeer _livepeer,
         address _node,
         TenderTokenConfig calldata _tenderTokenConfig,
-        TenderSwapConfig calldata _tenderSwapConfig
+        ITenderSwapFactory _tenderSwapFactory
     ) public {
-        Tenderizer._initialize(_steak, _node, _tenderTokenConfig, _tenderSwapConfig);
+        Tenderizer._initialize(_steak, _symbol, _node, _tenderTokenConfig, _tenderSwapFactory);
         livepeer = _livepeer;
     }
 
