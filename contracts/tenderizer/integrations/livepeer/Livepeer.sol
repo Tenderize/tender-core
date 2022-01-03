@@ -10,8 +10,8 @@ import "../../../libs/MathUtils.sol";
 import "../../Tenderizer.sol";
 import "./ILivepeer.sol";
 
-import '../../../token/IWETH.sol';
-import '../../../liquidity/ISwapRouter.sol';
+import '../../../interfaces/IWETH.sol';
+import '../../../interfaces/ISwapRouter.sol';
 
 contract Livepeer is Tenderizer {
     uint256 private constant MAX_ROUND = 2**256 - 1;
@@ -65,6 +65,7 @@ contract Livepeer is Tenderizer {
         emit Stake(node_, amount);
     }
 
+    // TODO: is unstaking when front running a negative rebase exploitable ? 
     function _unstake(
         address _account,
         address _node,
@@ -119,28 +120,21 @@ contract Livepeer is Tenderizer {
         emit Withdraw(account, amount, _unstakeID);
     }
 
-    function _claimRewards() internal override {
-        // Livepeer automatically compounds
-        // The rewards is the difference between
-        // pending stake and the latest cached stake amount
-
-        // TODO: Oh god this is going to be so costly
-        // What if we gulp before this call so we have the updated state in getDelegator ? bond might be more costly
-        // Let's just code this with everything we need and benchmark gas
-
-        // Account for LPT rewards
-        address del = address(this);
-        uint256 stake = livepeer.pendingStake(del, MAX_ROUND);
-        uint256 ethFees = livepeer.pendingFees(del, MAX_ROUND);
-        uint256 currentPrincipal_ = currentPrincipal;
-
-        uint256 rewards;
-        if (stake >= currentPrincipal_) {
-            rewards = stake - currentPrincipal_ -  pendingFees - pendingLiquidityFees;
-        }
-
+    /**
+     * @notice claims secondary rewards
+     * these are rewards that are not from staking
+     * but from fees that do not directly accumulate
+     * towards stake. These could either be liquid
+     * underlying tokens, or other tokens that then
+     * need to be swapped using a DEX. 
+     * Secondary claimed fees will be immeadiatly
+     * added to the balance of this contract
+     * @dev this is implementation specific
+     */
+    function _claimSecondaryRewards() internal {
+        uint256 ethFees = livepeer.pendingFees(address(this), MAX_ROUND);
+        // First claim any fees that are not underlying tokens
         // withdraw fees
-        uint256 swappedLPT;
         if (ethFees >= ethFees_threshold) {
             livepeer.withdrawFees();
 
@@ -162,29 +156,20 @@ contract Livepeer is Tenderizer {
                     amountOutMinimum: 0, // TODO: Set5% max slippage
                     sqrtPriceLimitX96: 0
                 });
-                try uniswapRouter.exactInputSingle(params) returns (uint256 _swappedLPT) {
-                    swappedLPT = _swappedLPT;
+                try uniswapRouter.exactInputSingle(params) returns (uint256 /*_swappedLPT*/) {
                 } catch {}
-                
-                // Add swapped LPT to rewards
-                rewards += swappedLPT;
             }
         }
-
-        // Substract protocol fee amount and add it to pendingFees
-        uint256 _pendingFees = pendingFees + MathUtils.percOf(rewards, protocolFee);
-        pendingFees = _pendingFees;
-        uint256 _liquidityFees = pendingLiquidityFees + MathUtils.percOf(rewards, liquidityFee);
-        pendingLiquidityFees = _liquidityFees;
-        // Add current pending stake minus fees and set it as current principal
-        uint256 newPrincipal = stake + swappedLPT - _pendingFees - _liquidityFees;
-        currentPrincipal = newPrincipal;
-
-        emit RewardsClaimed(rewards, newPrincipal, currentPrincipal_);
     }
 
-    function _totalStakedTokens() internal view override returns (uint256) {
-        return currentPrincipal;
+    function _claimRewards() internal override {
+
+        _claimSecondaryRewards();
+
+        // Account for LPT rewards
+        uint256 stake = livepeer.pendingStake(address(this), MAX_ROUND);
+
+        Tenderizer._processNewStake(stake);
     }
 
     function _setStakingContract(address _stakingContract) internal override {

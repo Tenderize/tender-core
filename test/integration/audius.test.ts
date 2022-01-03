@@ -1,7 +1,6 @@
 import hre, { ethers } from 'hardhat'
-import { MockContract, smockit } from '@eth-optimism/smock'
 import {
-  SimpleToken, Tenderizer, TenderToken, IAudius, TenderFarm, TenderSwap, LiquidityPoolToken
+  SimpleToken, Tenderizer, TenderToken, AudiusMock, TenderFarm, TenderSwap, LiquidityPoolToken
 } from '../../typechain'
 import { percOf2 } from '../util/helpers'
 import chai from 'chai'
@@ -32,8 +31,7 @@ import { getCurrentBlockTimestamp } from '../util/evm'
 chai.use(solidity)
 
 describe('Audius Integration Test', () => {
-  let AudiusNoMock: IAudius
-  let AudiusMock: MockContract
+  let AudiusMock: AudiusMock
 
   let Audius: {[name: string]: Deployment}
 
@@ -62,10 +60,8 @@ describe('Audius Integration Test', () => {
       this.signers[0]
     )
 
-    AudiusNoMock = (await AudiusFac.deploy(this.Steak.address)) as IAudius
-    this.StakingContractNoMock = AudiusNoMock
-
-    AudiusMock = await smockit(AudiusNoMock)
+    AudiusMock = (await AudiusFac.deploy(this.Steak.address)) as AudiusMock
+    this.StakingContract = AudiusMock
   })
 
   const STEAK_AMOUNT = '100000'
@@ -79,6 +75,12 @@ describe('Audius Integration Test', () => {
     process.env.VALIDATOR = this.NODE
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
 
+    this.methods = {
+      stake: 'delegateStake',
+      unstake: 'requestUndelegateStake',
+      withdrawStake: 'undelegateStake'
+    }
+
     this.NAME = process.env.NAME
     this.SYMBOL = process.env.SYMBOL
     this.initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
@@ -90,8 +92,6 @@ describe('Audius Integration Test', () => {
     this.unbondLockID = 0
     this.govUnboundLockID = 1
 
-    const dummyStakingAddress = '0xfA668FB97697200FA56ce98E246db61Cc7E14Bd5'
-    AudiusMock.smocked.getStakingAddress.will.return.with(dummyStakingAddress)
     Audius = await hre.deployments.fixture(['Audius'], {
       keepExistingDeployments: false
     })
@@ -109,7 +109,7 @@ describe('Audius Integration Test', () => {
     // Deposit initial stake
     await this.Steak.approve(this.Tenderizer.address, this.initialStake)
     await this.Tenderizer.deposit(this.initialStake)
-    await this.Tenderizer.gulp()
+    // await this.Tenderizer.claimRewards()
     // Add initial liquidity
     await this.Steak.approve(this.TenderSwap.address, this.initialStake)
     await this.TenderToken.approve(this.TenderSwap.address, this.initialStake)
@@ -120,25 +120,6 @@ describe('Audius Integration Test', () => {
     await this.LpToken.approve(this.TenderFarm.address, lpTokensOut)
     await this.TenderFarm.farm(lpTokensOut)
     console.log('farmed LP tokens')
-
-    // Setup Mocks for assertions
-    // Note: Mocks not needed for assertions can be set in before hooks here
-    this.stakeMock = {}
-    this.stakeMock.function = AudiusMock.smocked.delegateStake
-    // TODO: Use name everywhere and just pass entire AudiusMock.smocked
-    this.stakeMock.functionName = 'delegateStake'
-    this.stakeMock.nodeParam = '_targetSP'
-    this.stakeMock.amountParam = '_amount'
-
-    this.withdrawRewardsMock = null // No need to withdraw with Audius\
-
-    this.unbondMock = {}
-    this.unbondMock.function = AudiusMock.smocked.requestUndelegateStake
-    this.unbondMock.nodeParam = '_target'
-    this.unbondMock.amountParam = '_amount'
-
-    this.withdrawMock = {}
-    this.withdrawMock.function = AudiusMock.smocked.undelegateStake
   })
 
   // Run tests
@@ -152,12 +133,18 @@ describe('Audius Integration Test', () => {
   describe('Rebases', async function () {
     context('Positive Rebase', async function () {
       before(async function () {
-        this.increase = ethers.BigNumber.from('10000000000')
+        this.increase = ethers.utils.parseEther('10')
         liquidityFees = percOf2(this.increase, liquidityFeesPercent)
         protocolFees = percOf2(this.increase, protocolFeesPercent)
         newStake = this.deposit.add(this.initialStake).add(this.increase)
         this.newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
-        AudiusMock.smocked.getTotalDelegatorStake.will.return.with(newStake)
+
+        // set increase on mock
+        await this.StakingContract.setStaked(this.increase.add(await this.StakingContract.staked()))
+
+        // With mock values set correctly, adjust increase with fees
+        // for assertions
+        this.increase = this.increase.sub(protocolFees.add(liquidityFees))
       })
       describe('Stake increases', stakeIncreaseTests.bind(this))
     })
@@ -165,16 +152,19 @@ describe('Audius Integration Test', () => {
     context('Neutral Rebase', async function () {
       before(async function () {
         this.stakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
-        AudiusMock.smocked.getTotalDelegatorStake.will.return.with(newStake)
       })
       describe('Stake stays the same', stakeStaysSameTests.bind(this))
     })
 
     context('Negative Rebase', async function () {
       before(async function () {
-        const reducedStake = this.deposit.add(this.initialStake)
+        const stake = await this.StakingContract.staked()
+        this.decrease = ethers.utils.parseEther('10')
+        // reduced stake is current stake - 100 from rewards previously
+        const reducedStake = stake.sub(this.decrease)
         this.expectedCP = reducedStake.sub(liquidityFees).sub(protocolFees)
-        AudiusMock.smocked.getTotalDelegatorStake.will.return.with(reducedStake)
+        // reduce staked on mock
+        await this.StakingContract.setStaked(reducedStake)
       })
       describe('Stake decreases', stakeDecreaseTests.bind(this))
     })
@@ -187,7 +177,9 @@ describe('Audius Integration Test', () => {
   describe('Unlock and Withdraw', async function () {
     before(async function () {
       this.withdrawAmount = await this.TenderToken.balanceOf(this.deployer)
-      AudiusMock.smocked.getTotalDelegatorStake.will.return.with(this.withdrawAmount)
+      await this.StakingContract.setStaked(
+        await this.Tenderizer.totalStakedTokens()
+      )
     })
     describe('Unstake', unlockTests.bind(this))
     describe('Withdrawl', withdrawTests.bind(this))

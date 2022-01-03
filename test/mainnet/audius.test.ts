@@ -76,7 +76,7 @@ describe('Audius Mainnet Fork Test', () => {
       method: 'hardhat_reset',
       params: [{
         forking: {
-          jsonRpcUrl: process.env.ALCHEMY_URL || 'https://eth-mainnet.alchemyapi.io/v2/s93KFT7TnttkCPdNS2Fg_HAoCpP6dEda'
+          jsonRpcUrl: process.env.ALCHEMY_URL || 'https://eth-mainnet.alchemyapi.io/v2/_zIq0VgpYJ8sVLCgsOhsOxD_-HTMPOA6'
         }
       }]
     })
@@ -122,7 +122,6 @@ describe('Audius Mainnet Fork Test', () => {
     // Deposit initial stake
     await AudiusToken.approve(Tenderizer.address, initialStake)
     await Tenderizer.deposit(initialStake, { gasLimit: 500000 })
-    await Tenderizer.gulp()
     // Add initial liquidity
     await AudiusToken.approve(TenderSwap.address, initialStake)
     await TenderToken.approve(TenderSwap.address, initialStake)
@@ -169,8 +168,7 @@ describe('Audius Mainnet Fork Test', () => {
 
   describe('stake', () => {
     before(async () => {
-      tx = await Tenderizer.gulp()
-      await tx.wait()
+      tx = await Tenderizer.claimRewards()
     })
 
     it('bond succeeds', async () => {
@@ -178,7 +176,7 @@ describe('Audius Mainnet Fork Test', () => {
     })
 
     it('emits Stake event from tenderizer', async () => {
-      expect(tx).to.emit(Tenderizer, 'Stake').withArgs(NODE, deposit)
+      expect(tx).to.emit(Tenderizer, 'Stake').withArgs(NODE, deposit.add(initialStake))
     })
   })
 
@@ -214,7 +212,7 @@ describe('Audius Mainnet Fork Test', () => {
         const nodeSigner = await ethers.provider.getSigner(NODE)
         await claimsManager.connect(nodeSigner).initiateRound()
 
-        tx = await Tenderizer.rebase()
+        tx = await Tenderizer.claimRewards()
         const stakeAfter = await AudiusStaking.getTotalDelegatorStake(Tenderizer.address)
         increase = stakeAfter.sub(stakeBefore)
         liquidityFees = percOf2(increase, liquidityFeesPercent)
@@ -244,13 +242,13 @@ describe('Audius Mainnet Fork Test', () => {
         expect(await AudiusToken.balanceOf(TenderSwap.address)).to.eq(initialStake)
       })
 
-      it('tenderToken price slightly decreases vs underlying', async () => {
+      it('tenderToken price slightly increases vs underlying', async () => {
         expect(await TenderSwap.calculateSwap(TenderToken.address, ONE)).to.be.lt(dyBefore)
       })
 
       it('should emit RewardsClaimed event from Tenderizer', async () => {
         expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
-          .withArgs(increase, newStakeMinusFees, deposit.add(initialStake))
+          .withArgs(increase.sub(liquidityFees.add(protocolFees)), newStakeMinusFees, deposit.add(initialStake))
       })
     })
 
@@ -269,8 +267,8 @@ describe('Audius Mainnet Fork Test', () => {
       before(async function () {
         dyBefore = await TenderSwap.calculateSwap(TenderToken.address, ONE)
         this.timeout(testTimeout)
-        feesBefore = await Tenderizer.pendingFees()
-        oldPrinciple = await Tenderizer.currentPrincipal()
+        feesBefore = (await Tenderizer.pendingFees()).add(await Tenderizer.pendingLiquidityFees())
+        oldPrinciple = (await AudiusStaking.getTotalDelegatorStake(Tenderizer.address)).sub(feesBefore)
 
         // Impersonate guardian and slash NODE
         await hre.network.provider.request({
@@ -291,7 +289,7 @@ describe('Audius Mainnet Fork Test', () => {
         newStake = await AudiusStaking.getTotalDelegatorStake(Tenderizer.address)
         // Subtract protocol fees from last +ve rebase
         newStake = newStake.sub(liquidityFees.add(protocolFees))
-        tx = await Tenderizer.rebase()
+        tx = await Tenderizer.claimRewards()
       })
 
       it('updates currentPrincipal', async () => {
@@ -306,7 +304,7 @@ describe('Audius Mainnet Fork Test', () => {
       })
 
       it("doesn't increase pending fees", async () => {
-        expect(await Tenderizer.pendingFees()).to.eq(feesBefore)
+        expect((await Tenderizer.pendingFees()).add(await Tenderizer.pendingLiquidityFees())).to.eq(feesBefore)
       })
 
       it('decreases the tenderToken balance of the AMM', async () => {
@@ -318,12 +316,12 @@ describe('Audius Mainnet Fork Test', () => {
         expect(await AudiusToken.balanceOf(TenderSwap.address)).to.eq(initialStake)
       })
 
-      it('price of the TenderTokens increases vs the underlying', async () => {
+      it('price of the TenderTokens decreases vs the underlying', async () => {
         expect(await TenderSwap.calculateSwap(AudiusToken.address, ONE)).to.be.gt(dyBefore)
       })
 
       it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
-        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs('0', newStake, oldPrinciple)
+        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs(newStake.sub(oldPrinciple), newStake, oldPrinciple)
       })
     })
   })

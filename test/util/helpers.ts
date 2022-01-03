@@ -35,3 +35,7 @@ export async function asyncForEach<T> (
     await callback(array[index], index)
   }
 }
+
+export function getSighash (iface: ethers.utils.Interface, name: string) {
+  return ethers.utils.Interface.getSighash(iface.getFunction(name))
+}

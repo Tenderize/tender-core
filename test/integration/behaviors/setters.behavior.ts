@@ -11,23 +11,22 @@ export default function suite () {
   })
   describe('setting staking contract', () => {
     it('sets staking contract', async () => {
-      const newStakingContract = await smockit(ctx.StakingContractNoMock)
+      const newStakingContract = await smockit(ctx.StakingContract)
 
-      // TODO: Anti-pattern, refactor!
-      if (ctx.NAME === 'Audius') {
-        const dummyStakingAddress = '0xfA668FB97697200FA56ce98E246db61Cc7E14Bd5'
-        newStakingContract.smocked.getStakingAddress.will.return.with(dummyStakingAddress)
-      }
+      // // TODO: Anti-pattern, refactor!
+      // if (ctx.NAME === 'Audius') {
+      //   const dummyStakingAddress = '0xfA668FB97697200FA56ce98E246db61Cc7E14Bd5'
+      //   newStakingContract.smocked.getStakingAddress.will.return.with(dummyStakingAddress)
+      // }
 
       tx = await ctx.Tenderizer.setStakingContract(newStakingContract.address)
 
       // assert that bond() call is made to new staking contract on gulp()
       // Except for matic, TODO: Anti-pattern, Improve this?
-      if (ctx.NAME !== 'Matic') {
-        await ctx.Tenderizer.gulp()
-        expect(ctx.stakeMock.function.calls.length).to.eq(0)
-        expect(newStakingContract.smocked[ctx.stakeMock.functionName].calls.length).to.eq(1)
-      }
+      // if (ctx.NAME !== 'Matic') {
+      //   await ctx.Tenderizer.claimRewards()
+      //   expect(newStakingContract.smocked[ctx.stakeMock.functionName].calls.length).to.eq(1)
+      // }
     })
 
     it('should emit GovernanceUpdate event', async () => {

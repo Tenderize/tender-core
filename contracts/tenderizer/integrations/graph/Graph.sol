@@ -93,16 +93,14 @@ contract Graph is Tenderizer {
             governancePendingUnstakeLockID = unstakeLockID;
 
             // Calculate the amount of shares to undelegate
-            IGraph.Delegation memory delegation = graph.getDelegation(node, address(this));
             IGraph.DelegationPool memory delPool = graph.delegationPools(node);
 
-            uint256 delShares = delegation.shares;
             uint256 totalShares = delPool.shares;
             uint256 totalTokens = delPool.tokens;
 
-            uint256 stake = delShares * totalTokens / totalShares;
-            uint256 shares = delShares *  amount / stake;
+            uint256 shares = amount * totalShares / totalTokens;
 
+            // Shares =  amount * totalShares / totalTokens 
             // undelegate shares
             graph.undelegate(node_, shares);
         } else {
@@ -151,14 +149,7 @@ contract Graph is Tenderizer {
     }
 
     function _claimRewards() internal override {
-        // GRT automatically compounds
-        // The rewards is the difference between
-        // pending stake and the latest cached stake amount
-
-        address del = address(this);
-        uint256 currentPrincipal_ = currentPrincipal;
-
-        IGraph.Delegation memory delegation = graph.getDelegation(node, del);
+        IGraph.Delegation memory delegation = graph.getDelegation(node, address(this));
         IGraph.DelegationPool memory delPool = graph.delegationPools(node);
 
         uint256 delShares = delegation.shares;
@@ -167,25 +158,7 @@ contract Graph is Tenderizer {
 
         uint256 stake = delShares * totalTokens / totalShares;
 
-        uint256 rewards;
-        if (stake >= currentPrincipal_) {
-            rewards = stake - currentPrincipal_ - pendingFees - pendingLiquidityFees;
-        }
-
-        // Substract protocol fee amount and add it to pendingFees
-        uint256 _pendingFees = pendingFees + MathUtils.percOf(rewards, protocolFee);
-        pendingFees = _pendingFees;
-        uint256 _liquidityFees = pendingLiquidityFees + MathUtils.percOf(rewards, liquidityFee);
-        pendingLiquidityFees = _liquidityFees;
-        // Add current pending stake minus fees and set it as current principal
-        uint256 newPrincipal = stake - _pendingFees - _liquidityFees;
-        currentPrincipal = newPrincipal;
-
-        emit RewardsClaimed(rewards, newPrincipal, currentPrincipal_);
-    }
-
-    function _totalStakedTokens() internal view override returns (uint256) {
-        return currentPrincipal;
+        Tenderizer._processNewStake(stake);
     }
 
     function _setStakingContract(address _stakingContract) internal override {

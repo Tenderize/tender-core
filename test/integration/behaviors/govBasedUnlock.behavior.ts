@@ -1,6 +1,7 @@
 import { BigNumber, Transaction } from 'ethers/lib/ethers'
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
+import { getSighash } from '../../util/helpers'
 
 export default function suite () {
   let tx: Transaction
@@ -60,20 +61,18 @@ export default function suite () {
 
   describe('gov unlock', async () => {
     it('reverts if unlock() reverts', async () => {
-      ctx.unbondMock.function.will.revert()
-      await expect(ctx.Tenderizer.unstake(ethers.utils.parseEther('0'))).to.be.reverted
+      await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.unstake), true)
+      await expect(ctx.Tenderizer.unstake(secondDeposit)).to.be.reverted
+      await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.unstake), false)
     })
 
     it('unlock() suceeds', async () => {
-      ctx.unbondMock.function.will.return()
-      // Smocked doesn't actually execute transactions, so balance of Controller is not updated
-      // hence manually transferring some tokens to simlaute withdrawal
-      await ctx.Steak.transfer(ctx.Tenderizer.address, ctx.withdrawAmount)
+      const stakeBefore = await ctx.Tenderizer.totalStakedTokens()
 
-      tx = await ctx.Tenderizer.unstake(ethers.utils.parseEther('0'))
-      expect(ctx.unbondMock.function.calls.length).to.eq(1)
-      expect(ctx.unbondMock.function.calls[0][ctx.unbondMock.nodeParam]).to.eq(ctx.NODE)
-      expect(ctx.unbondMock.function.calls[0][ctx.unbondMock.amountParam]).to.eq(ctx.withdrawAmount)
+      tx = await ctx.Tenderizer.unstake(secondDeposit)
+      // staked tokens already updated by user unstaked, gov unstake just processes
+      // user unstakes, so staked tokens stays the same
+      expect(stakeBefore).to.eq(await ctx.Tenderizer.totalStakedTokens())
     })
 
     it('should emit Unstake event from Tenderizer', async () => {

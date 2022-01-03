@@ -72,6 +72,8 @@ describe('Livepeer Mainnet Fork Test', () => {
 
   const ONE = ethers.utils.parseEther('1')
 
+  const ALCHEMY_URL = process.env.ALCHEMY_URL || 'https://eth-mainnet.alchemyapi.io/v2/_zIq0VgpYJ8sVLCgsOhsOxD_-HTMPOA6'
+
   before('deploy Livepeer Tenderizer', async function () {
     this.timeout(testTimeout)
     // Fork from mainnet
@@ -79,20 +81,15 @@ describe('Livepeer Mainnet Fork Test', () => {
       method: 'hardhat_reset',
       params: [{
         forking: {
-          jsonRpcUrl: process.env.ALCHEMY_URL || 'https://eth-mainnet.alchemyapi.io/v2/s93KFT7TnttkCPdNS2Fg_HAoCpP6dEda'
+          jsonRpcUrl: ALCHEMY_URL
         }
       }]
     })
-
     process.env.NAME = 'Livepeer'
     process.env.SYMBOL = 'LPT'
     process.env.CONTRACT = bondingManagerAddr
     process.env.TOKEN = '0x58b6A8A3302369DAEc383334672404Ee733aB239'
     process.env.VALIDATOR = NODE
-    process.env.BFACTORY = '0x9424B1412450D0f8Fc2255FAf6046b98213B76Bd'
-    process.env.B_SAFEMATH = '0xCfE28868F6E0A24b7333D22D8943279e76aC2cdc'
-    process.env.B_RIGHTS_MANAGER = '0xCfE28868F6E0A24b7333D22D8943279e76aC2cdc'
-    process.env.B_SMART_POOL_MANAGER = '0xA3F9145CB0B50D907930840BB2dcfF4146df8Ab4'
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
 
     const uniswapRouter = '0xE592427A0AEce92De3Edee1F18E0157C05861564'
@@ -124,7 +121,6 @@ describe('Livepeer Mainnet Fork Test', () => {
     // Deposit initial stake
     await LivepeerToken.approve(Tenderizer.address, initialStake)
     await Tenderizer.deposit(initialStake, { gasLimit: 500000 })
-    await Tenderizer.gulp()
     // Add initial liquidity
     await LivepeerToken.approve(TenderSwap.address, initialStake)
     await TenderToken.approve(TenderSwap.address, initialStake)
@@ -172,19 +168,17 @@ describe('Livepeer Mainnet Fork Test', () => {
   })
 
   describe('stake', () => {
-    let stakeBefore:BigNumber
     before(async function () {
-      this.timeout(testTimeout)
-      stakeBefore = await LivepeerStaking.pendingStake(Tenderizer.address, MAX_ROUND)
-      tx = await Tenderizer.gulp()
+      this.timeout(testTimeout * 10)
+      tx = await Tenderizer.claimRewards()
     })
 
     it('bond succeeds', async () => {
-      expect(await LivepeerStaking.pendingStake(Tenderizer.address, MAX_ROUND)).to.eq(stakeBefore.add(deposit))
+      expect(await LivepeerStaking.pendingStake(Tenderizer.address, MAX_ROUND)).to.eq(initialStake.add(deposit))
     })
 
     it('emits Stake event from tenderizer', async () => {
-      expect(tx).to.emit(Tenderizer, 'Stake').withArgs(NODE, deposit)
+      expect(tx).to.emit(Tenderizer, 'Stake').withArgs(NODE, initialStake.add(deposit))
     })
   })
 
@@ -252,7 +246,7 @@ describe('Livepeer Mainnet Fork Test', () => {
         const protocolFees = percOf2(increase.add(swappedLPTRewards), protocolFeesPercent)
         newStake = deposit.add(initialStake).add(increase)
         newStakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
-        tx = await Tenderizer.rebase()
+        tx = await Tenderizer.claimRewards()
       })
 
       it('updates currentPrincipal', async () => {

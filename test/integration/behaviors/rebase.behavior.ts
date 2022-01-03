@@ -16,7 +16,7 @@ export function stakeIncreaseTests () {
     ctx = this.test?.ctx
     dyBefore = await ctx.TenderSwap.calculateSwap(ctx.TenderToken.address, ONE)
     swapStakeBalBefore = await ctx.Steak.balanceOf(ctx.TenderSwap.address)
-    tx = await ctx.Tenderizer.rebase()
+    tx = await ctx.Tenderizer.claimRewards()
   })
 
   it('updates currentPrincipal', async () => {
@@ -58,7 +58,7 @@ export function stakeStaysSameTests () {
   before(async function () {
     ctx = this.test?.ctx
     feesBefore = await ctx.Tenderizer.pendingFees()
-    await ctx.Tenderizer.rebase()
+    await ctx.Tenderizer.claimRewards()
   })
 
   it('currentPrincipal stays the same', async () => {
@@ -67,12 +67,6 @@ export function stakeStaysSameTests () {
 
   it('pending fees stay the same', async () => {
     expect(await ctx.Tenderizer.pendingFees()).to.eq(feesBefore)
-  })
-
-  it('does not withdraw fees since less than threshold', async () => {
-    if (ctx.withdrawRewardsMock) {
-      expect(ctx.withdrawRewardsMock.calls.length).to.eq(0)
-    }
   })
 }
 
@@ -91,7 +85,7 @@ export function stakeDecreaseTests () {
     oldPrinciple = await ctx.Tenderizer.currentPrincipal()
     dyBefore = await ctx.TenderSwap.calculateSwap(ctx.TenderToken.address, ONE)
     swapStakeBalBefore = await ctx.Steak.balanceOf(ctx.TenderSwap.address)
-    tx = await ctx.Tenderizer.rebase()
+    tx = await ctx.Tenderizer.claimRewards()
   })
 
   it('updates currentPrincipal', async () => {
@@ -122,8 +116,8 @@ export function stakeDecreaseTests () {
   it('price of the TenderTokens increases vs the underlying', async () => {
     expect(await ctx.TenderSwap.calculateSwap(ctx.Steak.address, ONE)).to.be.gt(dyBefore)
   })
-
+  
   it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
-    await expect(tx).to.emit(ctx.Tenderizer, 'RewardsClaimed').withArgs('0', ctx.expectedCP, oldPrinciple)
+    await expect(tx).to.emit(ctx.Tenderizer, 'RewardsClaimed').withArgs(ethers.constants.Zero.sub(ctx.decrease), ctx.expectedCP, oldPrinciple)
   })
 }

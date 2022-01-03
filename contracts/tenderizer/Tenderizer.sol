@@ -8,7 +8,9 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 
 import "./ITenderizer.sol";
 import "../token/ITenderToken.sol";
-import "../liquidity/ITenderSwap.sol";
+import "../tenderswap/ITenderSwap.sol";
+import "../libs/MathUtils.sol";
+
 
 /**
  * @title Tenderizer is the base contract to be implemented.
@@ -121,22 +123,6 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     }
 
     /// @inheritdoc ITenderizer
-    function gulp() public override {
-        // Execute state updates
-        // approve pendingTokens for staking
-        // Stake tokens
-        _stake(node, steak.balanceOf(address(this)));
-    }
-
-    /// @inheritdoc ITenderizer
-    function stake(address _account, uint256 _amount) external override onlyGov {
-        // Execute state updates
-        // approve pendingTokens for staking
-        // Stake tokens
-        _stake(_account, _amount);
-    }
-
-    /// @inheritdoc ITenderizer
     function unstake(uint256 _amount)
         external
         override
@@ -161,26 +147,26 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     }
 
     /// @inheritdoc ITenderizer
-    function rebase() public override {
-        // claim rewards
-        claimRewards();
-
-        // stake tokens
-        gulp();
-    }
-
-    /// @inheritdoc ITenderizer
     function claimRewards() public override {
         // Claim rewards
         // If received staking rewards in steak don't automatically compound, add to pendingTokens
         // Swap tokens with address != steak to steak
         // Add steak from swap to pendingTokens
         _claimRewards();
+        _stake(node, steak.balanceOf(address(this)));
     }
 
     /// @inheritdoc ITenderizer
     function totalStakedTokens() external view override returns (uint256) {
         return _totalStakedTokens();
+    }
+
+    /// @inheritdoc ITenderizer
+    function stake(address _account, uint256 _amount) external override onlyGov {
+        // Execute state updates
+        // approve pendingTokens for staking
+        // Stake tokens
+        _stake(_account, _amount);
     }
 
     function setNode(address _node) external virtual override onlyGov {
@@ -284,6 +270,52 @@ abstract contract Tenderizer is Initializable, ITenderizer {
 
     function _claimRewards() internal virtual;
 
+    function _processNewStake(uint256 _newStake) internal {
+        // TODO: all of the below could be a general internal function in Tenderizer.sol
+        uint256 currentPrincipal_ = currentPrincipal;
+
+        // adjust current token balance for potential protocol specific taxes or staking fees
+        uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)));
+
+        // calculate what the new currentPrinciple would be after the call
+        // but excluding fees from rewards for this rebase
+        // which still need to be calculated if stake >= currentPrincipal
+        uint256 stake = _newStake + currentBal - pendingFees - pendingLiquidityFees;
+
+        // Difference is negative, no rewards have been earnt
+        // So no fees are charged
+        if (stake <= currentPrincipal_) {
+            currentPrincipal = stake;
+            emit RewardsClaimed(
+                -int256(currentPrincipal_ - stake),
+                stake,
+                currentPrincipal_
+            );
+
+            return;
+        }
+
+        // Difference is positive, calculate the rewards 
+        uint256 totalRewards = stake - currentPrincipal_;
+
+        // calculate the protocol fees
+        uint256 fees = MathUtils.percOf(totalRewards, protocolFee);
+        pendingFees += fees;
+
+        // calculate the liquidity provider fees
+        uint256 liquidityFees = MathUtils.percOf(totalRewards, liquidityFee);
+        pendingLiquidityFees += liquidityFees;
+
+        stake = stake - fees - liquidityFees;
+        currentPrincipal = stake;
+
+        emit RewardsClaimed(
+            int256(stake - currentPrincipal_),
+            stake,
+            currentPrincipal_
+        );
+    }
+
     function _collectFees() internal virtual returns (uint256) {
         // set pendingFees to 0
         // Controller will mint tenderToken and distribute it
@@ -304,7 +336,9 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         return before;
     }
 
-    function _totalStakedTokens() internal view virtual returns (uint256);
+    function _totalStakedTokens() internal view virtual returns (uint256) {
+        return currentPrincipal;
+    }
 
     function _setStakingContract(address _stakingContract) internal virtual;
 
