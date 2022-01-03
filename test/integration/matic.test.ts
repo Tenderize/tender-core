@@ -9,6 +9,7 @@ import { Deployment } from 'hardhat-deploy/dist/types'
 import { BigNumber } from '@ethersproject/bignumber'
 import { percOf2 } from '../util/helpers'
 
+import initialStateTests from './behaviors/initialState.behavior'
 import depositTests from './behaviors/deposit.behavior'
 import stakeTests from './behaviors/stake.behavior'
 import {
@@ -82,6 +83,7 @@ describe('Matic Integration Test', () => {
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
 
     this.NAME = process.env.NAME
+    this.SYMBOL = process.env.SYMBOL
     this.initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
     this.deposit = ethers.utils.parseEther('100')
     // For porotocols where there is a tax to stake
@@ -144,6 +146,7 @@ describe('Matic Integration Test', () => {
   })
 
   // Run tests
+  describe('Initial State', initialStateTests.bind(this))
   describe('Deposit', depositTests.bind(this))
   describe('Stake', stakeTests.bind(this))
 
