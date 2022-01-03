@@ -102,18 +102,13 @@ export function userBasedUnlockByGov () {
 
     it('Gov unbond() succeeds', async () => {
       const stakedBefore = await ctx.StakingContract.staked()
-      console.log('stakedBefore', ethers.utils.formatEther(stakedBefore))
       const cpBefore = await ctx.Tenderizer.totalStakedTokens()
-      console.log('cpBefore', ethers.utils.formatEther(cpBefore))
       tx = await ctx.Tenderizer.unstake(govWithdrawAmount)
       expect(stakedBefore.sub(govWithdrawAmount)).to.eq(await ctx.StakingContract.staked())
       expect(cpBefore.sub(govWithdrawAmount)).to.eq(await ctx.Tenderizer.totalStakedTokens())
     })
 
     it('TenderToken balance of other account halves', async () => {
-      console.log(ethers.utils.formatEther(poolBalBefore), ethers.utils.formatEther(await ctx.TenderToken.balanceOf(ctx.TenderSwap.address)))
-      console.log(ethers.utils.formatEther(await ctx.Tenderizer.totalStakedTokens()))
-
       expect(await ctx.TenderToken.balanceOf(ctx.signers[2].address))
         .to.eq(otherAccBalBefore.div(2))
     })

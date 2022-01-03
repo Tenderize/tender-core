@@ -13,8 +13,6 @@ import "./ILivepeer.sol";
 import '../../../interfaces/IWETH.sol';
 import '../../../interfaces/ISwapRouter.sol';
 
-import "hardhat/console.sol";
-
 contract Livepeer is Tenderizer {
     uint256 private constant MAX_ROUND = 2**256 - 1;
 

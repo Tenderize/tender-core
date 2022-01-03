@@ -9,7 +9,6 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./ITenderizer.sol";
 import "../token/ITenderToken.sol";
 import "../tenderswap/ITenderSwap.sol";
-import "hardhat/console.sol";
 import "../libs/MathUtils.sol";
 
 
@@ -278,14 +277,10 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         // adjust current token balance for potential protocol specific taxes or staking fees
         uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)));
 
-        console.log("staked including rewards %s", _newStake / 1e9);
-        console.log("current balance normalised %s", currentBal / 1e9);
-
         // calculate what the new currentPrinciple would be after the call
         // but excluding fees from rewards for this rebase
         // which still need to be calculated if stake >= currentPrincipal
         uint256 stake = _newStake + currentBal - pendingFees - pendingLiquidityFees;
-        console.log("new principal excluding fees %s", stake / 1e9);
 
         // Difference is negative, no rewards have been earnt
         // So no fees are charged
@@ -313,8 +308,6 @@ abstract contract Tenderizer is Initializable, ITenderizer {
 
         stake = stake - fees - liquidityFees;
         currentPrincipal = stake;
-
-        console.log("new principal with fees %s", stake / 1e9);
 
         emit RewardsClaimed(
             int256(stake - currentPrincipal_),

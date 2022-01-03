@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "../libs/MathUtils.sol";
 import "../token/ITenderToken.sol";
 import "./ITenderFarm.sol";
+import "../tenderizer/ITenderizer.sol";
 
 /**
  * @title TenderFarm
@@ -28,9 +29,9 @@ contract TenderFarm is Initializable, ITenderFarm {
     ITenderToken public rewardToken;
 
     /**
-     * @dev Controller.
+     * @dev tenderizer.
      */
-    address public controller;
+    ITenderizer public tenderizer;
 
     /// @inheritdoc ITenderFarm
     uint256 public override totalStake;
@@ -56,15 +57,17 @@ contract TenderFarm is Initializable, ITenderFarm {
     function initialize(
         IERC20 _stakeToken,
         ITenderToken _rewardToken,
-        address _controller
-    ) public initializer {
+        ITenderizer _tenderizer
+    ) public override initializer returns (bool) {
         token = _stakeToken;
         rewardToken = _rewardToken;
-        controller = _controller;
+        tenderizer = _tenderizer;
+
+        return true;
     }
 
-    modifier onlyController() {
-        require(msg.sender == controller);
+    modifier onlyTenderizer() {
+        require(msg.sender == address(tenderizer));
         _;
     }
 
@@ -89,7 +92,7 @@ contract TenderFarm is Initializable, ITenderFarm {
     }
 
     /// @inheritdoc ITenderFarm
-    function addRewards(uint256 _amount) public override onlyController {
+    function addRewards(uint256 _amount) public override onlyTenderizer {
         uint256 _nextStake = nextTotalStake;
         require(_nextStake > 0, "NO_STAKE");
         totalStake = _nextStake;
@@ -163,8 +166,7 @@ contract TenderFarm is Initializable, ITenderFarm {
         return stakes[_of].stake;
     }
 
-    function setController(address _controller) external onlyController {
-        require(_controller != address(0), "ZERO_ADDRESS");
-        controller = _controller;
+    function setTenderizer(ITenderizer _tenderizer) external override onlyTenderizer {
+        tenderizer = _tenderizer;
     }
 }

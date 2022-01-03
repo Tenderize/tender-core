@@ -192,7 +192,6 @@ describe('Livepeer Mainnet Fork Test', () => {
 
       before(async function () {
         dyBefore = await TenderSwap.calculateSwap(TenderToken.address, ONE)
-        console.log('dyBefore', dyBefore.toString())
         this.timeout(testTimeout * 10)
         bondingManager = new ethers.Contract(bondingManagerAddr, bondingManagerAbi, ethers.provider)
         roundsManager = new ethers.Contract(roundsManagerAddr, adjustableRoundsManagerAbi, ethers.provider)

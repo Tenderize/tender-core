@@ -10,8 +10,6 @@ import "../../../libs/MathUtils.sol";
 import "../../Tenderizer.sol";
 import "./IAudius.sol";
 
-import "hardhat/console.sol";
-
 contract Audius is Tenderizer {
     IAudius audius;
 

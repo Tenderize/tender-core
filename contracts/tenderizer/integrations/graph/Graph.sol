@@ -10,8 +10,6 @@ import "../../../libs/MathUtils.sol";
 import "../../Tenderizer.sol";
 import "./IGraph.sol";
 
-import "hardhat/console.sol";
-
 contract Graph is Tenderizer {
     // 100% in parts per million
     uint32 private constant MAX_PPM = 1000000;
@@ -105,7 +103,6 @@ contract Graph is Tenderizer {
             uint256 shares = amount * totalShares / totalTokens;
 
             // Shares =  amount * totalShares / totalTokens 
-            console.log("shares %s", shares);
             // undelegate shares
             graph.undelegate(node_, shares);
         } else {
