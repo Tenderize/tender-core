@@ -8,6 +8,9 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
+import {Multicall} from "../helpers/Multicall.sol";
+import {SelfPermit} from "../helpers/SelfPermit.sol";
+
 import "./LiquidityPoolToken.sol";
 import "./SwapUtils.sol";
 import "./ITenderSwap.sol";
@@ -28,7 +31,7 @@ interface IERC20Decimals is IERC20 {
  * as the total supply of the token 'rebases'.
  */
 
-contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSwap {
+contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSwap, Multicall, SelfPermit {
     using SwapUtils for SwapUtils.Amplification;
     using SwapUtils for SwapUtils.PooledToken;
     using SwapUtils for SwapUtils.FeeParams;
