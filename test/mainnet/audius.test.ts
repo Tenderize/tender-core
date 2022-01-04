@@ -1,7 +1,7 @@
 import hre, { ethers } from 'hardhat'
 
 import {
-  Controller, TenderToken, IAudius, Audius, ERC20, TenderFarm, TenderSwap, LiquidityPoolToken
+  TenderToken, IAudius, Audius, ERC20, TenderFarm, TenderSwap, LiquidityPoolToken
 } from '../../typechain'
 
 import claimsManagerAbi from './abis/audius/ClaimsManager.json'
@@ -27,7 +27,6 @@ const {
 describe('Audius Mainnet Fork Test', () => {
   let AudiusStaking: IAudius
   let AudiusToken: ERC20
-  let Controller: Controller
   let Tenderizer: Audius
   let TenderToken: TenderToken
   let TenderSwap: TenderSwap
@@ -77,7 +76,7 @@ describe('Audius Mainnet Fork Test', () => {
       method: 'hardhat_reset',
       params: [{
         forking: {
-          jsonRpcUrl: process.env.ALCHEMY_URL || 'https://eth-mainnet.alchemyapi.io/v2/s93KFT7TnttkCPdNS2Fg_HAoCpP6dEda'
+          jsonRpcUrl: process.env.ALCHEMY_URL || 'https://eth-mainnet.alchemyapi.io/v2/_zIq0VgpYJ8sVLCgsOhsOxD_-HTMPOA6'
         }
       }]
     })
@@ -112,23 +111,17 @@ describe('Audius Mainnet Fork Test', () => {
     Audius = await hre.deployments.fixture(['Audius'], {
       keepExistingDeployments: false
     })
-    Controller = (await ethers.getContractAt('Controller', Audius.Controller.address)) as Controller
     Tenderizer = (await ethers.getContractAt('Audius', Audius.Audius.address)) as Audius
-    TenderToken = (await ethers.getContractAt('TenderToken', await Controller.tenderToken())) as TenderToken
-    TenderSwap = (await ethers.getContractAt('TenderSwap', await Controller.tenderSwap())) as TenderSwap
-    TenderFarm = (await ethers.getContractAt('TenderFarm', Audius.TenderFarm.address)) as TenderFarm
+    TenderToken = (await ethers.getContractAt('TenderToken', await Tenderizer.tenderToken())) as TenderToken
+    TenderSwap = (await ethers.getContractAt('TenderSwap', await Tenderizer.tenderSwap())) as TenderSwap
+    TenderFarm = (await ethers.getContractAt('TenderFarm', await Tenderizer.tenderFarm())) as TenderFarm
     LpToken = (await ethers.getContractAt('LiquidityPoolToken', await TenderSwap.lpToken())) as LiquidityPoolToken
-    await Controller.batchExecute(
-      [Tenderizer.address, Tenderizer.address],
-      [0, 0],
-      [Tenderizer.interface.encodeFunctionData('setProtocolFee', [protocolFeesPercent]),
-        Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent])]
-    )
+    await Tenderizer.setProtocolFee(protocolFeesPercent)
+    await Tenderizer.setLiquidityFee(liquidityFeesPercent)
 
     // Deposit initial stake
-    await AudiusToken.approve(Controller.address, initialStake)
-    await Controller.deposit(initialStake, { gasLimit: 500000 })
-    await Controller.gulp()
+    await AudiusToken.approve(Tenderizer.address, initialStake)
+    await Tenderizer.deposit(initialStake, { gasLimit: 500000 })
     // Add initial liquidity
     await AudiusToken.approve(TenderSwap.address, initialStake)
     await TenderToken.approve(TenderSwap.address, initialStake)
@@ -146,13 +139,13 @@ describe('Audius Mainnet Fork Test', () => {
 
   describe('deposit', () => {
     it('reverts because transfer amount exceeds allowance', async () => {
-      await expect(Controller.deposit(deposit)).to.be.reverted
+      await expect(Tenderizer.deposit(deposit)).to.be.reverted
     })
 
     describe('deposits funds succesfully', async () => {
       before(async () => {
-        await AudiusToken.approve(Controller.address, deposit)
-        tx = await Controller.deposit(deposit)
+        await AudiusToken.approve(Tenderizer.address, deposit)
+        tx = await Tenderizer.deposit(deposit)
       })
 
       it('increases TenderToken supply', async () => {
@@ -175,8 +168,7 @@ describe('Audius Mainnet Fork Test', () => {
 
   describe('stake', () => {
     before(async () => {
-      tx = await Controller.gulp()
-      await tx.wait()
+      tx = await Tenderizer.claimRewards()
     })
 
     it('bond succeeds', async () => {
@@ -184,7 +176,7 @@ describe('Audius Mainnet Fork Test', () => {
     })
 
     it('emits Stake event from tenderizer', async () => {
-      expect(tx).to.emit(Tenderizer, 'Stake').withArgs(NODE, deposit)
+      expect(tx).to.emit(Tenderizer, 'Stake').withArgs(NODE, deposit.add(initialStake))
     })
   })
 
@@ -220,7 +212,7 @@ describe('Audius Mainnet Fork Test', () => {
         const nodeSigner = await ethers.provider.getSigner(NODE)
         await claimsManager.connect(nodeSigner).initiateRound()
 
-        tx = await Controller.rebase()
+        tx = await Tenderizer.claimRewards()
         const stakeAfter = await AudiusStaking.getTotalDelegatorStake(Tenderizer.address)
         increase = stakeAfter.sub(stakeBefore)
         liquidityFees = percOf2(increase, liquidityFeesPercent)
@@ -250,13 +242,13 @@ describe('Audius Mainnet Fork Test', () => {
         expect(await AudiusToken.balanceOf(TenderSwap.address)).to.eq(initialStake)
       })
 
-      it('tenderToken price slightly decreases vs underlying', async () => {
+      it('tenderToken price slightly increases vs underlying', async () => {
         expect(await TenderSwap.calculateSwap(TenderToken.address, ONE)).to.be.lt(dyBefore)
       })
 
       it('should emit RewardsClaimed event from Tenderizer', async () => {
         expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
-          .withArgs(increase, newStakeMinusFees, deposit.add(initialStake))
+          .withArgs(increase.sub(liquidityFees.add(protocolFees)), newStakeMinusFees, deposit.add(initialStake))
       })
     })
 
@@ -275,8 +267,8 @@ describe('Audius Mainnet Fork Test', () => {
       before(async function () {
         dyBefore = await TenderSwap.calculateSwap(TenderToken.address, ONE)
         this.timeout(testTimeout)
-        feesBefore = await Tenderizer.pendingFees()
-        oldPrinciple = await Tenderizer.currentPrincipal()
+        feesBefore = (await Tenderizer.pendingFees()).add(await Tenderizer.pendingLiquidityFees())
+        oldPrinciple = (await AudiusStaking.getTotalDelegatorStake(Tenderizer.address)).sub(feesBefore)
 
         // Impersonate guardian and slash NODE
         await hre.network.provider.request({
@@ -297,7 +289,7 @@ describe('Audius Mainnet Fork Test', () => {
         newStake = await AudiusStaking.getTotalDelegatorStake(Tenderizer.address)
         // Subtract protocol fees from last +ve rebase
         newStake = newStake.sub(liquidityFees.add(protocolFees))
-        tx = await Controller.rebase()
+        tx = await Tenderizer.claimRewards()
       })
 
       it('updates currentPrincipal', async () => {
@@ -312,7 +304,7 @@ describe('Audius Mainnet Fork Test', () => {
       })
 
       it("doesn't increase pending fees", async () => {
-        expect(await Tenderizer.pendingFees()).to.eq(feesBefore)
+        expect((await Tenderizer.pendingFees()).add(await Tenderizer.pendingLiquidityFees())).to.eq(feesBefore)
       })
 
       it('decreases the tenderToken balance of the AMM', async () => {
@@ -324,12 +316,12 @@ describe('Audius Mainnet Fork Test', () => {
         expect(await AudiusToken.balanceOf(TenderSwap.address)).to.eq(initialStake)
       })
 
-      it('price of the TenderTokens increases vs the underlying', async () => {
+      it('price of the TenderTokens decreases vs the underlying', async () => {
         expect(await TenderSwap.calculateSwap(AudiusToken.address, ONE)).to.be.gt(dyBefore)
       })
 
       it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
-        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs('0', newStake, oldPrinciple)
+        expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs(newStake.sub(oldPrinciple), newStake, oldPrinciple)
       })
     })
   })
@@ -345,7 +337,7 @@ describe('Audius Mainnet Fork Test', () => {
       fees = await Tenderizer.pendingFees()
       ownerBalBefore = await TenderToken.balanceOf(deployer)
       otherAccBalBefore = await TenderToken.balanceOf(otherAcc.address)
-      tx = await Controller.collectFees()
+      tx = await Tenderizer.collectFees()
     })
 
     it('should reset pendingFees', async () => {
@@ -377,7 +369,7 @@ describe('Audius Mainnet Fork Test', () => {
       fees = await Tenderizer.pendingLiquidityFees()
       farmBalanceBefore = await TenderToken.balanceOf(TenderFarm.address)
       otherAccBalBefore = await TenderToken.balanceOf(otherAcc.address)
-      tx = await Controller.collectLiquidityFees()
+      tx = await Tenderizer.collectLiquidityFees()
     })
 
     it('should reset pendingFees', async () => {
@@ -418,15 +410,20 @@ describe('Audius Mainnet Fork Test', () => {
   })
 
   describe('unlock', () => {
+    before('transfer tenderTokens from gov', async () => {
+      await TenderToken.transfer(signers[2].address,
+        await TenderToken.balanceOf(deployer))
+    })
+
     describe('user unlock', async () => {
       it('reverts if user does not have enough tender token balance', async () => {
-        withdrawAmount = await TenderToken.balanceOf(deployer)
-        await expect(Controller.unlock(withdrawAmount.add(ethers.utils.parseEther('1')))).to.be.revertedWith('BURN_AMOUNT_EXCEEDS_BALANCE')
+        withdrawAmount = await TenderToken.balanceOf(signers[2].address)
+        await expect(Tenderizer.connect(signers[2]).unstake(withdrawAmount.add(ethers.utils.parseEther('1')))).to.be.revertedWith('BURN_AMOUNT_EXCEEDS_BALANCE')
       })
 
       it('on success - updates current pricinple', async () => {
         const principleBefore = await Tenderizer.currentPrincipal()
-        tx = await Controller.unlock(withdrawAmount)
+        tx = await Tenderizer.connect(signers[2]).unstake(withdrawAmount)
         expect(await Tenderizer.currentPrincipal()).to.eq(principleBefore.sub(withdrawAmount))
       })
 
@@ -437,20 +434,18 @@ describe('Audius Mainnet Fork Test', () => {
 
       it('should create unstakeLock', async () => {
         const lock = await Tenderizer.unstakeLocks(unbondLockID)
-        expect(lock.account).to.eq(deployer)
+        expect(lock.account).to.eq(signers[2].address)
         expect(lock.amount.sub(withdrawAmount).abs()).to.lte(acceptableDelta)
       })
 
       it('should emit Unstake event from Tenderizer', async () => {
-        expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(deployer, NODE, withdrawAmount, unbondLockID)
+        expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(signers[2].address, NODE, withdrawAmount, unbondLockID)
       })
     })
 
     describe('gov unlock', async () => {
       before(async () => {
-        const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('unstake',
-          [Controller.address, ethers.utils.parseEther('0')]))
-        tx = await Controller.execute(Tenderizer.address, 0, txData)
+        tx = await Tenderizer.unstake(ethers.utils.parseEther('0'))
       })
 
       it('requestUndelegateStake() suceeds - event emitted', async () => {
@@ -460,7 +455,7 @@ describe('Audius Mainnet Fork Test', () => {
       })
 
       it('should emit Unstake event from Tenderizer', async () => {
-        expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(Controller.address, NODE, withdrawAmount, govUnboundLockID)
+        expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(deployer, NODE, withdrawAmount, govUnboundLockID)
       })
     })
   })
@@ -468,9 +463,7 @@ describe('Audius Mainnet Fork Test', () => {
   describe('withdraw', () => {
     describe('gov withdrawal', async () => {
       it('reverts if undelegateStake() reverts - lockup pending', async () => {
-        const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('withdraw',
-          [Controller.address, govUnboundLockID]))
-        await expect(Controller.execute(Tenderizer.address, 0, txData)).to.be.reverted
+        await expect(Tenderizer.withdraw(govUnboundLockID)).to.be.reverted
       })
 
       it('undelegateStake() succeeds', async () => {
@@ -478,27 +471,25 @@ describe('Audius Mainnet Fork Test', () => {
         for (let j = 0; j < 46523; j++) {
           await hre.ethers.provider.send('evm_mine', [])
         }
-        const txData = ethers.utils.arrayify(Tenderizer.interface.encodeFunctionData('withdraw',
-          [Controller.address, govUnboundLockID]))
-        tx = await Controller.execute(Tenderizer.address, 0, txData)
+        tx = await Tenderizer.withdraw(govUnboundLockID)
       }).timeout(testTimeout * 10)
 
       it('should emit Withdraw event from Tenderizer', async () => {
-        expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(Controller.address, withdrawAmount, govUnboundLockID)
+        expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(deployer, withdrawAmount, govUnboundLockID)
       })
     })
 
     describe('user withdrawal', async () => {
       let AUDIOBalanceBefore : BigNumber
       it('reverts if account mismatch from unboondigLock', async () => {
-        await expect(Controller.connect(signers[1]).withdraw(unbondLockID))
+        await expect(Tenderizer.connect(signers[1]).withdraw(unbondLockID))
           .to.be.revertedWith('ACCOUNT_MISTMATCH')
       })
 
       it('success - increases AUDIO balance', async () => {
-        AUDIOBalanceBefore = await AudiusToken.balanceOf(deployer)
-        tx = await Controller.withdraw(unbondLockID)
-        expect(await AudiusToken.balanceOf(deployer)).to.eq(AUDIOBalanceBefore.add(withdrawAmount))
+        AUDIOBalanceBefore = await AudiusToken.balanceOf(signers[2].address)
+        tx = await Tenderizer.connect(signers[2]).withdraw(unbondLockID)
+        expect(await AudiusToken.balanceOf(signers[2].address)).to.eq(AUDIOBalanceBefore.add(withdrawAmount))
       })
 
       it('should delete unstakeLock', async () => {
@@ -508,7 +499,7 @@ describe('Audius Mainnet Fork Test', () => {
       })
 
       it('should emit Withdraw event from Tenderizer', async () => {
-        expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(deployer, withdrawAmount, unbondLockID)
+        expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(signers[2].address, withdrawAmount, unbondLockID)
       })
     })
   })

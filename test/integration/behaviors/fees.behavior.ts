@@ -16,7 +16,7 @@ export function protocolFeeTests () {
     fees = await ctx.Tenderizer.pendingFees()
     ownerBalBefore = await ctx.TenderToken.balanceOf(ctx.deployer)
     otherAccBalBefore = await ctx.TenderToken.balanceOf(ctx.signers[2].address)
-    tx = await ctx.Controller.collectFees()
+    tx = await ctx.Tenderizer.collectFees()
     await tx.wait()
   })
 
@@ -50,7 +50,7 @@ export function liquidityFeeTests () {
     fees = await ctx.Tenderizer.pendingLiquidityFees()
     farmBalanceBefore = await ctx.TenderToken.balanceOf(ctx.TenderFarm.address)
     acc0BalBefore = await ctx.TenderToken.balanceOf(ctx.deployer)
-    tx = await ctx.Controller.collectLiquidityFees()
+    tx = await ctx.Tenderizer.collectLiquidityFees()
     await tx.wait()
   })
 

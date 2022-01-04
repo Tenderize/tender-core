@@ -1,11 +1,11 @@
 import { ethers } from 'hardhat'
 import { BigNumber, Transaction } from 'ethers/lib/ethers'
 import { expect } from 'chai'
+import { getSighash } from '../../util/helpers'
 
 export default function suite () {
   let tx: Transaction
   let ctx: any
-  let steakBalBefore : BigNumber
   let withdrawAmount : BigNumber
 
   before(async function () {
@@ -13,26 +13,19 @@ export default function suite () {
   })
 
   it('reverts if wihtdraw() reverts', async () => {
-    ctx.withdrawMock.function.will.revert()
-    await expect(ctx.Controller.withdraw(ctx.lockID)).to.be.reverted
+    await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.withdrawStake), true)
+    await expect(ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.lockID)).to.be.reverted
+    await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.withdrawStake), false)
   })
 
   it('withdraw() succeeds', async () => {
-    ctx.withdrawMock.function.will.return()
-    // Smocked doesn't actually execute transactions, so balance of Controller is not updated
-    // hence manually transferring some tokens to simlaute withdrawal
     const lock = await ctx.Tenderizer.unstakeLocks(ctx.lockID)
     withdrawAmount = lock.amount
-    await ctx.Steak.transfer(ctx.Tenderizer.address, withdrawAmount)
-    steakBalBefore = await ctx.Steak.balanceOf(ctx.deployer)
-
-    tx = await ctx.Controller.withdraw(ctx.lockID)
-    expect(ctx.withdrawMock.function.calls.length).to.eq(1)
+    tx = await (ctx.Tenderizer.connect(ctx.signers[2])).withdraw(ctx.lockID)
   })
 
   it('increases Steak balance', async () => {
-    expect(await ctx.Steak.balanceOf(ctx.deployer))
-      .to.eq(steakBalBefore.add(withdrawAmount))
+    expect(await ctx.Steak.balanceOf(ctx.signers[2].address)).to.eq(withdrawAmount)
   })
 
   it('should delete unstakeLock', async () => {
@@ -43,6 +36,6 @@ export default function suite () {
 
   it('should emit Withdraw event from Tenderizer', async () => {
     expect(tx).to.emit(ctx.Tenderizer, 'Withdraw')
-      .withArgs(ctx.deployer, withdrawAmount, ctx.lockID)
+      .withArgs(ctx.signers[2].address, withdrawAmount, ctx.lockID)
   })
 }

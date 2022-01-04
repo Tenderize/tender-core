@@ -10,6 +10,8 @@ import "../../../libs/MathUtils.sol";
 import "../../Tenderizer.sol";
 import "./IMatic.sol";
 
+import {ITenderSwapFactory} from "../../../tenderswap/TenderSwapFactory.sol";
+
 contract Matic is Tenderizer {
     // Matic exchange rate precision
     uint256 constant EXCHANGE_RATE_PRECISION = 100; // For Validator ID < 8
@@ -23,26 +25,37 @@ contract Matic is Tenderizer {
 
     function initialize(
         IERC20 _steak,
+        string calldata _symbol,
         address _matic,
-        address _node
+        address _node,
+        uint256 _protocolFee,
+        uint256 _liquidityFee,
+        ITenderToken _tenderTokenTarget,
+        TenderFarmFactory _tenderFarmFactory,
+        ITenderSwapFactory _tenderSwapFactory
     ) public {
-        Tenderizer._initialize(_steak, _node, msg.sender);
+        Tenderizer._initialize(
+            _steak,
+            _symbol,
+            _node,
+            _protocolFee,
+            _liquidityFee,
+            _tenderTokenTarget,
+            _tenderFarmFactory,
+            _tenderSwapFactory
+        );
         maticStakeManager = _matic;
         matic = IMatic(_node);
     }
 
-    function setNode(address _node) external override onlyController {
+    function setNode(address _node) external override onlyGov {
         require(_node != address(0), "ZERO_ADDRESS");
         node = _node;
         matic = IMatic(_node);
 
         emit GovernanceUpdate("NODE");
     }
-
-    function calcDepositOut(uint256 amountIn) public pure override returns (uint256){
-        return amountIn;
-    }
-
+    
     function _deposit(address _from, uint256 _amount) internal override{
         currentPrincipal += _amount;
 
@@ -52,13 +65,15 @@ contract Matic is Tenderizer {
     function _stake(address _node, uint256 _amount) internal override {
         // if no amount is specified, stake all available tokens
         uint256 amount = _amount;
-        if (amount == 0) {
-            amount = IERC20(steak).balanceOf(address(this));
-        }
 
         if (amount == 0) {
             return;
             // TODO: revert ?
+        }
+
+        // if no _node is specified, return
+        if (_node == address(0)) {
+            return;
         }
 
         // use default validator share contract if _node isn't specified
@@ -85,16 +100,13 @@ contract Matic is Tenderizer {
         uint256 amount = _amount;
 
         // use default validator share contract if _node isn't specified
-        IMatic matic_ = matic;
-        if (_node != address(0)) {
-            matic_ = IMatic(_node);
-        }
+        IMatic matic_ = IMatic(_node);
 
         uint256 exhangeRatePrecision = _getExchangeRatePrecision(matic_);
         uint256 fxRate = _getExchangeRate(matic_);
 
         // Sanity check. Controller already checks user deposits and withdrawals > 0
-        if (_account != controller) require(amount > 0, "ZERO_AMOUNT");
+        if (_account != gov) require(amount > 0, "ZERO_AMOUNT");
         if (amount == 0) {
             uint256 shares = matic_.balanceOf(address(this));
             amount = (shares * fxRate) / exhangeRatePrecision;
@@ -138,34 +150,12 @@ contract Matic is Tenderizer {
 
     function _claimRewards() internal override {
         // restake to compound rewards
-
         try matic.restake() {} catch {}
 
-        // calculate rewards and fees
-        uint256 rewards;
-        uint256 stake;
-
         uint256 shares = matic.balanceOf(address(this));
-        stake = (shares * _getExchangeRate(matic)) / _getExchangeRatePrecision(matic);
+        uint256 stake = (shares * _getExchangeRate(matic)) / _getExchangeRatePrecision(matic);
 
-        uint256 currentPrincipal_ = currentPrincipal;
-
-        if (stake >= currentPrincipal_) {
-            rewards = stake - currentPrincipal_ - pendingFees - pendingLiquidityFees;
-        }
-        // Substract protocol fee amount and add it to pendingFees
-        uint256 _pendingFees = pendingFees + MathUtils.percOf(rewards, protocolFee);
-        pendingFees = _pendingFees;
-        uint256 _liquidityFees = pendingLiquidityFees + MathUtils.percOf(rewards, liquidityFee);
-        pendingLiquidityFees = _liquidityFees;
-        // Add current pending stake minus fees and set it as current principal
-        currentPrincipal = stake - _pendingFees - _liquidityFees;
-
-        emit RewardsClaimed(rewards, currentPrincipal, currentPrincipal_);
-    }
-
-    function _totalStakedTokens() internal view override returns (uint256) {
-        return currentPrincipal;
+        Tenderizer._processNewStake(stake);
     }
 
     function _setStakingContract(address _stakingContract) internal override {

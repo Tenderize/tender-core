@@ -10,6 +10,8 @@ import "../../../libs/MathUtils.sol";
 import "../../Tenderizer.sol";
 import "./IAudius.sol";
 
+import {ITenderSwapFactory} from "../../../tenderswap/TenderSwapFactory.sol";
+
 contract Audius is Tenderizer {
     IAudius audius;
 
@@ -24,16 +26,27 @@ contract Audius is Tenderizer {
 
     function initialize(
         IERC20 _steak,
+        string calldata _symbol,
         IAudius _audius,
-        address _node
+        address _node,
+        uint256 _protocolFee,
+        uint256 _liquidityFee,
+        ITenderToken _tenderTokenTarget,
+        TenderFarmFactory _tenderFarmFactory,
+        ITenderSwapFactory _tenderSwapFactory
     ) public {
-        Tenderizer._initialize(_steak, _node, msg.sender);
+        Tenderizer._initialize(
+            _steak,
+            _symbol,
+            _node,
+            _protocolFee,
+            _liquidityFee,
+            _tenderTokenTarget,
+            _tenderFarmFactory,
+            _tenderSwapFactory
+        );
         audius = _audius;
         audiusStaking = audius.getStakingAddress();
-    }
-
-    function calcDepositOut(uint256 amountIn) public pure override returns (uint256){
-        return amountIn;
     }
 
     function _deposit(address _from, uint256 _amount) internal override{
@@ -45,28 +58,24 @@ contract Audius is Tenderizer {
     function _stake(address _node, uint256 _amount) internal override {
         // if no amount is specified, stake all available tokens
         uint256 amount = _amount;
-        if (amount == 0) {
-            amount = IERC20(steak).balanceOf(address(this));
-        }
 
         if (amount == 0) {
             return;
             // TODO: revert ?
         }
 
-        // if no _node is specified, stake towards the default node
-        address node_ = _node;
-        if (node_ == ZERO_ADDRESS) {
-            node_ = node;
+        // if no _node is specified, return
+        if (_node == address(0)) {
+            return;
         }
 
         // Approve amount to Audius protocol
         steak.approve(audiusStaking, amount);
 
         // stake tokens
-        audius.delegateStake(node_, amount);
+        audius.delegateStake(_node, amount);
 
-        emit Stake(node_, amount);
+        emit Stake(_node, amount);
     }
 
     function _unstake(
@@ -77,14 +86,8 @@ contract Audius is Tenderizer {
         uint256 amount = _amount;
         unstakeLockID = nextUnstakeLockID;
 
-        // if no _node is specified, stake towards the default node
-        address node_ = _node;
-        if (node_ == ZERO_ADDRESS) {
-            node_ = node;
-        }
-
         // If caller is controller, process all user unstake requests
-        if (_caller == controller) {
+        if (_caller == gov) {
             // Check that no governance unstake is pending
             require(governancePendingUnstakeLockID == governanceLastProcessedUnstakeLockID, "GOV_WITHDRAW_PENDING");
 
@@ -93,7 +96,7 @@ contract Audius is Tenderizer {
             governancePendingUnstakeLockID = unstakeLockID;
 
             // Undelegate from audius
-            audius.requestUndelegateStake(node_, amount);
+            audius.requestUndelegateStake(_node, amount);
         } else {
             // Caller is a user, initialise unstake locally in Tenderizer
             require(amount > 0, "ZERO_AMOUNT");
@@ -105,7 +108,7 @@ contract Audius is Tenderizer {
         nextUnstakeLockID = unstakeLockID + 1;
         unstakeLocks[unstakeLockID] = UnstakeLock({ amount: amount, account: _caller });
 
-        emit Unstake(_caller, node_, amount, unstakeLockID);
+        emit Unstake(_caller, _node, amount, unstakeLockID);
     }
 
     function _withdraw(address _caller, uint256 _unstakeLockID) internal override {
@@ -120,7 +123,7 @@ contract Audius is Tenderizer {
         require(amount > 0, "ZERO_AMOUNT");
 
         // If caller is controller, process all user unstakes
-        if (_caller == controller) {
+        if (_caller == gov) {
             governanceLastProcessedUnstakeLockID = governancePendingUnstakeLockID;
             // Withdraw from Audius
             audius.undelegateStake();
@@ -136,33 +139,13 @@ contract Audius is Tenderizer {
     }
 
     function _claimRewards() internal override {
-        uint256 currentPrincipal_ = currentPrincipal;
-
         // Process the rewards for the nodes that we have staked to
         try audius.claimRewards(node) {} catch {}
 
         // Get the new total delegator stake
         uint256 stake = audius.getTotalDelegatorStake(address(this));
 
-        uint256 rewards;
-        if (stake >= currentPrincipal_) {
-            rewards = stake - currentPrincipal_ - pendingFees - pendingLiquidityFees;
-        }
-
-        // Substract protocol fee amount and add it to pendingFees
-        uint256 _pendingFees = pendingFees + MathUtils.percOf(rewards, protocolFee);
-        pendingFees = _pendingFees;
-        uint256 _liquidityFees = pendingLiquidityFees + MathUtils.percOf(rewards, liquidityFee);
-        pendingLiquidityFees = _liquidityFees;
-        // Add current pending stake minus fees and set it as current principal
-        uint256 newPrincipal = stake - _pendingFees - _liquidityFees;
-        currentPrincipal = newPrincipal;
-
-        emit RewardsClaimed(rewards, newPrincipal, currentPrincipal_);
-    }
-
-    function _totalStakedTokens() internal view override returns (uint256) {
-        return currentPrincipal;
+        Tenderizer._processNewStake(stake);
     }
 
     function _setStakingContract(address _stakingContract) internal override {

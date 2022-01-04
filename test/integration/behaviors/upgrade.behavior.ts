@@ -16,25 +16,7 @@ export default function suite () {
     beforeBalance = await ctx.Tenderizer.currentPrincipal()
     const newFac = await ethers.getContractFactory(ctx.NAME, ctx.signers[0])
     newTenderizer = await newFac.deploy()
-    await hre.network.provider.request({
-      method: 'hardhat_impersonateAccount',
-      params: [ctx.Controller.address]
-    }
-    )
-
-    const signer = await ethers.provider.getSigner(ctx.Controller.address)
-
-    await hre.network.provider.send('hardhat_setBalance', [
-      ctx.Controller.address,
-        `0x${ethers.utils.parseEther('10')}`
-    ])
-
-    tx = await proxy.connect(signer).upgradeTo(newTenderizer.address)
-
-    await hre.network.provider.request({
-      method: 'hardhat_stopImpersonatingAccount',
-      params: [ctx.Controller.address]
-    })
+    tx = await proxy.upgradeTo(newTenderizer.address)
   })
 
   it('upgrades tenderizer - emits event', async () => {

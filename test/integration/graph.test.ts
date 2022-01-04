@@ -1,9 +1,7 @@
 import hre, { ethers } from 'hardhat'
 
-import { MockContract, smockit } from '@eth-optimism/smock'
-
 import {
-  SimpleToken, Controller, Tenderizer, TenderToken, IGraph, TenderFarm, TenderSwap, LiquidityPoolToken
+  SimpleToken, Tenderizer, TenderToken, TenderFarm, TenderSwap, LiquidityPoolToken, GraphMock
 } from '../../typechain'
 
 import { percOf2 } from '../util/helpers'
@@ -15,6 +13,7 @@ import {
 import { Deployment } from 'hardhat-deploy/dist/types'
 import { BigNumber } from '@ethersproject/bignumber'
 
+import initialStateTests from './behaviors/initialState.behavior'
 import depositTests from './behaviors/deposit.behavior'
 import stakeTests from './behaviors/stake.behavior'
 import {
@@ -37,8 +36,7 @@ import { getCurrentBlockTimestamp } from '../util/evm'
 chai.use(solidity)
 
 describe('Graph Integration Test', () => {
-  let GraphNoMock: IGraph
-  let GraphMock: MockContract
+  let GraphMock: GraphMock
 
   let Graph: {[name: string]: Deployment}
 
@@ -67,10 +65,8 @@ describe('Graph Integration Test', () => {
       this.signers[0]
     )
 
-    GraphNoMock = (await GraphFac.deploy(this.Steak.address)) as IGraph
-    this.StakingContractNoMock = GraphNoMock
-
-    GraphMock = await smockit(GraphNoMock)
+    GraphMock = (await GraphFac.deploy(this.Steak.address)) as GraphMock
+    this.StakingContract = GraphMock
   })
 
   const STEAK_AMOUNT = '100000'
@@ -84,7 +80,14 @@ describe('Graph Integration Test', () => {
     process.env.VALIDATOR = this.NODE
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
 
+    this.methods = {
+      stake: 'delegate',
+      unstake: 'undelegate',
+      withdrawStake: 'withdrawDelegated'
+    }
+
     this.NAME = process.env.NAME
+    this.SYMBOL = process.env.SYMBOL
     this.initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
     this.deposit = ethers.utils.parseEther('100')
 
@@ -94,28 +97,24 @@ describe('Graph Integration Test', () => {
     this.DELEGATION_TAX = BigNumber.from(5000)
     this.MAX_PPM = BigNumber.from(1000000)
 
-    GraphMock.smocked.delegationTaxPercentage.will.return.with(this.DELEGATION_TAX)
     Graph = await hre.deployments.fixture(['Graph'], {
       keepExistingDeployments: false
     })
-    this.Controller = (await ethers.getContractAt('Controller', Graph.Controller.address)) as Controller
     this.Tenderizer = (await ethers.getContractAt('Tenderizer', Graph.Graph.address)) as Tenderizer
     this.TenderizerImpl = (await ethers.getContractAt('Tenderizer', Graph.Graph_Implementation.address)) as Tenderizer
-    this.TenderToken = (await ethers.getContractAt('TenderToken', await this.Controller.tenderToken())) as TenderToken
-    this.TenderSwap = (await ethers.getContractAt('TenderSwap', await this.Controller.tenderSwap())) as TenderSwap
-    this.TenderFarm = (await ethers.getContractAt('TenderFarm', Graph.TenderFarm.address)) as TenderFarm
+    this.TenderToken = (await ethers.getContractAt('TenderToken', await this.Tenderizer.tenderToken())) as TenderToken
+    this.TenderSwap = (await ethers.getContractAt('TenderSwap', await this.Tenderizer.tenderSwap())) as TenderSwap
+    this.TenderFarm = (await ethers.getContractAt('TenderFarm', await this.Tenderizer.tenderFarm())) as TenderFarm
     this.LpToken = (await ethers.getContractAt('LiquidityPoolToken', await this.TenderSwap.lpToken())) as LiquidityPoolToken
-    await this.Controller.batchExecute(
-      [this.Tenderizer.address, this.Tenderizer.address],
-      [0, 0],
-      [this.Tenderizer.interface.encodeFunctionData('setProtocolFee', [protocolFeesPercent]),
-        this.Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent])]
-    )
+
+    // Set contract variables
+    await this.Tenderizer.setProtocolFee(protocolFeesPercent)
+    await this.Tenderizer.setLiquidityFee(liquidityFeesPercent)
 
     // Deposit initial stake
-    await this.Steak.approve(this.Controller.address, this.initialStake)
-    await this.Controller.deposit(this.initialStake)
-    await this.Controller.gulp()
+    await this.Steak.approve(this.Tenderizer.address, this.initialStake)
+    await this.Tenderizer.deposit(this.initialStake)
+    // await this.Tenderizer.claimRewards()
     // Add initial liquidity
     const tokensAfterTax = this.initialStake.sub(this.initialStake.mul(this.DELEGATION_TAX).div(this.MAX_PPM))
     await this.Steak.approve(this.TenderSwap.address, tokensAfterTax)
@@ -128,28 +127,10 @@ describe('Graph Integration Test', () => {
     await this.LpToken.approve(this.TenderFarm.address, lpTokensOut)
     await this.TenderFarm.farm(lpTokensOut)
     console.log('farmed LP tokens')
-
-    // Setup Mocks for assertions
-    // Note: Mocks not needed for assertions can be set in before hooks here
-    this.stakeMock = {}
-    this.stakeMock.function = GraphMock.smocked.delegate
-    // TODO: Use name everywhere and just pass entire GraphMock.smocked
-    this.stakeMock.functionName = 'delegate'
-    this.stakeMock.nodeParam = '_indexer'
-    this.stakeMock.amountParam = '_tokens'
-
-    this.withdrawRewardsMock = null // No need to withdraw with Graph
-
-    this.unbondMock = {}
-    this.unbondMock.function = GraphMock.smocked.undelegate
-    this.unbondMock.nodeParam = '_indexer'
-    this.unbondMock.amountParam = '_shares'
-
-    this.withdrawMock = {}
-    this.withdrawMock.function = GraphMock.smocked.withdrawDelegated
   })
 
   // Run tests
+  describe('Initial State', initialStateTests.bind(this))
   describe('Deposit', depositTests.bind(this))
   describe('Stake', stakeTests.bind(this))
 
@@ -159,26 +140,20 @@ describe('Graph Integration Test', () => {
   describe('Rebases', async function () {
     context('Positive Rebase', async function () {
       before(async function () {
-        this.increase = ethers.BigNumber.from('10000000000')
+        this.increase = ethers.utils.parseEther('10')
         liquidityFees = percOf2(this.increase, liquidityFeesPercent)
         protocolFees = percOf2(this.increase, protocolFeesPercent)
         newStake = this.deposit.add(this.initialStake)
           .sub(this.deposit.add(this.initialStake).mul(this.DELEGATION_TAX).div(this.MAX_PPM))
           .add(this.increase)
         this.newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
-        GraphMock.smocked.getDelegation.will.return.with({
-          shares: 100,
-          tokensLocked: 0,
-          tokensLockedUntil: 0
-        })
-        GraphMock.smocked.delegationPools.will.return.with({
-          tokens: newStake,
-          shares: 100,
-          cooldownBlocks: 0,
-          indexingRewardCut: 0,
-          queryFeeCut: 0,
-          updatedAtBlock: 0
-        })
+
+        // set increase on mock
+        await this.StakingContract.setStaked(this.increase.add(await this.StakingContract.staked()))
+
+        // With mock values set correctly, adjust increase with fees
+        // for assertions
+        this.increase = this.increase.sub(protocolFees.add(liquidityFees))
       })
       describe('Stake increases', stakeIncreaseTests.bind(this))
     })
@@ -192,22 +167,13 @@ describe('Graph Integration Test', () => {
 
     context('Negative Rebase', async function () {
       before(async function () {
-        const reducedStake = this.deposit.add(this.initialStake)
-          .sub(this.deposit.add(this.initialStake).mul(this.DELEGATION_TAX).div(this.MAX_PPM))
+        const stake = await this.StakingContract.staked()
+        this.decrease = ethers.utils.parseEther('10')
+        // reduced stake is current stake - 100 from rewards previously
+        const reducedStake = stake.sub(this.decrease)
         this.expectedCP = reducedStake.sub(liquidityFees).sub(protocolFees)
-        GraphMock.smocked.getDelegation.will.return.with({
-          shares: 100,
-          tokensLocked: 0,
-          tokensLockedUntil: 0
-        })
-        GraphMock.smocked.delegationPools.will.return.with({
-          tokens: reducedStake,
-          shares: 100,
-          cooldownBlocks: 0,
-          indexingRewardCut: 0,
-          queryFeeCut: 0,
-          updatedAtBlock: 0
-        })
+        // reduce staked on mock
+        await this.StakingContract.setStaked(reducedStake)
       })
       describe('Stake decreases', stakeDecreaseTests.bind(this))
     })
@@ -220,19 +186,9 @@ describe('Graph Integration Test', () => {
   describe('Unlock and Withdraw', async function () {
     before(async function () {
       this.withdrawAmount = await this.TenderToken.balanceOf(this.deployer)
-      GraphMock.smocked.getDelegation.will.return.with({
-        shares: 100,
-        tokensLocked: 0,
-        tokensLockedUntil: 0
-      })
-      GraphMock.smocked.delegationPools.will.return.with({
-        tokens: 100, // TODO: Check this !
-        shares: 100,
-        cooldownBlocks: 0,
-        indexingRewardCut: 0,
-        queryFeeCut: 0,
-        updatedAtBlock: 0
-      })
+      await this.StakingContract.setStaked(
+        await this.Tenderizer.totalStakedTokens()
+      )
     })
     describe('Unstake', unlockTests.bind(this))
     describe('Withdrawl', withdrawTests.bind(this))

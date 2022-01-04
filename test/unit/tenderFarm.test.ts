@@ -670,14 +670,10 @@ describe('TenderFarm', () => {
   })
 
   describe('Setting Controller', () => {
-    it('reverts if Zero address is set', async () => {
-      await expect(tenderFarm.setController(ethers.constants.AddressZero)).to.be.revertedWith('ZERO_ADDRESS')
-    })
-
     it('sets controller successfully', async () => {
       const newControllerAddr = '0xfA668FB97697200FA56ce98E246db61Cc7E14Bd5' // dummy
-      await tenderFarm.setController(newControllerAddr)
-      expect(await tenderFarm.controller()).to.equal(newControllerAddr)
+      await tenderFarm.setTenderizer(newControllerAddr)
+      expect(await tenderFarm.tenderizer()).to.equal(newControllerAddr)
     })
   })
 })

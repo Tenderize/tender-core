@@ -1,7 +1,6 @@
 import hre, { ethers } from 'hardhat'
-import { MockContract, smockit } from '@eth-optimism/smock'
 import {
-  SimpleToken, Controller, Tenderizer, TenderToken, IMatic, TenderFarm, TenderSwap, LiquidityPoolToken
+  SimpleToken, Tenderizer, TenderToken, TenderFarm, TenderSwap, LiquidityPoolToken, MaticMock
 } from '../../typechain'
 import chai from 'chai'
 import { solidity } from 'ethereum-waffle'
@@ -9,6 +8,7 @@ import { Deployment } from 'hardhat-deploy/dist/types'
 import { BigNumber } from '@ethersproject/bignumber'
 import { percOf2 } from '../util/helpers'
 
+import initialStateTests from './behaviors/initialState.behavior'
 import depositTests from './behaviors/deposit.behavior'
 import stakeTests from './behaviors/stake.behavior'
 import {
@@ -35,8 +35,7 @@ import { getCurrentBlockTimestamp } from '../util/evm'
 chai.use(solidity)
 
 describe('Matic Integration Test', () => {
-  let MaticNoMock: IMatic
-  let MaticMock: MockContract
+  let MaticMock: MaticMock
 
   let Matic: {[name: string]: Deployment}
 
@@ -65,9 +64,8 @@ describe('Matic Integration Test', () => {
       this.signers[0]
     )
 
-    MaticNoMock = (await MaticFac.deploy(this.Steak.address)) as IMatic
-    this.StakingContractNoMock = MaticNoMock
-    MaticMock = await smockit(MaticNoMock)
+    MaticMock = (await MaticFac.deploy(this.Steak.address)) as MaticMock
+    this.StakingContract = MaticMock
 
     this.NODE = MaticMock.address
   })
@@ -78,10 +76,17 @@ describe('Matic Integration Test', () => {
     process.env.SYMBOL = 'MATIC'
     process.env.VALIDATOR = MaticMock.address
     process.env.TOKEN = this.Steak.address
-    process.env.CONTRACT = '0x0000000000000000000000000000000000000101' // dummy
+    process.env.CONTRACT = MaticMock.address
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
 
+    this.methods = {
+      stake: 'buyVoucher',
+      unstake: 'sellVoucher_new',
+      withdrawStake: 'unstakeClaimTokens_new'
+    }
+
     this.NAME = process.env.NAME
+    this.SYMBOL = process.env.SYMBOL
     this.initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
     this.deposit = ethers.utils.parseEther('100')
     // For porotocols where there is a tax to stake
@@ -93,24 +98,21 @@ describe('Matic Integration Test', () => {
     Matic = await hre.deployments.fixture(['Matic'], {
       keepExistingDeployments: false
     })
-    this.Controller = (await ethers.getContractAt('Controller', Matic.Controller.address)) as Controller
     this.Tenderizer = (await ethers.getContractAt('Tenderizer', Matic.Matic.address)) as Tenderizer
     this.TenderizerImpl = (await ethers.getContractAt('Tenderizer', Matic.Matic_Implementation.address)) as Tenderizer
-    this.TenderToken = (await ethers.getContractAt('TenderToken', await this.Controller.tenderToken())) as TenderToken
-    this.TenderSwap = (await ethers.getContractAt('TenderSwap', await this.Controller.tenderSwap())) as TenderSwap
-    this.TenderFarm = (await ethers.getContractAt('TenderFarm', Matic.TenderFarm.address)) as TenderFarm
+    this.TenderToken = (await ethers.getContractAt('TenderToken', await this.Tenderizer.tenderToken())) as TenderToken
+    this.TenderSwap = (await ethers.getContractAt('TenderSwap', await this.Tenderizer.tenderSwap())) as TenderSwap
+    this.TenderFarm = (await ethers.getContractAt('TenderFarm', await this.Tenderizer.tenderFarm())) as TenderFarm
     this.LpToken = (await ethers.getContractAt('LiquidityPoolToken', await this.TenderSwap.lpToken())) as LiquidityPoolToken
-    await this.Controller.batchExecute(
-      [this.Tenderizer.address, this.Tenderizer.address],
-      [0, 0],
-      [this.Tenderizer.interface.encodeFunctionData('setProtocolFee', [protocolFeesPercent]),
-        this.Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent])]
-    )
+
+    // Set contract variables
+    await this.Tenderizer.setProtocolFee(protocolFeesPercent)
+    await this.Tenderizer.setLiquidityFee(liquidityFeesPercent)
 
     // Deposit initial stake
-    await this.Steak.approve(this.Controller.address, this.initialStake)
-    await this.Controller.deposit(this.initialStake)
-    await this.Controller.gulp()
+    await this.Steak.approve(this.Tenderizer.address, this.initialStake)
+    await this.Tenderizer.deposit(this.initialStake)
+    // await this.Tenderizer.claimRewards()
     // Add initial liquidity
     await this.Steak.approve(this.TenderSwap.address, this.initialStake)
     await this.TenderToken.approve(this.TenderSwap.address, this.initialStake)
@@ -122,31 +124,13 @@ describe('Matic Integration Test', () => {
     await this.TenderFarm.farm(lpTokensOut)
     console.log('farmed LP tokens')
 
-    // Setup Mocks for assertions
-    // Note: Mocks not needed for assertions can be set in before hooks here
-    this.stakeMock = {}
-    this.stakeMock.function = MaticMock.smocked.buyVoucher
-    // TODO: Use name everywhere and just pass entire LivepeerMock.smocked
-    this.stakeMock.functionName = 'buyVoucher'
-    this.stakeMock.amountParam = '_amount'
-
-    this.withdrawRewardsMock = null
-
-    this.unbondMock = {}
-    this.unbondMock.function = MaticMock.smocked.sellVoucher_new
-    this.unbondMock.amountParam = '_claimAmount'
-
-    this.withdrawMock = {}
-    this.withdrawMock.function = MaticMock.smocked.unstakeClaimTokens_new
-
     // Matic specific stuff
     this.exchangeRatePrecision = 100
     this.fxRate = 100
-    MaticMock.smocked.validatorId.will.return.with(1)
-    MaticMock.smocked.exchangeRate.will.return.with(this.fxRate)
   })
 
   // Run tests
+  describe('Initial State', initialStateTests.bind(this))
   describe('Deposit', depositTests.bind(this))
   describe('Stake', stakeTests.bind(this))
 
@@ -156,12 +140,18 @@ describe('Matic Integration Test', () => {
   describe('Rebases', async function () {
     context('Positive Rebase', async function () {
       before(async function () {
-        this.increase = ethers.BigNumber.from('10000000000')
+        this.increase = ethers.utils.parseEther('10')
         liquidityFees = percOf2(this.increase, liquidityFeesPercent)
         protocolFees = percOf2(this.increase, protocolFeesPercent)
         newStake = this.deposit.add(this.initialStake).add(this.increase)
         this.newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
-        MaticMock.smocked.balanceOf.will.return.with(newStake)
+
+        // set increase on mock
+        await this.StakingContract.setStaked(this.increase.add(await this.StakingContract.staked()))
+
+        // With mock values set correctly, adjust increase with fees
+        // for assertions
+        this.increase = this.increase.sub(protocolFees.add(liquidityFees))
       })
       describe('Stake increases', stakeIncreaseTests.bind(this))
     })
@@ -175,9 +165,13 @@ describe('Matic Integration Test', () => {
 
     context('Negative Rebase', async function () {
       before(async function () {
-        const reducedStake = this.deposit.add(this.initialStake)
+        const stake = await this.StakingContract.staked()
+        this.decrease = ethers.utils.parseEther('10')
+        // reduced stake is current stake - 100 from rewards previously
+        const reducedStake = stake.sub(this.decrease)
         this.expectedCP = reducedStake.sub(liquidityFees).sub(protocolFees)
-        MaticMock.smocked.balanceOf.will.return.with(reducedStake)
+        // reduce staked on mock
+        await this.StakingContract.setStaked(reducedStake)
       })
       describe('Stake decreases', stakeDecreaseTests.bind(this))
     })
@@ -191,14 +185,15 @@ describe('Matic Integration Test', () => {
     describe('Gov unlock', async function () {
       context('Zero stake', async function () {
         before(async function () {
-          MaticMock.smocked.balanceOf.will.return.with(ethers.constants.Zero)
+          await this.StakingContract.setStaked(0)
         })
         describe('No pending stake', govUnbondRevertIfNoStake.bind(this))
       })
       context('>0 Stake', async function () {
         before(async function () {
-          MaticMock.smocked.balanceOf.will.return
-            .with(await this.Tenderizer.totalStakedTokens())
+          await this.StakingContract.setStaked(
+            await this.Tenderizer.totalStakedTokens()
+          )
         })
         describe('Gov unlocks', userBasedUnlockByGov.bind(this))
       })
