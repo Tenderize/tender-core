@@ -1,10 +1,8 @@
-import { BigNumber, Transaction } from 'ethers/lib/ethers'
+import { BigNumber } from 'ethers/lib/ethers'
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
-import { TenderSwap } from '../../../typechain'
 
 export default function suite () {
-  let tx: Transaction
   let ctx: any
 
   const expFees = BigNumber.from(25).mul(BigNumber.from(10).pow(15))
@@ -73,7 +71,7 @@ export default function suite () {
     })
 
     it('Name is set', async function () {
-      expect(await ctx.TenderToken.name()).to.eq('tender ' + ctx.NAME)
+      expect(await ctx.TenderToken.name()).to.eq('tender ' + ctx.SYMBOL)
     })
 
     it('Sybmol is set', async function () {

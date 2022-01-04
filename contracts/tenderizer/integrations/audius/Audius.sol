@@ -29,10 +29,22 @@ contract Audius is Tenderizer {
         string calldata _symbol,
         IAudius _audius,
         address _node,
-        TenderTokenConfig calldata _tenderTokenConfig,
+        uint256 _protocolFee,
+        uint256 _liquidityFee,
+        ITenderToken _tenderTokenTarget,
+        TenderFarmFactory _tenderFarmFactory,
         ITenderSwapFactory _tenderSwapFactory
     ) public {
-        Tenderizer._initialize(_steak, _symbol, _node, _tenderTokenConfig, _tenderSwapFactory);
+        Tenderizer._initialize(
+            _steak,
+            _symbol,
+            _node,
+            _protocolFee,
+            _liquidityFee,
+            _tenderTokenTarget,
+            _tenderFarmFactory,
+            _tenderSwapFactory
+        );
         audius = _audius;
         audiusStaking = audius.getStakingAddress();
     }
@@ -52,19 +64,18 @@ contract Audius is Tenderizer {
             // TODO: revert ?
         }
 
-        // if no _node is specified, stake towards the default node
-        address node_ = _node;
-        if (node_ == ZERO_ADDRESS) {
-            node_ = node;
+        // if no _node is specified, return
+        if (_node == address(0)) {
+            return;
         }
 
         // Approve amount to Audius protocol
         steak.approve(audiusStaking, amount);
 
         // stake tokens
-        audius.delegateStake(node_, amount);
+        audius.delegateStake(_node, amount);
 
-        emit Stake(node_, amount);
+        emit Stake(_node, amount);
     }
 
     function _unstake(
@@ -74,12 +85,6 @@ contract Audius is Tenderizer {
     ) internal override returns (uint256 unstakeLockID) {
         uint256 amount = _amount;
         unstakeLockID = nextUnstakeLockID;
-
-        // if no _node is specified, stake towards the default node
-        address node_ = _node;
-        if (node_ == ZERO_ADDRESS) {
-            node_ = node;
-        }
 
         // If caller is controller, process all user unstake requests
         if (_caller == gov) {
@@ -91,7 +96,7 @@ contract Audius is Tenderizer {
             governancePendingUnstakeLockID = unstakeLockID;
 
             // Undelegate from audius
-            audius.requestUndelegateStake(node_, amount);
+            audius.requestUndelegateStake(_node, amount);
         } else {
             // Caller is a user, initialise unstake locally in Tenderizer
             require(amount > 0, "ZERO_AMOUNT");
@@ -103,7 +108,7 @@ contract Audius is Tenderizer {
         nextUnstakeLockID = unstakeLockID + 1;
         unstakeLocks[unstakeLockID] = UnstakeLock({ amount: amount, account: _caller });
 
-        emit Unstake(_caller, node_, amount, unstakeLockID);
+        emit Unstake(_caller, _node, amount, unstakeLockID);
     }
 
     function _withdraw(address _caller, uint256 _unstakeLockID) internal override {

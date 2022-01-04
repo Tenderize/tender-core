@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "./ITenderizer.sol";
 import "../token/ITenderToken.sol";
 import {ITenderSwapFactory, ITenderSwap} from "../tenderswap/TenderSwapFactory.sol";
+import "../tenderfarm/TenderFarmFactory.sol";
 import "../libs/MathUtils.sol";
 
 
@@ -24,14 +25,6 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         uint256 amount;
         address account;
     }
-
-      struct TenderTokenConfig {
-        address tenderTokenTarget;
-        string name;
-        string symbol; 
-    }
-
-    address constant ZERO_ADDRESS = address(0);
 
     IERC20 public steak;
     ITenderToken public tenderToken;
@@ -60,33 +53,45 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         IERC20 _steak,
         string memory _symbol,
         address _node,
-        TenderTokenConfig calldata _tenderTokenConfig,
+        uint256 _protocolFee,
+        uint256 _liquidityFee,
+        ITenderToken _tenderTokenTarget,
+        TenderFarmFactory _tenderFarmFactory,
         ITenderSwapFactory _tenderSwapFactory
     ) internal initializer {
         steak = _steak;
         node = _node;
-        protocolFee = 25 * 1e15; // 2.5%
+        protocolFee = _protocolFee; //25 * 1e15; 2.5%
+        liquidityFee = _liquidityFee;
+
+        gov = msg.sender;
 
         // Clone TenderToken
-        ITenderToken tenderToken_ = ITenderToken(Clones.clone(_tenderTokenConfig.tenderTokenTarget));
+        ITenderToken tenderToken_ = ITenderToken(Clones.clone(address(_tenderTokenTarget)));
+        string memory tenderTokenSymbol = string(abi.encodePacked("t", _symbol));
         require(
             tenderToken_.initialize(
-                _tenderTokenConfig.name,
-                _tenderTokenConfig.symbol,
+                _symbol,
+                _symbol,
                 ITotalStakedReader(address(this))
             ),
             "FAIL_INIT_TENDERTOKEN"
         );
         tenderToken = tenderToken_;
-        gov = msg.sender;
 
         tenderSwap = _tenderSwapFactory.deploy(
             ITenderSwapFactory.Config({
                 token0: IERC20(address(tenderToken_)),
                 token1: _steak,
-                lpTokenName: string(abi.encodePacked(_tenderTokenConfig.symbol, "-", _symbol, " Swap Token")),
-                lpTokenSymbol: string(abi.encodePacked(_tenderTokenConfig.symbol, "-", _symbol, "-SWAP"))
+                lpTokenName: string(abi.encodePacked(tenderTokenSymbol, "-", _symbol, " Swap Token")),
+                lpTokenSymbol: string(abi.encodePacked(tenderTokenSymbol, "-", _symbol, "-SWAP"))
             })
+        );
+
+        tenderFarm = _tenderFarmFactory.deploy(
+            IERC20(address(tenderSwap.lpToken())),
+            tenderToken_,
+            ITenderizer(address(this))
         );
     }
 
@@ -120,7 +125,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
 
         // Execute state updates to pending withdrawals
         // Unstake tokens
-        return _unstake(msg.sender, address(0), _amount);
+        return _unstake(msg.sender, node, _amount);
     }
 
     /// @inheritdoc ITenderizer
@@ -154,13 +159,11 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     }
 
     function setNode(address _node) external virtual override onlyGov {
-        require(_node != address(0), "ZERO_ADDRESS");
         node = _node;
         emit GovernanceUpdate("NODE");
     }
 
     function setSteak(IERC20 _steak) external virtual override onlyGov {
-        require(address(_steak) != address(0), "ZERO_ADDRESS");
         steak = _steak;
         emit GovernanceUpdate("STEAK");
     }
@@ -180,7 +183,6 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     }
 
     function setTenderFarm(ITenderFarm _tenderFarm) external override onlyGov {
-        require(address(_tenderFarm) != address(0), "ZERO_ADDRESS");
         tenderFarm = _tenderFarm;
         emit GovernanceUpdate("TENDERFARM");
     }

@@ -30,10 +30,22 @@ contract Graph is Tenderizer {
         string calldata _symbol,
         IGraph _graph,
         address _node,
-        TenderTokenConfig calldata _tenderTokenConfig,
+        uint256 _protocolFee,
+        uint256 _liquidityFee,
+        ITenderToken _tenderTokenTarget,
+        TenderFarmFactory _tenderFarmFactory,
         ITenderSwapFactory _tenderSwapFactory
     ) public {
-        Tenderizer._initialize(_steak, _symbol, _node, _tenderTokenConfig, _tenderSwapFactory);
+        Tenderizer._initialize(
+            _steak,
+            _symbol,
+            _node,
+            _protocolFee,
+            _liquidityFee,
+            _tenderTokenTarget,
+            _tenderFarmFactory,
+            _tenderSwapFactory
+        );
         graph = _graph;
     }
 
@@ -57,19 +69,18 @@ contract Graph is Tenderizer {
             // TODO: revert ?
         }
 
-        // if no _node is specified, stake towards the default node
-        address node_ = _node;
-        if (node_ == ZERO_ADDRESS) {
-            node_ = node;
+        // if no _node is specified, return
+        if (_node == address(0)) {
+            return;
         }
 
         // approve amount to Graph protocol
         steak.approve(address(graph), amount);
 
         // stake tokens
-        graph.delegate(node_, amount);
+        graph.delegate(_node, amount);
 
-        emit Stake(node_, amount);
+        emit Stake(_node, amount);
     }
 
     function _unstake(
@@ -79,12 +90,6 @@ contract Graph is Tenderizer {
     ) internal override returns (uint256 unstakeLockID) {
         uint256 amount = _amount;
         unstakeLockID = nextUnstakeLockID;
-
-        // if no _node is specified, stake towards the default node
-        address node_ = _node;
-        if (node_ == ZERO_ADDRESS) {
-            node_ = node;
-        }
 
         // Unstake from governance
         if (_account == gov) {
@@ -105,7 +110,7 @@ contract Graph is Tenderizer {
 
             // Shares =  amount * totalShares / totalTokens 
             // undelegate shares
-            graph.undelegate(node_, shares);
+            graph.undelegate(_node, shares);
         } else {
             require(amount > 0, "ZERO_AMOUNT");
 
@@ -116,7 +121,7 @@ contract Graph is Tenderizer {
         nextUnstakeLockID = unstakeLockID + 1;
         unstakeLocks[unstakeLockID] = UnstakeLock({ amount: amount, account: _account });
 
-        emit Unstake(_account, node_, amount, unstakeLockID);
+        emit Unstake(_account, _node, amount, unstakeLockID);
     }
 
     function _withdraw(address _account, uint256 _unstakeLockID) internal override {
@@ -132,7 +137,7 @@ contract Graph is Tenderizer {
 
         if (_account == gov) {
             governanceLastProcessedUnstakeLockID = governancePendingUnstakeLockID;
-            graph.withdrawDelegated(node, ZERO_ADDRESS);
+            graph.withdrawDelegated(node, address(0));
         } else {
             // Check that gov withdrawal for that unstake has occured
             require(_unstakeLockID < governanceLastProcessedUnstakeLockID, "GOV_WITHDRAW_PENDING");

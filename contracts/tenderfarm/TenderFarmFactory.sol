@@ -25,7 +25,7 @@ contract TenderFarmFactory {
         ITenderToken _rewardToken,
         ITenderizer _tenderizer
     ) public returns (ITenderFarm farm) {
-        farm = ITenderFarm(Clones.clone(address(farm)));
+        farm = ITenderFarm(Clones.clone(address(farmTarget)));
 
         require(
             farm.initialize(

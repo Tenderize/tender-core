@@ -28,10 +28,22 @@ contract Matic is Tenderizer {
         string calldata _symbol,
         address _matic,
         address _node,
-        TenderTokenConfig calldata _tenderTokenConfig,
+        uint256 _protocolFee,
+        uint256 _liquidityFee,
+        ITenderToken _tenderTokenTarget,
+        TenderFarmFactory _tenderFarmFactory,
         ITenderSwapFactory _tenderSwapFactory
     ) public {
-        Tenderizer._initialize(_steak, _symbol, _node, _tenderTokenConfig, _tenderSwapFactory);
+        Tenderizer._initialize(
+            _steak,
+            _symbol,
+            _node,
+            _protocolFee,
+            _liquidityFee,
+            _tenderTokenTarget,
+            _tenderFarmFactory,
+            _tenderSwapFactory
+        );
         maticStakeManager = _matic;
         matic = IMatic(_node);
     }
@@ -59,6 +71,11 @@ contract Matic is Tenderizer {
             // TODO: revert ?
         }
 
+        // if no _node is specified, return
+        if (_node == address(0)) {
+            return;
+        }
+
         // use default validator share contract if _node isn't specified
         IMatic matic_ = matic;
         if (_node != address(0)) {
@@ -83,10 +100,7 @@ contract Matic is Tenderizer {
         uint256 amount = _amount;
 
         // use default validator share contract if _node isn't specified
-        IMatic matic_ = matic;
-        if (_node != address(0)) {
-            matic_ = IMatic(_node);
-        }
+        IMatic matic_ = IMatic(_node);
 
         uint256 exhangeRatePrecision = _getExchangeRatePrecision(matic_);
         uint256 fxRate = _getExchangeRate(matic_);

@@ -35,10 +35,6 @@ export default function suite () {
   })
 
   describe('setting node', async () => {
-    it('reverts if Zero address is set', async () => {
-      await expect(ctx.Tenderizer.setNode(ethers.constants.AddressZero)).to.be.revertedWith('ZERO_ADDRESS')
-    })
-
     it('reverts if not called by controller', async () => {
       await expect(ctx.Tenderizer.connect(ctx.signers[1]).setNode(ethers.constants.AddressZero)).to.be.reverted
     })
@@ -55,10 +51,6 @@ export default function suite () {
   })
 
   describe('setting steak', async () => {
-    it('reverts if Zero address is set', async () => {
-      await expect(ctx.Tenderizer.setSteak(ethers.constants.AddressZero)).to.be.revertedWith('ZERO_ADDRESS')
-    })
-
     it('sets steak successfully', async () => {
       const newSteakAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
       tx = await ctx.Tenderizer.setSteak(newSteakAddress)

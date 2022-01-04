@@ -31,10 +31,22 @@ contract Livepeer is Tenderizer {
         string calldata _symbol,
         ILivepeer _livepeer,
         address _node,
-        TenderTokenConfig calldata _tenderTokenConfig,
+        uint256 _protocolFee,
+        uint256 _liquidityFee,
+        ITenderToken _tenderTokenTarget,
+        TenderFarmFactory _tenderFarmFactory,
         ITenderSwapFactory _tenderSwapFactory
     ) public {
-        Tenderizer._initialize(_steak, _symbol, _node, _tenderTokenConfig, _tenderSwapFactory);
+        Tenderizer._initialize(
+            _steak,
+            _symbol,
+            _node,
+            _protocolFee,
+            _liquidityFee,
+            _tenderTokenTarget,
+            _tenderFarmFactory,
+            _tenderSwapFactory
+        );
         livepeer = _livepeer;
     }
 
@@ -53,19 +65,18 @@ contract Livepeer is Tenderizer {
             // TODO: revert ?
         }
 
-        // if no _node is specified, stake towards the default node
-        address node_ = _node;
-        if (node_ == address(0)) {
-            node_ = node;
+        // if no _node is specified, return
+        if (_node == address(0)) {
+            return;
         }
 
         // approve amount to Livepeer protocol
         steak.approve(address(livepeer), amount);
 
         // stake tokens
-        livepeer.bond(amount, node_);
+        livepeer.bond(amount, _node);
 
-        emit Stake(node_, amount);
+        emit Stake(_node, amount);
     }
 
     // TODO: is unstaking when front running a negative rebase exploitable ? 
@@ -83,12 +94,6 @@ contract Livepeer is Tenderizer {
             require(amount > 0, "ZERO_STAKE");
         }
 
-        // if no _node is specified, stake towards the default node
-        address node_ = _node;
-        if (node_ == address(0)) {
-            node_ = node;
-        }
-
         currentPrincipal -= amount;
 
         // Unbond tokens
@@ -99,7 +104,7 @@ contract Livepeer is Tenderizer {
         unstakeLocks[unstakeLockID] = UnstakeLock({ amount: amount, account: _account });
         nextUnstakeLockID = unstakeLockID + 1;
 
-        emit Unstake(_account, node_, amount, unstakeLockID);
+        emit Unstake(_account, _node, amount, unstakeLockID);
     }
 
     function _withdraw(address _account, uint256 _unstakeID) internal override {
