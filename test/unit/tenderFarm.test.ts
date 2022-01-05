@@ -12,7 +12,8 @@ import * as rpc from '../util/snapshot'
 import { MockContract, smockit } from '@eth-optimism/smock'
 
 import { percOf } from '../util/helpers'
-import { SimpleToken, TenderFarm, TenderToken } from '../../typechain'
+import { signERC2612Permit } from 'eth-permit'
+import { LiquidityPoolToken, TenderFarm, TenderToken } from '../../typechain'
 import { PERC_DIVISOR } from '../util/constants'
 chai.use(solidity)
 const {
@@ -23,7 +24,7 @@ describe('TenderFarm', () => {
   let snapshotId: any
 
   let tenderToken: TenderToken
-  let lpToken : SimpleToken
+  let lpToken : LiquidityPoolToken
   let tenderFarm: any
   let tenderizerMock: MockContract
 
@@ -59,7 +60,7 @@ describe('TenderFarm', () => {
     )
 
     const LPTokenFactory = await ethers.getContractFactory(
-      'SimpleToken',
+      'LiquidityPoolToken',
       signers[0]
     )
 
@@ -72,18 +73,20 @@ describe('TenderFarm', () => {
     account1 = await signers[1].getAddress()
     account2 = await signers[2].getAddress()
 
-    lpToken = (await LPTokenFactory.deploy('LP token', 'LP', ethers.utils.parseEther('1000000000000000'))) as SimpleToken
+    lpToken = (await LPTokenFactory.deploy()) as LiquidityPoolToken
     tenderToken = (await TenderTokenFactory.deploy()) as TenderToken
     await lpToken.deployed()
     await tenderToken.deployed()
     await tenderToken.initialize('Tender Token', 'Tender', tenderizerMock.address)
+    await lpToken.initialize('LP token', 'LP')
 
     tenderFarm = await upgrades.deployProxy(TenderFarmFactory, [lpToken.address, tenderToken.address, account0])
     await tenderFarm.deployed()
 
-    const tenderSupply = ethers.utils.parseEther('1000000000000000')
-    await tenderToken.mint(account0, tenderSupply)
-    tenderizerMock.smocked.totalStakedTokens.will.return.with(tenderSupply)
+    const supply = ethers.utils.parseEther('1000000000000000')
+    await lpToken.mint(account0, supply)
+    await tenderToken.mint(account0, supply)
+    tenderizerMock.smocked.totalStakedTokens.will.return.with(supply)
   })
 
   describe('Genesis', () => {
@@ -148,6 +151,31 @@ describe('TenderFarm', () => {
 
       // Check event
       await expect(tenderFarm.farm(amount)).to.emit(tenderFarm, 'Farm').withArgs(
+        account0, amount
+      )
+
+      // Check stake
+      expect(await tenderFarm.stakeOf(account0)).to.eq(amount)
+      const stake = await tenderFarm.stakes(account0)
+      expect(stake.stake).to.eq(amount)
+      expect(stake.lastCRF).to.eq(0)
+
+      // Check total stake
+      expect(await tenderFarm.totalStake()).to.eq(0)
+
+      expect(await tenderFarm.nextTotalStake()).to.eq(amount)
+
+      // Check rewards still 0
+      expect(await tenderFarm.availableRewards(account0)).to.eq(0)
+    })
+
+    it('FarmWithPermit deposits for msg.sender', async () => {
+      const amount = ethers.utils.parseEther('100')
+
+      const signed = await signERC2612Permit(signers[0], lpToken.address, account0, tenderFarm.address, amount.toString())
+
+      // Check event
+      await expect(tenderFarm.farmWithPermit(amount, signed.deadline, signed.v, signed.r, signed.s)).to.emit(tenderFarm, 'Farm').withArgs(
         account0, amount
       )
 

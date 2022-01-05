@@ -4,20 +4,20 @@
 
 pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 import "../libs/MathUtils.sol";
 import "../token/ITenderToken.sol";
 import "./ITenderFarm.sol";
 import "../tenderizer/ITenderizer.sol";
+import "../helpers/SelfPermit.sol";
 
 /**
  * @title TenderFarm
  * @notice TenderFarm is responsible for incetivizing liquidity providers, by accepting LP Tokens
  * and a proportionaly rewarding them with TenderTokens over time.
  */
-contract TenderFarm is Initializable, ITenderFarm {
+contract TenderFarm is Initializable, ITenderFarm, SelfPermit {
     /**
      * @dev LP token.
      */
@@ -73,6 +73,12 @@ contract TenderFarm is Initializable, ITenderFarm {
 
     /// @inheritdoc ITenderFarm
     function farm(uint256 _amount) public override {
+        _farmFor(msg.sender, _amount);
+    }
+
+    /// @inheritdoc ITenderFarm
+    function farmWithPermit(uint256 _amount, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s) public override {
+        _selfPermit(address(token), _amount, _deadline, _v, _r, _s);
         _farmFor(msg.sender, _amount);
     }
 
