@@ -12,22 +12,16 @@ pragma solidity 0.8.4;
  * @dev TenderSwap is a light-weight StableSwap implementation for two assets.
  * See the Curve StableSwap paper for more details (https://curve.fi/files/stableswap-paper.pdf).
  * that trade 1:1 with eachother (e.g. USD stablecoins or tenderToken derivatives vs their underlying assets).
- * It supports Elastic Supply ERC20 tokens, which are tokens of which the balances can change 
+ * It supports Elastic Supply ERC20 tokens, which are tokens of which the balances can change
  * as the total supply of the token 'rebases'.
  */
- 
-interface ITenderSwap {
 
+interface ITenderSwap {
     /*** EVENTS ***/
 
     // events replicated from SwapUtils to make the ABI easier for dumb
     // clients
-    event Swap(
-        address indexed buyer,
-        IERC20  tokenSold,
-        uint256 amountSold,
-        uint256 amountReceived
-    );
+    event Swap(address indexed buyer, IERC20 tokenSold, uint256 amountSold, uint256 amountReceived);
     event AddLiquidity(
         address indexed provider,
         uint256[2] tokenAmounts,
@@ -35,11 +29,7 @@ interface ITenderSwap {
         uint256 invariant,
         uint256 lpTokenSupply
     );
-    event RemoveLiquidity(
-        address indexed provider,
-        uint256[2] tokenAmounts,
-        uint256 lpTokenSupply
-    );
+    event RemoveLiquidity(address indexed provider, uint256[2] tokenAmounts, uint256 lpTokenSupply);
     event RemoveLiquidityOne(
         address indexed provider,
         uint256 lpTokenAmount,
@@ -56,12 +46,7 @@ interface ITenderSwap {
     );
     event NewAdminFee(uint256 newAdminFee);
     event NewSwapFee(uint256 newSwapFee);
-    event RampA(
-        uint256 oldA,
-        uint256 newA,
-        uint256 initialTime,
-        uint256 futureTime
-    );
+    event RampA(uint256 oldA, uint256 newA, uint256 initialTime, uint256 futureTime);
     event StopRampA(uint256 currentA, uint256 time);
 
     /**
@@ -88,10 +73,11 @@ interface ITenderSwap {
         uint256 _a,
         uint256 _fee,
         uint256 _adminFee,
-        LiquidityPoolToken lpTokenTargetAddress) external returns (bool);
+        LiquidityPoolToken lpTokenTargetAddress
+    ) external returns (bool);
 
     /*** VIEW FUNCTIONS ***/
-    function lpToken() external view returns(LiquidityPoolToken);
+    function lpToken() external view returns (LiquidityPoolToken);
 
     /**
      * @notice Return A, the amplification coefficient * n * (n - 1)
@@ -146,10 +132,7 @@ interface ITenderSwap {
      * a fee on transfers, use the amount that gets transferred after the fee.
      * @return amount of tokens the user will receive
      */
-    function calculateSwap(
-        IERC20 _tokenFrom,
-        uint256 _dx
-    ) external view returns (uint256);
+    function calculateSwap(IERC20 _tokenFrom, uint256 _dx) external view returns (uint256);
 
     /**
      * @notice A simple method to calculate amount of each underlying
@@ -157,10 +140,7 @@ interface ITenderSwap {
      * @param amount the amount of LP tokens that would be burned on withdrawal
      * @return array of token balances that the user will receive
      */
-    function calculateRemoveLiquidity(uint256 amount)
-        external
-        view
-        returns (uint256[2] memory);
+    function calculateRemoveLiquidity(uint256 amount) external view returns (uint256[2] memory);
 
     /**
      * @notice Calculate the amount of underlying token available to withdraw
@@ -170,10 +150,10 @@ interface ITenderSwap {
      * @return availableTokenAmount calculated amount of underlying token
      * available to withdraw
      */
-    function calculateRemoveLiquidityOneToken(
-        uint256 tokenAmount,
-        IERC20 tokenReceive
-    ) external view returns (uint256 availableTokenAmount);
+    function calculateRemoveLiquidityOneToken(uint256 tokenAmount, IERC20 tokenReceive)
+        external
+        view
+        returns (uint256 availableTokenAmount);
 
     /**
      * @notice A simple method to calculate prices from deposits or
@@ -185,16 +165,12 @@ interface ITenderSwap {
      *
      * @param amounts an array of token amounts to deposit or withdrawal,
      * corresponding to pool cardinality of [token0, token1]. The amount should be in each
-     * pooled token's native precision. 
+     * pooled token's native precision.
      * @param deposit whether this is a deposit or a withdrawal
      * @return token amount the user will receive
      */
-    function calculateTokenAmount(
-        uint256[] calldata amounts,
-        bool deposit
-    ) external view returns (uint256);
+    function calculateTokenAmount(uint256[] calldata amounts, bool deposit) external view returns (uint256);
 
-    
     /*** POOL FUNCTIONALITY ***/
 
     /**
@@ -210,13 +186,11 @@ interface ITenderSwap {
         uint256 _dx,
         uint256 _minDy,
         uint256 _deadline
-    )
-        external
-        returns (uint256);
-    
+    ) external returns (uint256);
+
     /**
      * @notice Add liquidity to the pool with the given amounts of tokens
-     * @param _amounts the amounts of each token to add, in their native precision 
+     * @param _amounts the amounts of each token to add, in their native precision
      *          according to the cardinality of the pool [token0, token1]
      * @param _minToMint the minimum LP tokens adding this amount of liquidity
      * should mint, otherwise revert. Handy for front-running mitigation
@@ -227,9 +201,7 @@ interface ITenderSwap {
         uint256[2] calldata _amounts,
         uint256 _minToMint,
         uint256 _deadline
-    )
-        external
-        returns (uint256);
+    ) external returns (uint256);
 
     /**
      * @notice Burn LP tokens to remove liquidity from the pool.
@@ -245,9 +217,7 @@ interface ITenderSwap {
         uint256 amount,
         uint256[2] calldata minAmounts,
         uint256 deadline
-    )
-        external
-        returns (uint256[2] memory amountsReceived);
+    ) external returns (uint256[2] memory amountsReceived);
 
     /**
      * @notice Remove liquidity from the pool all in one token.
@@ -262,9 +232,7 @@ interface ITenderSwap {
         IERC20 _tokenReceive,
         uint256 _minAmount,
         uint256 _deadline
-    )
-        external
-        returns (uint256);
+    ) external returns (uint256);
 
     /**
      * @notice Remove liquidity from the pool, weighted differently than the
@@ -280,8 +248,7 @@ interface ITenderSwap {
         uint256[2] calldata _amounts,
         uint256 _maxBurnAmount,
         uint256 _deadline
-    )
-        external returns(uint256);
+    ) external returns (uint256);
 
     /*** ADMIN FUNCTIONALITY ***/
     /**

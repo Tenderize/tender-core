@@ -10,7 +10,7 @@ import "../../../libs/MathUtils.sol";
 import "../../Tenderizer.sol";
 import "./IAudius.sol";
 
-import {ITenderSwapFactory} from "../../../tenderswap/TenderSwapFactory.sol";
+import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
 
 contract Audius is Tenderizer {
     IAudius audius;
@@ -49,7 +49,7 @@ contract Audius is Tenderizer {
         audiusStaking = audius.getStakingAddress();
     }
 
-    function _deposit(address _from, uint256 _amount) internal override{
+    function _deposit(address _from, uint256 _amount) internal override {
         currentPrincipal += _amount;
 
         emit Deposit(_from, _amount);

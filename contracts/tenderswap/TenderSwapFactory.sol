@@ -8,7 +8,6 @@ import "./ITenderSwap.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 
 interface ITenderSwapFactory {
-
     struct Config {
         IERC20 token0;
         IERC20 token1;
@@ -16,13 +15,10 @@ interface ITenderSwapFactory {
         string lpTokenSymbol; // e.g. tLPT-LPT-SWAP
     }
 
-    function deploy(
-        Config calldata _config
-    ) external returns (ITenderSwap);
+    function deploy(Config calldata _config) external returns (ITenderSwap);
 }
 
 contract TenderSwapFactoryV1 is ITenderSwapFactory {
-
     event NewTenderSwap(
         ITenderSwap tenderSwap,
         string lpTokenName,
@@ -44,7 +40,7 @@ contract TenderSwapFactoryV1 is ITenderSwapFactory {
         uint256 _amplifier,
         uint256 _fee,
         uint256 _adminFee
-    ){
+    ) {
         tenderSwapTarget = _tenderSwapTarget;
         lpTokenTarget = _lpTokenTarget;
         amplifier = _amplifier;
@@ -52,9 +48,7 @@ contract TenderSwapFactoryV1 is ITenderSwapFactory {
         adminFee = _adminFee;
     }
 
-    function deploy(
-        Config calldata _config
-    ) external override(ITenderSwapFactory) returns (ITenderSwap tenderSwap) {
+    function deploy(Config calldata _config) external override(ITenderSwapFactory) returns (ITenderSwap tenderSwap) {
         tenderSwap = ITenderSwap(Clones.clone(address(tenderSwapTarget)));
 
         require(
@@ -73,13 +67,6 @@ contract TenderSwapFactoryV1 is ITenderSwapFactory {
 
         tenderSwap.transferOwnership(msg.sender);
 
-        emit NewTenderSwap(
-            tenderSwap,
-            _config.lpTokenName,
-            _config.lpTokenSymbol,
-            amplifier,
-            fee,
-            adminFee
-        );
+        emit NewTenderSwap(tenderSwap, _config.lpTokenName, _config.lpTokenSymbol, amplifier, fee, adminFee);
     }
 }

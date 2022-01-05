@@ -10,7 +10,7 @@ import "../../../libs/MathUtils.sol";
 import "../../Tenderizer.sol";
 import "./IGraph.sol";
 
-import {ITenderSwapFactory} from "../../../tenderswap/TenderSwapFactory.sol";
+import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
 
 contract Graph is Tenderizer {
     // 100% in parts per million
@@ -49,11 +49,11 @@ contract Graph is Tenderizer {
         graph = _graph;
     }
 
-   function _calcDepositOut(uint256 _amountIn) internal view override returns (uint256){
-        return _amountIn - (uint256(graph.delegationTaxPercentage()) * _amountIn / MAX_PPM);
+    function _calcDepositOut(uint256 _amountIn) internal view override returns (uint256) {
+        return _amountIn - ((uint256(graph.delegationTaxPercentage()) * _amountIn) / MAX_PPM);
     }
 
-    function _deposit(address _from, uint256 _amount) internal override{
+    function _deposit(address _from, uint256 _amount) internal override {
         currentPrincipal += _calcDepositOut(_amount);
 
         emit Deposit(_from, _amount);
@@ -105,9 +105,9 @@ contract Graph is Tenderizer {
             uint256 totalShares = delPool.shares;
             uint256 totalTokens = delPool.tokens;
 
-            uint256 shares = amount * totalShares / totalTokens;
+            uint256 shares = (amount * totalShares) / totalTokens;
 
-            // Shares =  amount * totalShares / totalTokens 
+            // Shares =  amount * totalShares / totalTokens
             // undelegate shares
             graph.undelegate(_node, shares);
         } else {
@@ -140,14 +140,13 @@ contract Graph is Tenderizer {
         } else {
             // Check that gov withdrawal for that unstake has occured
             require(_unstakeLockID < governanceLastProcessedUnstakeLockID, "GOV_WITHDRAW_PENDING");
-            
+
             // Transfer amount from unbondingLock to _account
-            try steak.transfer(_account, amount) {
-            } catch {
+            try steak.transfer(_account, amount) {} catch {
                 // Account for roundoff errors in shares calculations
                 uint256 steakBal = steak.balanceOf(address(this));
-                if (amount > steakBal) { 
-                    steak.transfer(_account, steakBal); 
+                if (amount > steakBal) {
+                    steak.transfer(_account, steakBal);
                 }
             }
         }
@@ -163,7 +162,7 @@ contract Graph is Tenderizer {
         uint256 totalShares = delPool.shares;
         uint256 totalTokens = delPool.tokens;
 
-        uint256 stake = delShares * totalTokens / totalShares;
+        uint256 stake = (delShares * totalTokens) / totalShares;
 
         Tenderizer._processNewStake(stake);
     }

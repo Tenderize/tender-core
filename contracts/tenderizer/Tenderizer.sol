@@ -9,10 +9,9 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 import "./ITenderizer.sol";
 import "../token/ITenderToken.sol";
-import {ITenderSwapFactory, ITenderSwap} from "../tenderswap/TenderSwapFactory.sol";
+import { ITenderSwapFactory, ITenderSwap } from "../tenderswap/TenderSwapFactory.sol";
 import "../tenderfarm/TenderFarmFactory.sol";
 import "../libs/MathUtils.sol";
-
 
 /**
  * @title Tenderizer is the base contract to be implemented.
@@ -69,14 +68,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         // Clone TenderToken
         ITenderToken tenderToken_ = ITenderToken(Clones.clone(address(_tenderTokenTarget)));
         string memory tenderTokenSymbol = string(abi.encodePacked("t", _symbol));
-        require(
-            tenderToken_.initialize(
-                _symbol,
-                _symbol,
-                ITotalStakedReader(address(this))
-            ),
-            "FAIL_INIT_TENDERTOKEN"
-        );
+        require(tenderToken_.initialize(_symbol, _symbol, ITotalStakedReader(address(this))), "FAIL_INIT_TENDERTOKEN");
         tenderToken = tenderToken_;
 
         tenderSwap = _tenderSwapFactory.deploy(
@@ -97,11 +89,11 @@ abstract contract Tenderizer is Initializable, ITenderizer {
 
     /// @inheritdoc ITenderizer
     function deposit(uint256 _amount) external override {
-         require(_amount > 0, "ZERO_AMOUNT");
+        require(_amount > 0, "ZERO_AMOUNT");
 
         // Calculate tenderTokens to be minted
         uint256 amountOut = calcDepositOut(_amount);
-        
+
         // mint tenderTokens
         require(tenderToken.mint(msg.sender, amountOut), "TENDER_MINT_FAILED");
 
@@ -112,14 +104,10 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     }
 
     /// @inheritdoc ITenderizer
-    function unstake(uint256 _amount)
-        external
-        override
-        returns (uint256 unstakeLockID)
-    {
+    function unstake(uint256 _amount) external override returns (uint256 unstakeLockID) {
         // Burn tenderTokens if not gov
         // TODO: CHECK THIS!
-        if(msg.sender != gov) {
+        if (msg.sender != gov) {
             require(tenderToken.burn(msg.sender, _amount), "TENDER_BURN_FAILED");
         }
 
@@ -211,12 +199,12 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     }
 
     /// @inheritdoc ITenderizer
-    function calcDepositOut(uint256 _amountIn) override public view virtual returns (uint256 amountOut) {
+    function calcDepositOut(uint256 _amountIn) public view virtual override returns (uint256 amountOut) {
         return _calcDepositOut(_amountIn);
     }
 
     /// @inheritdoc ITenderizer
-    function execute (
+    function execute(
         address _target,
         uint256 _value,
         bytes calldata _data
@@ -272,16 +260,12 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         // So no fees are charged
         if (stake <= currentPrincipal_) {
             currentPrincipal = stake;
-            emit RewardsClaimed(
-                -int256(currentPrincipal_ - stake),
-                stake,
-                currentPrincipal_
-            );
+            emit RewardsClaimed(-int256(currentPrincipal_ - stake), stake, currentPrincipal_);
 
             return;
         }
 
-        // Difference is positive, calculate the rewards 
+        // Difference is positive, calculate the rewards
         uint256 totalRewards = stake - currentPrincipal_;
 
         // calculate the protocol fees
@@ -295,11 +279,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         stake = stake - fees - liquidityFees;
         currentPrincipal = stake;
 
-        emit RewardsClaimed(
-            int256(stake - currentPrincipal_),
-            stake,
-            currentPrincipal_
-        );
+        emit RewardsClaimed(int256(stake - currentPrincipal_), stake, currentPrincipal_);
     }
 
     function _collectFees() internal virtual returns (uint256) {

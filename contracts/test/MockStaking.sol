@@ -5,7 +5,6 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-
 contract MockStaking {
     IERC20 token;
 
@@ -41,6 +40,5 @@ contract MockStaking {
 
     function setReverts(bytes4 _sel, bool yn) public {
         reverts[_sel] = yn;
-    } 
-
+    }
 }

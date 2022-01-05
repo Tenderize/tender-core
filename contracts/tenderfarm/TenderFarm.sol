@@ -14,7 +14,7 @@ import "../tenderizer/ITenderizer.sol";
 
 /**
  * @title TenderFarm
- * @notice TenderFarm is responsible for incetivizing liquidity providers, by accepting LP Tokens 
+ * @notice TenderFarm is responsible for incetivizing liquidity providers, by accepting LP Tokens
  * and a proportionaly rewarding them with TenderTokens over time.
  */
 contract TenderFarm is Initializable, ITenderFarm {

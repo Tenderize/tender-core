@@ -10,7 +10,7 @@ import "../../../libs/MathUtils.sol";
 import "../../Tenderizer.sol";
 import "./IMatic.sol";
 
-import {ITenderSwapFactory} from "../../../tenderswap/TenderSwapFactory.sol";
+import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
 
 contract Matic is Tenderizer {
     // Matic exchange rate precision
@@ -55,8 +55,8 @@ contract Matic is Tenderizer {
 
         emit GovernanceUpdate("NODE");
     }
-    
-    function _deposit(address _from, uint256 _amount) internal override{
+
+    function _deposit(address _from, uint256 _amount) internal override {
         currentPrincipal += _amount;
 
         emit Deposit(_from, _amount);

@@ -17,7 +17,6 @@ import "../tenderizer/ITotalStakedReader.sol";
  * shares[account] * _getTotalPooledTokens() / _getTotalShares()
  */
 interface ITenderToken {
-
     /**
      * @notice Initilize the TenderToken Contract
      * @param _name name of the token (steak)
@@ -30,7 +29,7 @@ interface ITenderToken {
         string memory _symbol,
         ITotalStakedReader _stakedReader
     ) external returns (bool);
-    
+
     /**
      * @notice The number of decimals the TenderToken uses.
      * @return the number of decimals for getting user representation of a token amount.

@@ -8,7 +8,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20Burnable
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract LiquidityPoolToken is OwnableUpgradeable, ERC20BurnableUpgradeable {
-
     /**
      * @notice Initializes this LPToken contract with the given name and symbol
      * @dev The caller of this function will become the owner. A Swap contract should call this
@@ -16,11 +15,7 @@ contract LiquidityPoolToken is OwnableUpgradeable, ERC20BurnableUpgradeable {
      * @param name name of this token
      * @param symbol symbol of this token
      */
-    function initialize(string memory name, string memory symbol)
-        external
-        initializer
-        returns (bool)
-    {
+    function initialize(string memory name, string memory symbol) external initializer returns (bool) {
         __Context_init_unchained();
         __ERC20_init_unchained(name, symbol);
         __Ownable_init_unchained();
@@ -38,4 +33,4 @@ contract LiquidityPoolToken is OwnableUpgradeable, ERC20BurnableUpgradeable {
         require(amount != 0, "LPToken: cannot mint 0");
         _mint(recipient, amount);
     }
-}   
+}

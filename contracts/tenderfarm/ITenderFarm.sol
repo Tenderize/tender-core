@@ -10,11 +10,10 @@ import "../tenderizer/ITenderizer.sol";
 
 /**
  * @title TenderFarm
- * @notice TenderFarm is responsible for incetivizing liquidity providers, by accepting LP Tokens 
+ * @notice TenderFarm is responsible for incetivizing liquidity providers, by accepting LP Tokens
  * and a proportionaly rewarding them with TenderTokens over time.
  */
 interface ITenderFarm {
-
     event Farm(address indexed account, uint256 amount);
     event Unfarm(address indexed account, uint256 amount);
     event Harvest(address indexed account, uint256 amount);
