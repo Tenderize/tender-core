@@ -158,6 +158,11 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         _stake(_account, _amount);
     }
 
+    function setGov(address _gov) external virtual override onlyGov {
+        gov = _gov;
+        emit GovernanceUpdate("GOV");
+    }
+
     function setNode(address _node) external virtual override onlyGov {
         node = _node;
         emit GovernanceUpdate("NODE");
