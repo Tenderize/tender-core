@@ -14,7 +14,6 @@ import "../tenderfarm/ITenderFarm.sol";
  * @dev New implementations are required to inherit this contract and override any required internal functions.
  */
 interface ITenderizer {
-
     // Events
     event Deposit(address indexed from, uint256 amount);
     event Stake(address indexed node, uint256 amount);
@@ -61,7 +60,7 @@ interface ITenderizer {
     function withdraw(uint256 _unstakeLockID) external;
 
     /**
-     * @notice Compound all the rewards and new deposits. 
+     * @notice Compound all the rewards and new deposits.
      * Claim staking rewards and earned fees for the underlying protocol and stake
      * any leftover token balance. Process Tender protocol fees if revenue is positive.
      */
@@ -99,7 +98,6 @@ interface ITenderizer {
 
     function pendingLiquidityFees() external view returns (uint256);
 
-
     /**
      * @notice Exectutes a transaction on behalf of the controller.
      * @param _target target address for the contract call
@@ -126,7 +124,6 @@ interface ITenderizer {
         uint256[] calldata _values,
         bytes[] calldata _datas
     ) external;
-
 
     // Governance setter funtions
 

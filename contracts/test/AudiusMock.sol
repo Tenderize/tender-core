@@ -8,10 +8,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./MockStaking.sol";
 
 contract AudiusMock is MockStaking {
+    constructor(IERC20 _token) MockStaking(_token) {}
 
-    constructor(IERC20 _token) MockStaking(_token) {
-
-    }
     /**
      * @notice Get total delegation from a given address
      * @param _delegator - delegator address
@@ -26,9 +24,12 @@ contract AudiusMock is MockStaking {
      * @param _amount - amount in wei to delegate
      * @return Updated total amount delegated to the service provider by delegator
      */
-    function delegateStake(address _targetSP, uint256 _amount) external 
-    reverted(this.delegateStake.selector) returns (uint256) {
-            require(token.transferFrom(msg.sender, address(this), _amount));
+    function delegateStake(address _targetSP, uint256 _amount)
+        external
+        reverted(this.delegateStake.selector)
+        returns (uint256)
+    {
+        require(token.transferFrom(msg.sender, address(this), _amount));
         staked += _amount;
     }
 
@@ -38,13 +39,13 @@ contract AudiusMock is MockStaking {
      * @param _amount - amount in wei to undelegate
      * @return Updated total amount delegated to the service provider by delegator
      */
-    function requestUndelegateStake(address _target, uint256 _amount) external
-    reverted(this.requestUndelegateStake.selector) returns (uint256) {
+    function requestUndelegateStake(address _target, uint256 _amount)
+        external
+        reverted(this.requestUndelegateStake.selector)
+        returns (uint256)
+    {
         staked -= _amount;
-        unstakeLocks[nextUnstakeLockID] = UnstakeLock({
-            amount: _amount,
-            account: msg.sender
-        });
+        unstakeLocks[nextUnstakeLockID] = UnstakeLock({ amount: _amount, account: msg.sender });
     }
 
     /**
@@ -58,7 +59,6 @@ contract AudiusMock is MockStaking {
      */
     function undelegateStake() external reverted(this.undelegateStake.selector) returns (uint256) {
         token.transfer(unstakeLocks[nextUnstakeLockID].account, unstakeLocks[nextUnstakeLockID].amount);
-
     }
 
     /**

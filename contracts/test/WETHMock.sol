@@ -5,6 +5,7 @@
 pragma solidity 0.8.4;
 
 contract WETHMock {
-     function deposit() external payable {}
-      function approve(address guy, uint wad) public returns (bool) {}
+    function deposit() external payable {}
+
+    function approve(address guy, uint256 wad) public returns (bool) {}
 }

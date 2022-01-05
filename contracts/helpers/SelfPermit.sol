@@ -4,8 +4,8 @@
 
 pragma solidity 0.8.4;
 
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol';
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
 
 /// @title Self Permit
 /// @notice Functionality to call permit on any EIP-2612-compliant token for use in the route
@@ -69,7 +69,7 @@ abstract contract SelfPermit is ISelfPermit {
         bytes32 _s
     ) external payable override {
         uint256 allowance = IERC20(_token).allowance(msg.sender, address(this));
-        if ( allowance < _value) _selfPermit(_token, _value-allowance, _deadline, _v, _r, _s);
+        if (allowance < _value) _selfPermit(_token, _value - allowance, _deadline, _v, _r, _s);
     }
 
     function _selfPermit(

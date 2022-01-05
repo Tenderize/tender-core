@@ -7,13 +7,11 @@ import "./MockStaking.sol";
 
 pragma solidity 0.8.4;
 
-contract GraphMock is MockStaking{
-
+contract GraphMock is MockStaking {
     uint32 constant MAX_PPM = 1000000;
 
-    constructor(IERC20 _token) MockStaking(_token) {
+    constructor(IERC20 _token) MockStaking(_token) {}
 
-    }
     // -- Delegation Data --
 
     /**
@@ -41,48 +39,43 @@ contract GraphMock is MockStaking{
     function delegate(address _indexer, uint256 _tokens) external reverted(this.delegate.selector) returns (uint256) {
         require(token.transferFrom(msg.sender, address(this), _tokens));
 
-        staked += _tokens - (_tokens * this.delegationTaxPercentage() / MAX_PPM )
-;
+        staked += _tokens - ((_tokens * this.delegationTaxPercentage()) / MAX_PPM);
     }
 
-    function undelegate(address _indexer, uint256 _shares) external
-    reverted(this.undelegate.selector) returns (uint256) {
-        unstakeLocks[nextUnstakeLockID] = UnstakeLock({
-            amount: _shares,
-            account: msg.sender
-        });
+    function undelegate(address _indexer, uint256 _shares)
+        external
+        reverted(this.undelegate.selector)
+        returns (uint256)
+    {
+        unstakeLocks[nextUnstakeLockID] = UnstakeLock({ amount: _shares, account: msg.sender });
         staked -= _shares;
-
     }
 
-    function withdrawDelegated(address _indexer, address _newIndexer) external
-    reverted(this.withdrawDelegated.selector) returns (uint256) {
+    function withdrawDelegated(address _indexer, address _newIndexer)
+        external
+        reverted(this.withdrawDelegated.selector)
+        returns (uint256)
+    {
         token.transfer(unstakeLocks[nextUnstakeLockID].account, unstakeLocks[nextUnstakeLockID].amount);
-
     }
 
     function getDelegation(address _indexer, address _delegator) external view returns (Delegation memory) {
-        return Delegation({
-            shares: staked,
-            tokensLocked: 0,
-            tokensLockedUntil: 0
-        });
+        return Delegation({ shares: staked, tokensLocked: 0, tokensLockedUntil: 0 });
     }
 
     function delegationPools(address _indexer) external view returns (DelegationPool memory) {
-        return DelegationPool({
-            tokens: staked == 0 ? 1 : staked,
-            cooldownBlocks: 0,
-            indexingRewardCut: 0,
-            queryFeeCut: 0,
-            updatedAtBlock: 0,
-            shares: staked == 0 ? 1 : staked
-        });
+        return
+            DelegationPool({
+                tokens: staked == 0 ? 1 : staked,
+                cooldownBlocks: 0,
+                indexingRewardCut: 0,
+                queryFeeCut: 0,
+                updatedAtBlock: 0,
+                shares: staked == 0 ? 1 : staked
+            });
     }
 
-    function getWithdraweableDelegatedTokens(Delegation memory _delegation) external view returns (uint256) {
-
-    }
+    function getWithdraweableDelegatedTokens(Delegation memory _delegation) external view returns (uint256) {}
 
     function thawingPeriod() external view returns (uint256) {}
 

@@ -7,10 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./MockStaking.sol";
 
 contract LivepeerMock is MockStaking {
-
-    constructor(IERC20 _token) MockStaking(_token) {
-
-    }
+    constructor(IERC20 _token) MockStaking(_token) {}
 
     function bond(uint256 _amount, address _to) external reverted(this.bond.selector) {
         require(token.transferFrom(msg.sender, address(this), _amount));
@@ -19,10 +16,7 @@ contract LivepeerMock is MockStaking {
 
     function unbond(uint256 _amount) external reverted(this.unbond.selector) {
         staked -= _amount;
-        unstakeLocks[nextUnstakeLockID] = UnstakeLock({
-            amount: _amount,
-            account: msg.sender
-        });
+        unstakeLocks[nextUnstakeLockID] = UnstakeLock({ amount: _amount, account: msg.sender });
     }
 
     function rebondFromUnbonded(address _to, uint256 _unbondingLockId) external {
@@ -45,5 +39,4 @@ contract LivepeerMock is MockStaking {
     function pendingStake(address _delegator, uint256 _endRound) external view returns (uint256) {
         return staked;
     }
-
 }

@@ -15,12 +15,7 @@ library SwapUtils {
     // =============================================
     //                   EVENTS
     // =============================================
-    event Swap(
-        address indexed buyer,
-        IERC20  tokenSold,
-        uint256 amountSold,
-        uint256 amountReceived
-    );
+    event Swap(address indexed buyer, IERC20 tokenSold, uint256 amountSold, uint256 amountReceived);
     event AddLiquidity(
         address indexed provider,
         uint256[2] tokenAmounts,
@@ -28,11 +23,7 @@ library SwapUtils {
         uint256 invariant,
         uint256 lpTokenSupply
     );
-    event RemoveLiquidity(
-        address indexed provider,
-        uint256[2] tokenAmounts,
-        uint256 lpTokenSupply
-    );
+    event RemoveLiquidity(address indexed provider, uint256[2] tokenAmounts, uint256 lpTokenSupply);
     event RemoveLiquidityOne(
         address indexed provider,
         uint256 lpTokenAmount,
@@ -49,7 +40,7 @@ library SwapUtils {
     );
     event NewAdminFee(uint256 newAdminFee);
     event NewSwapFee(uint256 newSwapFee);
-    
+
     // =============================================
     //                 SWAP LOGIC
     // =============================================
@@ -127,23 +118,14 @@ library SwapUtils {
         Amplification storage amplificationParams,
         FeeParams storage feeParams
     ) external returns (uint256) {
-        require(
-                dx <= tokenFrom.token.balanceOf(msg.sender),
-                'ERC20: transfer amount exceeds balance'
-        );
+        require(dx <= tokenFrom.token.balanceOf(msg.sender), "ERC20: transfer amount exceeds balance");
         uint256 dy;
         uint256 dyFee;
-        (dy, dyFee) = _calculateSwap(
-            tokenFrom,
-            tokenTo,
-            dx,
-            amplificationParams,
-            feeParams
-        );
+        (dy, dyFee) = _calculateSwap(tokenFrom, tokenTo, dx, amplificationParams, feeParams);
 
         require(dy >= minDy, "Swap didn't result in min tokens");
 
-        uint256 dyAdminFee = dyFee * feeParams.adminFee / FEE_DENOMINATOR / tokenTo.precisionMultiplier;
+        uint256 dyAdminFee = (dyFee * feeParams.adminFee) / FEE_DENOMINATOR / tokenTo.precisionMultiplier;
         // TODO: Need to handle keeping track of admin fees or transfer them instantly
 
         // transfer tokens
@@ -168,18 +150,14 @@ library SwapUtils {
         PooledToken storage token1,
         Amplification storage amplificationParams,
         LiquidityPoolToken lpToken
-        )
-        external
-        view
-        returns (uint256)
-    {
+    ) external view returns (uint256) {
         uint256 xp0 = _xp(_getTokenBalance(token0.token), token0.precisionMultiplier);
         uint256 xp1 = _xp(_getTokenBalance(token1.token), token1.precisionMultiplier);
 
         uint256 d = getD(xp0, xp1, _getAPrecise(amplificationParams));
         uint256 supply = lpToken.totalSupply();
         if (supply > 0) {
-            return d * (10**POOL_PRECISION_DECIMALS) / supply;
+            return (d * (10**POOL_PRECISION_DECIMALS)) / supply;
         }
         return 0;
     }
@@ -200,13 +178,7 @@ library SwapUtils {
         Amplification storage amplificationParams,
         FeeParams storage feeParams
     ) external view returns (uint256 dy) {
-        (dy, ) = _calculateSwap(
-            tokenFrom,
-            tokenTo,
-            dx,
-            amplificationParams,
-            feeParams
-        );
+        (dy, ) = _calculateSwap(tokenFrom, tokenTo, dx, amplificationParams, feeParams);
     }
 
     /**
@@ -255,7 +227,7 @@ library SwapUtils {
         }
 
         // Transfer the tokens
-        for (uint256 i=0; i < tokens.length; i++) {
+        for (uint256 i = 0; i < tokens.length; i++) {
             tokens[i].token.safeTransferFrom(msg.sender, address(this), amounts[i]);
         }
 
@@ -278,10 +250,10 @@ library SwapUtils {
         if (v.totalSupply != 0) {
             uint256 feePerToken = _feePerToken(feeParams.swapFee);
 
-            for (uint256 i=0; i < tokens.length; i++) {
-                uint256 idealBal = v.d1 * v.oldBalances[i] / v.d0;
-                feePerToken * idealBal.difference(v.newBalances[i]) / FEE_DENOMINATOR;
-                fees[i] = feePerToken * idealBal.difference(v.newBalances[i]) / FEE_DENOMINATOR;
+            for (uint256 i = 0; i < tokens.length; i++) {
+                uint256 idealBal = (v.d1 * v.oldBalances[i]) / v.d0;
+                (feePerToken * idealBal.difference(v.newBalances[i])) / FEE_DENOMINATOR;
+                fees[i] = (feePerToken * idealBal.difference(v.newBalances[i])) / FEE_DENOMINATOR;
                 v.newBalances[i] = v.newBalances[i] - fees[i];
                 // TODO: handle admin fee
             }
@@ -298,7 +270,7 @@ library SwapUtils {
         if (v.totalSupply == 0) {
             toMint = v.d1;
         } else {
-            toMint = (v.d2 - v.d0) * v.totalSupply / v.d0;
+            toMint = ((v.d2 - v.d0) * v.totalSupply) / v.d0;
         }
 
         require(toMint >= minToMint, "Couldn't mint min requested");
@@ -306,13 +278,7 @@ library SwapUtils {
         // mint the user's LP tokens
         v.lpToken.mint(msg.sender, toMint);
 
-        emit AddLiquidity(
-            msg.sender,
-            amounts,
-            fees,
-            v.d1,
-            v.totalSupply + toMint
-        );
+        emit AddLiquidity(msg.sender, amounts, fees, v.d1, v.totalSupply + toMint);
 
         return toMint;
     }
@@ -374,14 +340,17 @@ library SwapUtils {
         uint256 totalSupply = lpToken.totalSupply();
         require(tokenAmount <= lpToken.balanceOf(msg.sender), ">LP.balanceOf");
 
-        (uint256 dy, /*uint256 dyFee*/ ) = _calculateWithdrawOneToken(
-            tokenAmount,
-            tokenReceive,
-            tokenCounterpart,
-            totalSupply,
-            amplificationParams,
-            feeParams
-        );
+        (
+            uint256 dy, /*uint256 dyFee*/
+
+        ) = _calculateWithdrawOneToken(
+                tokenAmount,
+                tokenReceive,
+                tokenCounterpart,
+                totalSupply,
+                amplificationParams,
+                feeParams
+            );
 
         require(dy >= minAmount, "dy < minAmount");
 
@@ -393,13 +362,7 @@ library SwapUtils {
         // Burn LP tokens
         lpToken.burnFrom(msg.sender, tokenAmount);
 
-        emit RemoveLiquidityOne(
-            msg.sender,
-            tokenAmount,
-            totalSupply,
-            tokenReceive.token,
-            dy
-        );
+        emit RemoveLiquidityOne(msg.sender, tokenAmount, totalSupply, tokenReceive.token, dy);
 
         return dy;
     }
@@ -450,7 +413,7 @@ library SwapUtils {
         }
 
         // calculate pool invariant after balance changes d1
-        {   
+        {
             require(v.oldBalances[0] >= amounts[0], "AMOUNT_EXCEEDS_BALANCE");
             require(v.oldBalances[1] >= amounts[1], "AMOUNT_EXCEEDS_BALANCE");
 
@@ -469,10 +432,10 @@ library SwapUtils {
         uint256[2] memory fees;
         uint256 feePerToken = _feePerToken(feeParams.swapFee);
 
-        for (uint256 i=0; i < tokens.length; i++) {
-            uint256 idealBal = v.d1 * v.oldBalances[i] / v.d0;
-            feePerToken * idealBal.difference(v.newBalances[i]) / FEE_DENOMINATOR;
-            fees[i] = feePerToken * idealBal.difference(v.newBalances[i]) / FEE_DENOMINATOR;
+        for (uint256 i = 0; i < tokens.length; i++) {
+            uint256 idealBal = (v.d1 * v.oldBalances[i]) / v.d0;
+            (feePerToken * idealBal.difference(v.newBalances[i])) / FEE_DENOMINATOR;
+            fees[i] = (feePerToken * idealBal.difference(v.newBalances[i])) / FEE_DENOMINATOR;
             v.newBalances[i] = v.newBalances[i] - fees[i];
             // TODO: handle admin fee
         }
@@ -483,8 +446,8 @@ library SwapUtils {
             uint256 _xp1 = _xp(v.newBalances[1], tokens[1].precisionMultiplier);
             v.d2 = getD(_xp0, _xp1, v.preciseA);
         }
-        
-        uint256 tokenAmount = (v.d0 - v.d2) * v.totalSupply / v.d0;
+
+        uint256 tokenAmount = ((v.d0 - v.d2) * v.totalSupply) / v.d0;
         require(tokenAmount != 0, "Burnt amount cannot be zero");
 
         require(tokenAmount <= maxBurnAmount, "tokenAmount > maxBurnAmount");
@@ -495,13 +458,7 @@ library SwapUtils {
             tokens[i].token.safeTransfer(msg.sender, amounts[i]);
         }
 
-        emit RemoveLiquidityImbalance(
-            msg.sender,
-            amounts,
-            fees,
-            v.d1,
-            v.totalSupply - tokenAmount
-        );
+        emit RemoveLiquidityImbalance(msg.sender, amounts, fees, v.d1, v.totalSupply - tokenAmount);
 
         return tokenAmount;
     }
@@ -535,6 +492,7 @@ library SwapUtils {
         );
         return availableAmount;
     }
+
     /**
      * @notice Calculate the dy, the amount of selected token that user receives and
      * the fee of withdrawing in one token
@@ -607,12 +565,11 @@ library SwapUtils {
         uint256 tcBal = _getTokenBalance(tokenCounterpart.token);
         uint256 xpC = _xp(tcBal, tokenCounterpart.precisionMultiplier);
 
-        CalculateWithdrawOneTokenDYInfo
-            memory v = CalculateWithdrawOneTokenDYInfo(0, 0, 0, 0, 0);
+        CalculateWithdrawOneTokenDYInfo memory v = CalculateWithdrawOneTokenDYInfo(0, 0, 0, 0, 0);
         v.preciseA = preciseA;
         // swap from counterpart to receive (so counterpart is from and receive is to)
         v.d0 = getD(xpC, xpR, v.preciseA);
-        v.d1 = v.d0 - (tokenAmount * v.d0 / totalSupply);
+        v.d1 = v.d0 - ((tokenAmount * v.d0) / totalSupply);
 
         require(tokenAmount <= xpR, "AMOUNT_EXCEEDS_AVAILABLE");
 
@@ -623,7 +580,7 @@ library SwapUtils {
         // For xpR => dxExpected = xpR * d1 / d0 - newY
         // For xpC => dxExpected = xpC - (xpC * d1 / d0)
         // xpReduced -= dxExpected * fee / FEE_DENOMINATOR
-        uint256 xpRReduced = xpR - (xpR * v.d1 /  v.d0 - v.newY) * v.feePerToken / FEE_DENOMINATOR;
+        uint256 xpRReduced = xpR - (((xpR * v.d1) / v.d0 - v.newY) * v.feePerToken) / FEE_DENOMINATOR;
         // uint256 xpCReduced = xpC - (xpC - (xpC * v.d1 / v.d0)) * v.feePerToken / FEE_DENOMINATOR;
 
         uint256 dy = xpRReduced - getYD(v.preciseA, xpR, v.d1);
@@ -668,23 +625,17 @@ library SwapUtils {
             uint256 bal0 = _getTokenBalance(tokens[0].token);
             xp0 = _xp(bal0, prec0);
             if (!deposit && bal0 < amounts[0]) revert("AMOUNT_EXCEEDS_SUPPLY");
-            xp0_ = _xp(
-                deposit ? bal0 + amounts[0] : bal0 - amounts[0],
-                prec0
-            );
+            xp0_ = _xp(deposit ? bal0 + amounts[0] : bal0 - amounts[0], prec0);
         }
 
-        uint256 xp1; 
+        uint256 xp1;
         uint256 xp1_;
         {
             uint256 prec1 = tokens[1].precisionMultiplier;
             uint256 bal1 = _getTokenBalance(tokens[1].token);
             xp1 = _xp(bal1, prec1);
             if (!deposit && bal1 < amounts[1]) revert("AMOUNT_EXCEEDS_SUPPLY");
-            xp1_ = _xp(
-                deposit ? bal1 + amounts[1] : bal1 - amounts[1],
-                prec1
-            );
+            xp1_ = _xp(deposit ? bal1 + amounts[1] : bal1 - amounts[1], prec1);
         }
 
         uint256 d0 = getD(xp0, xp1, a);
@@ -693,9 +644,9 @@ library SwapUtils {
         uint256 totalSupply = lpToken.totalSupply();
 
         if (deposit) {
-            return totalSupply == 0 ? d1 : (d1 - d0) * totalSupply / d0;
+            return totalSupply == 0 ? d1 : ((d1 - d0) * totalSupply) / d0;
         } else {
-            return (d0 - d1) * totalSupply / d0;
+            return ((d0 - d1) * totalSupply) / d0;
         }
     }
 
@@ -720,20 +671,20 @@ library SwapUtils {
         uint256 xpTo,
         uint256 d
     ) internal pure returns (uint256) {
-        uint256 c = d * d / (xpTo * NUM_TOKENS);
+        uint256 c = (d * d) / (xpTo * NUM_TOKENS);
         uint256 s = xpTo;
         uint256 nA = a * NUM_TOKENS;
 
-        c = c * d * A_PRECISION / (nA * NUM_TOKENS);
+        c = (c * d * A_PRECISION) / (nA * NUM_TOKENS);
 
-        uint256 b = s + (d * A_PRECISION / nA);
-        
+        uint256 b = s + ((d * A_PRECISION) / nA);
+
         uint256 yPrev;
         uint256 y = d;
         for (uint256 i = 0; i < MAX_LOOP_LIMIT; i++) {
             yPrev = y;
             uint256 num = y * y + c;
-            uint256 denom =  y * 2 + b - d;
+            uint256 denom = y * 2 + b - d;
             y = num / denom;
             // y = y.mul(y).add(c).div(y.mul(2).add(b).sub(d));
             if (y.within1(yPrev)) {
@@ -741,7 +692,6 @@ library SwapUtils {
             }
         }
         revert("Approximation did not converge");
-
     }
 
     /**
@@ -754,7 +704,7 @@ library SwapUtils {
      * @param tokenTo the token to buy
      * @param dx the number of tokens to sell
      * @param amplificationParams amplification parameters for the pool
-    * @param feeParams fee parameters for the pool
+     * @param feeParams fee parameters for the pool
      * @return dy the number of tokens the user will get
      * @return dyFee the associated fee
      */
@@ -774,19 +724,14 @@ library SwapUtils {
         uint256 toBalance = _getTokenBalance(tokenTo.token);
         // precision adjusted balance
         uint256 toXp = _xp(toBalance, tokenTo.precisionMultiplier);
-        
+
         // x is the new total amount of tokenFrom
         uint256 x = _xp(dx, tokenFrom.precisionMultiplier) + fromXp;
 
-        uint256 y = getY(
-            _getAPrecise(amplificationParams),
-            fromXp,
-            toXp,
-            x
-        );
+        uint256 y = getY(_getAPrecise(amplificationParams), fromXp, toXp, x);
 
         dy = toXp - y - 1;
-        dyFee = dy * feeParams.swapFee / FEE_DENOMINATOR;
+        dyFee = (dy * feeParams.swapFee) / FEE_DENOMINATOR;
         dy = (dy - dyFee) / tokenTo.precisionMultiplier;
     }
 
@@ -802,10 +747,10 @@ library SwapUtils {
      * @return array of amounts of tokens user will receive
      */
     function calculateRemoveLiquidity(
-            uint256 amount,
-            PooledToken[2] calldata tokens,
-            LiquidityPoolToken lpToken
-        ) external view returns (uint256[2] memory) {
+        uint256 amount,
+        PooledToken[2] calldata tokens,
+        LiquidityPoolToken lpToken
+    ) external view returns (uint256[2] memory) {
         uint256 totalSupply = lpToken.totalSupply();
         uint256[2] memory amounts = _calculateRemoveLiquidity(amount, tokens, totalSupply);
         return amounts;
@@ -833,7 +778,7 @@ library SwapUtils {
 
         for (uint256 i = 0; i < tokens.length; i++) {
             uint256 balance = _getTokenBalance(tokens[i].token);
-            outAmounts[i] = balance * amount / totalSupply;
+            outAmounts[i] = (balance * amount) / totalSupply;
         }
         return outAmounts;
     }
@@ -858,17 +803,17 @@ library SwapUtils {
         // d is the invariant of the pool
         uint256 d = getD(fromXp, toXp, preciseA);
         uint256 nA = NUM_TOKENS * preciseA;
-        uint256 c = d * d / (x * NUM_TOKENS);
-        c = c * d * A_PRECISION / (nA * NUM_TOKENS);
+        uint256 c = (d * d) / (x * NUM_TOKENS);
+        c = (c * d * A_PRECISION) / (nA * NUM_TOKENS);
 
-        uint256 b = x + ( d * A_PRECISION / nA);
+        uint256 b = x + ((d * A_PRECISION) / nA);
         uint256 yPrev;
         uint256 y = d;
 
         // iterative approximation
         for (uint256 i = 0; i < MAX_LOOP_LIMIT; i++) {
             yPrev = y;
-            y = ( y * y + c ) / ( y * 2 + b  - d);
+            y = (y * y + c) / (y * 2 + b - d);
             // y = y.mul(y).add(c).div(y.mul(2).add(b).sub(d));
             if (y.within1(yPrev)) {
                 return y;
@@ -885,52 +830,53 @@ library SwapUtils {
      * See the StableSwap paper for details
      * @return the invariant, at the precision of the pool
      */
-    function getD(uint256 fromXp, uint256 toXp, uint256 a)
-        internal
-        pure
-        returns (uint256) {
-            uint256 s = fromXp + toXp;
-            if (s == 0) return 0;
+    function getD(
+        uint256 fromXp,
+        uint256 toXp,
+        uint256 a
+    ) internal pure returns (uint256) {
+        uint256 s = fromXp + toXp;
+        if (s == 0) return 0;
 
-            uint256 prevD;
-            uint256 d = s;
-            uint256 nA = a * NUM_TOKENS;
+        uint256 prevD;
+        uint256 d = s;
+        uint256 nA = a * NUM_TOKENS;
 
-            for (uint256 i = 0; i < MAX_LOOP_LIMIT; i++) {
-                uint256 dP = d;
+        for (uint256 i = 0; i < MAX_LOOP_LIMIT; i++) {
+            uint256 dP = d;
 
-                // dP = dP.mul(d).div(xp[j].mul(numTokens));
+            // dP = dP.mul(d).div(xp[j].mul(numTokens));
 
-                dP = dP * d / ( fromXp * NUM_TOKENS);
-                dP = dP * d / ( toXp * NUM_TOKENS);
+            dP = (dP * d) / (fromXp * NUM_TOKENS);
+            dP = (dP * d) / (toXp * NUM_TOKENS);
 
-                prevD = d;
+            prevD = d;
 
-                uint256 num = (nA * s / A_PRECISION + (dP * NUM_TOKENS)) * d;
-                uint denom = (nA - A_PRECISION) * d / A_PRECISION + (NUM_TOKENS + 1) * dP;
-                d = num / denom;
-                // d = nA
-                //     .mul(s)
-                //     .div(A_PRECISION)
-                //     .add(dP.mul(NUM_TOKENS))
-                //     .mul(d)
-                //     .div(
-                //         nA
-                //             .sub(A_PRECISION)
-                //             .mul(d)
-                //             .div(A_PRECISION)
-                //             .add(NUM_TOKENS.add(1).mul(dP))
-                //     );
-                if (d.within1(prevD)) {
-                    return d;
-                }
+            uint256 num = ((nA * s) / A_PRECISION + (dP * NUM_TOKENS)) * d;
+            uint256 denom = ((nA - A_PRECISION) * d) / A_PRECISION + (NUM_TOKENS + 1) * dP;
+            d = num / denom;
+            // d = nA
+            //     .mul(s)
+            //     .div(A_PRECISION)
+            //     .add(dP.mul(NUM_TOKENS))
+            //     .mul(d)
+            //     .div(
+            //         nA
+            //             .sub(A_PRECISION)
+            //             .mul(d)
+            //             .div(A_PRECISION)
+            //             .add(NUM_TOKENS.add(1).mul(dP))
+            //     );
+            if (d.within1(prevD)) {
+                return d;
             }
-
-            // Convergence should occur in 4 loops or less. If this is reached, there may be something wrong
-            // with the pool. If this were to occur repeatedly, LPs should withdraw via `removeLiquidity()`
-            // function which does not rely on D.
-            revert("D does not converge");
         }
+
+        // Convergence should occur in 4 loops or less. If this is reached, there may be something wrong
+        // with the pool. If this were to occur repeatedly, LPs should withdraw via `removeLiquidity()`
+        // function which does not rely on D.
+        revert("D does not converge");
+    }
 
     /**
      * @notice Given a a balance and precision multiplier, return the
@@ -943,10 +889,7 @@ library SwapUtils {
      *
      * @return an amount  "scaled" to the pool's precision
      */
-    function _xp(
-        uint256  balance,
-        uint256 precisionMultiplier
-    ) internal pure returns (uint256) {
+    function _xp(uint256 balance, uint256 precisionMultiplier) internal pure returns (uint256) {
         return balance * precisionMultiplier;
     }
 
@@ -955,11 +898,7 @@ library SwapUtils {
      * swap fee calculations
      * @param swapFee swap fee for the tokens
      */
-    function _feePerToken(uint256 swapFee)
-        internal
-        pure
-        returns (uint256)
-    {
+    function _feePerToken(uint256 swapFee) internal pure returns (uint256) {
         return swapFee / NUM_TOKENS;
     }
 
@@ -983,12 +922,7 @@ library SwapUtils {
         uint256 futureATime;
     }
 
-    event RampA(
-        uint256 oldA,
-        uint256 newA,
-        uint256 initialTime,
-        uint256 futureTime
-    );
+    event RampA(uint256 oldA, uint256 newA, uint256 initialTime, uint256 futureTime);
     event StopRampA(uint256 currentA, uint256 time);
 
     /**
@@ -997,11 +931,7 @@ library SwapUtils {
      * @param self Swap struct to read from
      * @return A parameter
      */
-    function getA(Amplification storage self)
-        external
-        view
-        returns (uint256)
-    {
+    function getA(Amplification storage self) external view returns (uint256) {
         return _getAPrecise(self) / A_PRECISION;
     }
 
@@ -1011,11 +941,7 @@ library SwapUtils {
      * @param self Swap struct to read from
      * @return A parameter in its raw precision form
      */
-    function getAPrecise(Amplification storage self)
-        external
-        view
-        returns (uint256)
-    {
+    function getAPrecise(Amplification storage self) external view returns (uint256) {
         return _getAPrecise(self);
     }
 
@@ -1025,11 +951,7 @@ library SwapUtils {
      * @param self Swap struct to read from
      * @return A parameter in its raw precision form
      */
-    function _getAPrecise(Amplification storage self)
-        internal
-        view
-        returns (uint256)
-    {
+    function _getAPrecise(Amplification storage self) internal view returns (uint256) {
         uint256 t1 = self.futureATime; // time when ramp is finished
         uint256 a1 = self.futureA; // final A value when ramp is finished
 
@@ -1038,10 +960,10 @@ library SwapUtils {
             uint256 a0 = self.initialA; // initial A value when ramp is started
             if (a1 > a0) {
                 // a0 + (a1 - a0) * (block.timestamp - t0) / (t1 - t0)
-                return a0 + (a1 - a0) * (block.timestamp - t0) / (t1 - t0);
+                return a0 + ((a1 - a0) * (block.timestamp - t0)) / (t1 - t0);
             } else {
                 // a0 - (a0 - a1) * (block.timestamp - t0) / (t1 - t0)
-                return a0 - (a0 - a1) * (block.timestamp - t0) / (t1 - t0);
+                return a0 - ((a0 - a1) * (block.timestamp - t0)) / (t1 - t0);
             }
         } else {
             return a1;
@@ -1061,32 +983,17 @@ library SwapUtils {
         uint256 futureA_,
         uint256 futureTime_
     ) external {
-        require(
-            block.timestamp >= self.initialATime + 1 days,
-            "Wait 1 day before starting ramp"
-        );
-        require(
-            futureTime_ >= block.timestamp + MIN_RAMP_TIME,
-            "Insufficient ramp time"
-        );
-        require(
-            futureA_ > 0 && futureA_ < MAX_A,
-            "futureA_ must be > 0 and < MAX_A"
-        );
+        require(block.timestamp >= self.initialATime + 1 days, "Wait 1 day before starting ramp");
+        require(futureTime_ >= block.timestamp + MIN_RAMP_TIME, "Insufficient ramp time");
+        require(futureA_ > 0 && futureA_ < MAX_A, "futureA_ must be > 0 and < MAX_A");
 
         uint256 initialAPrecise = _getAPrecise(self);
         uint256 futureAPrecise = futureA_ * A_PRECISION;
 
         if (futureAPrecise < initialAPrecise) {
-            require(
-                futureAPrecise * MAX_A_CHANGE >= initialAPrecise,
-                "futureA_ is too small"
-            );
+            require(futureAPrecise * MAX_A_CHANGE >= initialAPrecise, "futureA_ is too small");
         } else {
-            require(
-                futureAPrecise <= initialAPrecise * MAX_A_CHANGE,
-                "futureA_ is too large"
-            );
+            require(futureAPrecise <= initialAPrecise * MAX_A_CHANGE, "futureA_ is too large");
         }
 
         self.initialA = initialAPrecise;
@@ -1094,12 +1001,7 @@ library SwapUtils {
         self.initialATime = block.timestamp;
         self.futureATime = futureTime_;
 
-        emit RampA(
-            initialAPrecise,
-            futureAPrecise,
-            block.timestamp,
-            futureTime_
-        );
+        emit RampA(initialAPrecise, futureAPrecise, block.timestamp, futureTime_);
     }
 
     /**
@@ -1134,7 +1036,7 @@ library SwapUtils {
     // =============================================
     //            FEE MANAGEMENT
     // =============================================
-    
+
     /**
      * @notice Sets the admin fee
      * @dev adminFee cannot be higher than 100% of the swap fee

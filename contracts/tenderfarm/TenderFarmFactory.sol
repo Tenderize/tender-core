@@ -10,8 +10,8 @@ import "../tenderizer/ITenderizer.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
-contract TenderFarmFactory {
 
+contract TenderFarmFactory {
     ITenderFarm immutable farmTarget;
 
     constructor(ITenderFarm _farm) {
@@ -27,16 +27,8 @@ contract TenderFarmFactory {
     ) public returns (ITenderFarm farm) {
         farm = ITenderFarm(Clones.clone(address(farmTarget)));
 
-        require(
-            farm.initialize(
-                _stakeToken,
-                _rewardToken,
-                _tenderizer
-            ),
-            "FAIL_INIT_TENDERFARM"
-        );
+        require(farm.initialize(_stakeToken, _rewardToken, _tenderizer), "FAIL_INIT_TENDERFARM");
 
         emit NewTenderFarm(farm, _stakeToken, _rewardToken, _tenderizer);
     }
-
 }

@@ -10,10 +10,10 @@ import "../../../libs/MathUtils.sol";
 import "../../Tenderizer.sol";
 import "./ILivepeer.sol";
 
-import '../../../interfaces/IWETH.sol';
-import '../../../interfaces/ISwapRouter.sol';
+import "../../../interfaces/IWETH.sol";
+import "../../../interfaces/ISwapRouter.sol";
 
-import {ITenderSwapFactory} from "../../../tenderswap/TenderSwapFactory.sol";
+import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
 
 contract Livepeer is Tenderizer {
     uint256 private constant MAX_ROUND = 2**256 - 1;
@@ -79,7 +79,7 @@ contract Livepeer is Tenderizer {
         emit Stake(_node, amount);
     }
 
-    // TODO: is unstaking when front running a negative rebase exploitable ? 
+    // TODO: is unstaking when front running a negative rebase exploitable ?
     function _unstake(
         address _account,
         address _node,
@@ -134,7 +134,7 @@ contract Livepeer is Tenderizer {
      * but from fees that do not directly accumulate
      * towards stake. These could either be liquid
      * underlying tokens, or other tokens that then
-     * need to be swapped using a DEX. 
+     * need to be swapped using a DEX.
      * Secondary claimed fees will be immeadiatly
      * added to the balance of this contract
      * @dev this is implementation specific
@@ -148,13 +148,12 @@ contract Livepeer is Tenderizer {
 
             // Wrap ETH
             uint256 bal = address(this).balance;
-            WETH.deposit{value: bal}();
+            WETH.deposit{ value: bal }();
             WETH.approve(address(uniswapRouter), bal);
 
             // swap ETH fees for LPT
             if (address(uniswapRouter) != address(0)) {
-                ISwapRouter.ExactInputSingleParams memory params =
-                ISwapRouter.ExactInputSingleParams({
+                ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
                     tokenIn: address(WETH),
                     tokenOut: address(steak),
                     fee: UNISWAP_POOL_FEE,
@@ -164,14 +163,14 @@ contract Livepeer is Tenderizer {
                     amountOutMinimum: 0, // TODO: Set5% max slippage
                     sqrtPriceLimitX96: 0
                 });
-                try uniswapRouter.exactInputSingle(params) returns (uint256 /*_swappedLPT*/) {
-                } catch {}
+                try uniswapRouter.exactInputSingle(params) returns (
+                    uint256 /*_swappedLPT*/
+                ) {} catch {}
             }
         }
     }
 
     function _claimRewards() internal override {
-
         _claimSecondaryRewards();
 
         // Account for LPT rewards
