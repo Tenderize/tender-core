@@ -127,6 +127,8 @@ interface ITenderizer {
 
     // Governance setter funtions
 
+    function setGov(address _gov) external;
+
     function setNode(address _node) external;
 
     function setSteak(IERC20 _steak) external;

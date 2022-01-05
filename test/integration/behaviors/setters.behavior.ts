@@ -85,4 +85,20 @@ export default function suite () {
       expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('LIQUIDITY_FEE')
     })
   })
+
+  describe('setting gov', async () => {
+    it('reverts if not called by gov', async () => {
+      await expect(ctx.Tenderizer.connect(ctx.signers[1]).setGov(ethers.constants.AddressZero)).to.be.reverted
+    })
+
+    it('sets gov successfully', async () => {
+      const newGovAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
+      tx = await ctx.Tenderizer.setGov(newGovAddress)
+      expect(await ctx.Tenderizer.gov()).to.equal(newGovAddress)
+    })
+
+    it('should emit GovernanceUpdate event', async () => {
+      expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('GOV')
+    })
+  })
 }
