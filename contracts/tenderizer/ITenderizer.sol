@@ -36,6 +36,7 @@ interface ITenderizer {
     /**
      * @notice Deposit tokens in Tenderizer with permit.
      * @param _amount amount deposited
+     * @param _deadline deadline for the permit
      * @param _v from ECDSA signature
      * @param _r from ECDSA signature
      * @param _s from ECDSA signature
@@ -43,7 +44,13 @@ interface ITenderizer {
      * awaiting to be staked.
      * @dev requires '_amount' to be approved by '_from'.
      */
-    function depositWithPermit(uint256 _amount, uint8 _v, bytes32 _r, bytes32 _s) external;
+    function depositWithPermit(
+        uint256 _amount,
+        uint256 _deadline,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) external;
 
     /**
      * @notice Stake '_amount' of tokens to '_node'.

@@ -12,10 +12,7 @@ import "../token/ITenderToken.sol";
 import { ITenderSwapFactory, ITenderSwap } from "../tenderswap/TenderSwapFactory.sol";
 import "../tenderfarm/TenderFarmFactory.sol";
 import "../libs/MathUtils.sol";
-<<<<<<< HEAD
-=======
 import "../helpers/SelfPermit.sol";
->>>>>>> 2e899ff (deposit: use permit)
 
 /**
  * @title Tenderizer is the base contract to be implemented.
@@ -108,10 +105,16 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     /// @inheritdoc ITenderizer
-    function depositWithPermit(uint256 _amount, uint8 _v, bytes32 _r, bytes32 _s) external override {
-        _selfPermit(address(steak), _amount, type(uint256).max, _v, _r, _s);
+    function depositWithPermit(
+        uint256 _amount,
+        uint256 _deadline,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) external override {
+        _selfPermit(address(steak), _amount, _deadline, _v, _r, _s);
 
-        depositInner(_amount);
+        deposit(_amount);
     }
 
     /// @inheritdoc ITenderizer

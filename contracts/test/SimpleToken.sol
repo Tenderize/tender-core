@@ -5,6 +5,7 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 
 /**
  * @title SimpleToken
@@ -13,7 +14,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
  * `ERC20` functions.
  * Based on https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v2.5.1/contracts/examples/SimpleToken.sol
  */
-contract SimpleToken is ERC20 {
+contract SimpleToken is ERC20, ERC20Permit {
     /**
      * @dev Constructor that gives msg.sender all of existing tokens.
      */
@@ -21,7 +22,7 @@ contract SimpleToken is ERC20 {
         string memory name,
         string memory symbol,
         uint256 initialSupply
-    ) ERC20(name, symbol) {
+    ) ERC20(name, symbol) ERC20Permit(name) {
         _mint(msg.sender, initialSupply);
     }
 
