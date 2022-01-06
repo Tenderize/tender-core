@@ -12,6 +12,10 @@ import "../token/ITenderToken.sol";
 import { ITenderSwapFactory, ITenderSwap } from "../tenderswap/TenderSwapFactory.sol";
 import "../tenderfarm/TenderFarmFactory.sol";
 import "../libs/MathUtils.sol";
+<<<<<<< HEAD
+=======
+import "../helpers/SelfPermit.sol";
+>>>>>>> 2e899ff (deposit: use permit)
 
 /**
  * @title Tenderizer is the base contract to be implemented.
@@ -19,7 +23,7 @@ import "../libs/MathUtils.sol";
  * while also keeping track of user depsotis/withdrawals and protocol fees.
  * @dev New implementations are required to inherit this contract and override any required internal functions.
  */
-abstract contract Tenderizer is Initializable, ITenderizer {
+abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     struct UnstakeLock {
         uint256 amount;
         address account;
@@ -88,7 +92,7 @@ abstract contract Tenderizer is Initializable, ITenderizer {
     }
 
     /// @inheritdoc ITenderizer
-    function deposit(uint256 _amount) external override {
+    function deposit(uint256 _amount) public override {
         require(_amount > 0, "ZERO_AMOUNT");
 
         // Calculate tenderTokens to be minted
@@ -101,6 +105,13 @@ abstract contract Tenderizer is Initializable, ITenderizer {
         require(steak.transferFrom(msg.sender, address(this), _amount), "STEAK_TRANSFERFROM_FAILED");
 
         _deposit(msg.sender, _amount);
+    }
+
+    /// @inheritdoc ITenderizer
+    function depositWithPermit(uint256 _amount, uint8 _v, bytes32 _r, bytes32 _s) external override {
+        _selfPermit(address(steak), _amount, type(uint256).max, _v, _r, _s);
+
+        depositInner(_amount);
     }
 
     /// @inheritdoc ITenderizer
