@@ -79,7 +79,7 @@ abstract contract SelfPermit is ISelfPermit {
         uint8 _v,
         bytes32 _r,
         bytes32 _s
-    ) public payable {
+    ) internal {
         IERC20Permit(_token).permit(msg.sender, address(this), _value, _deadline, _v, _r, _s);
     }
 }

@@ -34,6 +34,19 @@ interface ITenderFarm {
     function farm(uint256 _amount) external;
 
     /**
+     * @notice allow spending token and stake liquidity pool tokens to receive rewards
+     * @dev '_amount' needs to be approved for the 'TenderFarm' to transfer.
+     * @dev harvests current rewards before accounting updates are made.
+     * @dev calls permit on LP Token.
+     * @param _amount amount of liquidity pool tokens to stake
+     * @param _deadline deadline of the permit
+     * @param _v v of signed Permit message
+     * @param _r r of signed Permit message
+     * @param _s s of signed Permit message
+     */
+    function farmWithPermit(uint256 _amount, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s) external;
+
+    /**
      * @notice stake liquidity pool tokens for a specific account so that it receives rewards
      * @dev '_amount' needs to be approved for the 'TenderFarm' to transfer.
      * @dev staked tokens will belong to the account they are staked for.
