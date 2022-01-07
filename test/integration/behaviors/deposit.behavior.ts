@@ -1,5 +1,6 @@
 import { BigNumber, Transaction } from 'ethers/lib/ethers'
 import { expect } from 'chai'
+import { signERC2612Permit } from 'eth-permit'
 
 export default function suite () {
   let tx: Transaction
@@ -12,13 +13,15 @@ export default function suite () {
     await expect(ctx.Tenderizer.deposit(ctx.deposit)).to.be.revertedWith('ERC20: transfer amount exceeds allowance')
   })
 
-  describe('deposits funds succesfully', async () => {
+  describe('deposits funds with permit', async () => {
     let supplyAfterTax: BigNumber
     before(async () => {
-      await ctx.Steak.approve(ctx.Tenderizer.address, ctx.deposit)
       supplyAfterTax = ctx.deposit.add(ctx.initialStake)
         .sub(ctx.deposit.add(ctx.initialStake).mul(ctx.DELEGATION_TAX).div(ctx.MAX_PPM))
-      tx = await ctx.Tenderizer.deposit(ctx.deposit)
+
+      const signed = await signERC2612Permit(ctx.signers[0], ctx.Steak.address, ctx.signers[0].address, ctx.Tenderizer.address, ctx.deposit)
+
+      tx = await ctx.Tenderizer.depositWithPermit(ctx.deposit, signed.deadline, signed.v, signed.r, signed.s)
     })
 
     it('increases TenderToken supply', async () => {
