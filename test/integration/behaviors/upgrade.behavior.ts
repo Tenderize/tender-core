@@ -11,7 +11,7 @@ export default function suite () {
   let proxy: EIP173Proxy
   let newTenderizer: Contract
 
-  before(async function () {
+  beforeEach(async function () {
     ctx = this.test?.ctx!
     proxy = (await ethers.getContractAt('EIP173Proxy', ctx.Tenderizer.address)) as EIP173Proxy
     beforeBalance = await ctx.Tenderizer.currentPrincipal()

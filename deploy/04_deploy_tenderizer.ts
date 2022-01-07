@@ -53,7 +53,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   const tenderTokenAddress = await Tenderizer.tenderToken()
   const TenderFarm: TenderFarm = (await ethers.getContractAt('TenderFarm', await Tenderizer.tenderFarm())) as TenderFarm
 
-  console.log('Succesfully Deployed ! ')
+  // console.log('Succesfully Deployed ! ')
 
   // register protocol
   const allDeployed = await deployments.all()
@@ -81,7 +81,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     const seedAmount = process.env.FAUCET_SEED_AMOUNT // Seed amount of tokens to be added to the faucet
 
     if (!tokenAddress || !requestAmount || !requestWait || !seedAmount) {
-      console.log('Faucet ENVs are not set, skipping Faucet deployment')
+      // console.log('Faucet ENVs are not set, skipping Faucet deployment')
       return
     }
 

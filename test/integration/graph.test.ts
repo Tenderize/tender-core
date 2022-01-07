@@ -1,5 +1,5 @@
 import hre, { ethers } from 'hardhat'
-
+import * as rpc from '../util/snapshot'
 import {
   SimpleToken, Tenderizer, TenderToken, TenderFarm, TenderSwap, LiquidityPoolToken, GraphMock
 } from '../../typechain'
@@ -36,6 +36,7 @@ import setterTests from './behaviors/setters.behavior'
 chai.use(solidity)
 
 describe('Graph Integration Test', () => {
+  let snapshotId: any
   let GraphMock: GraphMock
 
   let Graph: {[name: string]: Deployment}
@@ -43,14 +44,22 @@ describe('Graph Integration Test', () => {
   const protocolFeesPercent = ethers.utils.parseEther('0.025')
   const liquidityFeesPercent = ethers.utils.parseEther('0.025')
 
-  before('get signers', async function () {
+  beforeEach(async () => {
+    snapshotId = await rpc.snapshot()
+  })
+
+  afterEach(async () => {
+    await rpc.revert(snapshotId)
+  })
+
+  beforeEach('get signers', async function () {
     const namedAccs = await hre.getNamedAccounts()
     this.signers = await ethers.getSigners()
 
     this.deployer = namedAccs.deployer
   })
 
-  before('deploy Graph token', async function () {
+  beforeEach('deploy Graph token', async function () {
     const SimpleTokenFactory = await ethers.getContractFactory(
       'SimpleToken',
       this.signers[0]
@@ -59,7 +68,7 @@ describe('Graph Integration Test', () => {
     this.Steak = (await SimpleTokenFactory.deploy('Graph Token', 'GRT', ethers.utils.parseEther('1000000'))) as SimpleToken
   })
 
-  before('deploy Graph', async function () {
+  beforeEach('deploy Graph', async function () {
     const GraphFac = await ethers.getContractFactory(
       'GraphMock',
       this.signers[0]
@@ -71,7 +80,7 @@ describe('Graph Integration Test', () => {
 
   const STEAK_AMOUNT = '100000'
 
-  before('deploy Graph Tenderizer', async function () {
+  beforeEach('deploy Graph Tenderizer', async function () {
     this.NODE = '0xf4e8Ef0763BCB2B1aF693F5970a00050a6aC7E1B'
     process.env.NAME = 'Graph'
     process.env.SYMBOL = 'GRT'
@@ -116,7 +125,7 @@ describe('Graph Integration Test', () => {
   describe('Before intial deposits', beforeInitialDepsoits.bind(this))
 
   describe('After initial deposits', async function () {
-    before(async function () {
+    beforeEach(async function () {
       await addInitialDeposits(this)
     })
 
@@ -129,12 +138,12 @@ describe('Graph Integration Test', () => {
     let newStake: BigNumber
     describe('Rebases', async function () {
       context('Positive Rebase', async function () {
-        before(async function () {
+        beforeEach(async function () {
           this.increase = ethers.utils.parseEther('10')
           liquidityFees = percOf2(this.increase, liquidityFeesPercent)
           protocolFees = percOf2(this.increase, protocolFeesPercent)
-          newStake = this.deposit.add(this.initialStake)
-            .sub(this.deposit.add(this.initialStake).mul(this.DELEGATION_TAX).div(this.MAX_PPM))
+          newStake = this.initialStake
+            .sub(this.initialStake.mul(this.DELEGATION_TAX).div(this.MAX_PPM))
             .add(this.increase)
           this.newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
 
@@ -149,21 +158,23 @@ describe('Graph Integration Test', () => {
       })
 
       context('Neutral Rebase', async function () {
-        before(async function () {
-          this.stakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
+        beforeEach(async function () {
+          await this.Tenderizer.claimRewards()
+          this.expectedCP = this.initialStake
+            .sub(this.initialStake.mul(this.DELEGATION_TAX).div(this.MAX_PPM))
         })
         describe('Stake stays the same', stakeStaysSameTests.bind(this))
       })
 
       context('Negative Rebase', async function () {
-        before(async function () {
-          const stake = await this.StakingContract.staked()
+        beforeEach(async function () {
+          await this.Tenderizer.claimRewards()
           this.decrease = ethers.utils.parseEther('10')
-          // reduced stake is current stake - 100 from rewards previously
-          const reducedStake = stake.sub(this.decrease)
-          this.expectedCP = reducedStake.sub(liquidityFees).sub(protocolFees)
+          this.expectedCP = this.initialStake
+            .sub(this.initialStake.mul(this.DELEGATION_TAX).div(this.MAX_PPM))
+            .sub(this.decrease)
           // reduce staked on mock
-          await this.StakingContract.setStaked(reducedStake)
+          await this.StakingContract.setStaked((await this.StakingContract.staked()).sub(this.decrease))
         })
         describe('Stake decreases', stakeDecreaseTests.bind(this))
       })
@@ -174,7 +185,7 @@ describe('Graph Integration Test', () => {
     describe('Swap', swapTests.bind(this))
 
     describe('Unlock and Withdraw', async function () {
-      before(async function () {
+      beforeEach(async function () {
         this.withdrawAmount = await this.TenderToken.balanceOf(this.deployer)
         await this.StakingContract.setStaked(
           await this.Tenderizer.totalStakedTokens()

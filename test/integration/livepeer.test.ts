@@ -1,5 +1,5 @@
 import hre, { ethers } from 'hardhat'
-
+import * as rpc from '../util/snapshot'
 import { MockContract, smockit } from '@eth-optimism/smock'
 
 import {
@@ -41,6 +41,7 @@ import { percOf2 } from '../util/helpers'
 chai.use(solidity)
 
 describe('Livepeer Integration Test', () => {
+  let snapshotId: any
   // Mocks
   let LivepeerMock: LivepeerMock
   let UniswapRouterMock: MockContract
@@ -52,14 +53,22 @@ describe('Livepeer Integration Test', () => {
   const protocolFeesPercent = ethers.utils.parseEther('0.025')
   const liquidityFeesPercent = ethers.utils.parseEther('0.025')
 
-  before('get signers', async function () {
+  beforeEach(async () => {
+    snapshotId = await rpc.snapshot()
+  })
+
+  afterEach(async () => {
+    await rpc.revert(snapshotId)
+  })
+
+  beforeEach('get signers', async function () {
     const namedAccs = await hre.getNamedAccounts()
     this.signers = await ethers.getSigners()
 
     this.deployer = namedAccs.deployer
   })
 
-  before('deploy Livepeer token (Steak)', async function () {
+  beforeEach('deploy Livepeer token (Steak)', async function () {
     const SimpleTokenFactory = await ethers.getContractFactory(
       'SimpleToken',
       this.signers[0]
@@ -67,7 +76,7 @@ describe('Livepeer Integration Test', () => {
     this.Steak = (await SimpleTokenFactory.deploy('Livepeer Token', 'LPT', ethers.utils.parseEther('1000000'))) as SimpleToken
   })
 
-  before('deploy Livepeer', async function () {
+  beforeEach('deploy Livepeer', async function () {
     const LivepeerFac = await ethers.getContractFactory(
       'LivepeerMock',
       this.signers[0]
@@ -77,7 +86,7 @@ describe('Livepeer Integration Test', () => {
     this.StakingContract = LivepeerMock
   })
 
-  before('deploy Uniswap Router Mock', async function () {
+  beforeEach('deploy Uniswap Router Mock', async function () {
     const UniswapRouterFac = await ethers.getContractFactory(
       'UniswapRouterMock',
       this.signers[0]
@@ -88,7 +97,7 @@ describe('Livepeer Integration Test', () => {
     UniswapRouterMock = await smockit(UniswapRouterNoMock)
   })
 
-  before('deploy WETH Mock', async function () {
+  beforeEach('deploy WETH Mock', async function () {
     const WETHFac = await ethers.getContractFactory(
       'WETHMock',
       this.signers[0]
@@ -99,7 +108,7 @@ describe('Livepeer Integration Test', () => {
     WethMock = await smockit(WETHNoMock)
   })
 
-  before('deploy Livepeer Tenderizer', async function () {
+  beforeEach('deploy Livepeer Tenderizer', async function () {
     const STEAK_AMOUNT = '100000'
     this.NODE = '0xf4e8Ef0763BCB2B1aF693F5970a00050a6aC7E1B'
 
@@ -147,7 +156,7 @@ describe('Livepeer Integration Test', () => {
   describe('Before intial deposits', beforeInitialDepsoits.bind(this))
 
   describe('After initial deposits', async function () {
-    before(async function () {
+    beforeEach(async function () {
       await addInitialDeposits(this)
     })
 
@@ -161,11 +170,11 @@ describe('Livepeer Integration Test', () => {
     let newStake: BigNumber
     describe('Rebases', async function () {
       context('Positive Rebase', async function () {
-        before(async function () {
+        beforeEach(async function () {
           this.increase = ethers.utils.parseEther('90')
           liquidityFees = percOf2(this.increase.add(swappedLPTRewards), liquidityFeesPercent)
           protocolFees = percOf2(this.increase.add(swappedLPTRewards), protocolFeesPercent)
-          newStake = this.deposit.add(this.initialStake).add(this.increase)
+          newStake = this.initialStake.add(this.increase)
           this.newStakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
 
           // set increase on mock
@@ -185,22 +194,21 @@ describe('Livepeer Integration Test', () => {
       })
 
       context('Neutral Rebase', async function () {
-        before(async function () {
+        beforeEach(async function () {
+          await this.Tenderizer.claimRewards()
           UniswapRouterMock.smocked.exactInputSingle.will.return.with(ethers.constants.Zero)
-          this.stakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
+          this.expectedCP = this.initialStake
         })
         describe('Stake stays the same', stakeStaysSameTests.bind(this))
       })
 
       context('Negative Rebase', async function () {
-        before(async function () {
-          const stake = await this.StakingContract.staked()
+        beforeEach(async function () {
+          await this.Tenderizer.claimRewards()
           this.decrease = ethers.utils.parseEther('10')
-          // reduced stake is current stake - 90 from rewards previously
-          const reducedStake = stake.sub(this.decrease)
-          this.expectedCP = reducedStake.sub(liquidityFees).sub(protocolFees)
+          this.expectedCP = this.initialStake.sub(this.decrease)
           // reduce staked on mock
-          await this.StakingContract.setStaked(reducedStake)
+          await this.StakingContract.setStaked((await this.StakingContract.staked()).sub(this.decrease))
         })
         describe('Stake decreases', stakeDecreaseTests.bind(this))
       })
@@ -215,13 +223,13 @@ describe('Livepeer Integration Test', () => {
       describe('Withdrawal', userBasedWithdrawalTests.bind(this))
       describe('Gov unlock', async function () {
         context('Zero stake', async function () {
-          before(async function () {
+          beforeEach(async function () {
             await this.StakingContract.setStaked(0)
           })
           describe('No pending stake', govUnbondRevertIfNoStake.bind(this))
         })
         context('>0 Stake', async function () {
-          before(async function () {
+          beforeEach(async function () {
             await this.StakingContract.setStaked(
               await this.Tenderizer.totalStakedTokens()
             )

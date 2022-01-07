@@ -7,17 +7,32 @@ import { Context } from 'mocha'
 export default function suite () {
   let tx: Transaction
   let ctx: Context
+  const secondDeposit = ethers.utils.parseEther('10')
+  let balBefore: BigNumber
 
-  before(async function () {
+  beforeEach(async function () {
     ctx = this.test?.ctx!
-    const lock = await ctx.Tenderizer.unstakeLocks(ctx.unbondLockID)
-    ctx.withdrawAmount = lock.amount
+    // Stake and unstake with another account
+    await ctx.Steak.transfer(ctx.signers[2].address, secondDeposit)
+    await ctx.Steak.connect(ctx.signers[2]).approve(ctx.Tenderizer.address, secondDeposit)
+    await ctx.Tenderizer.connect(ctx.signers[2]).deposit(secondDeposit)
+    await ctx.Tenderizer.claimRewards()
+    ctx.withdrawAmount = await ctx.TenderToken.balanceOf(ctx.signers[2].address)
+    await ctx.Tenderizer.connect(ctx.signers[2]).unstake(ctx.withdrawAmount)
+
+    // Gov Unstake
+    await ctx.Tenderizer.unstake(secondDeposit)
+  })
+
+  it('user withdrawal reverts if gov withdrawal pending', async () => {
+    await expect(ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.unbondLockID))
+      .to.be.revertedWith('GOV_WITHDRAW_PENDING')
   })
 
   describe('gov withdrawal', async () => {
-    it('user withdrawal reverts if gov withdrawal pending', async () => {
-      await expect(ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.unbondLockID))
-        .to.be.revertedWith('GOV_WITHDRAW_PENDING')
+    beforeEach(async function () {
+      balBefore = await ctx.Steak.balanceOf(ctx.Tenderizer.address)
+      tx = await ctx.Tenderizer.withdraw(ctx.govUnboundLockID)
     })
 
     it('reverts if undelegateStake() reverts', async () => {
@@ -27,8 +42,6 @@ export default function suite () {
     })
 
     it('undelegateStake() succeeds', async () => {
-      const balBefore = await ctx.Steak.balanceOf(ctx.Tenderizer.address)
-      tx = await ctx.Tenderizer.withdraw(ctx.govUnboundLockID)
       const balAfter = await ctx.Steak.balanceOf(ctx.Tenderizer.address)
       expect(balBefore.add(ctx.withdrawAmount)).to.eq(balAfter)
     })
@@ -41,14 +54,19 @@ export default function suite () {
 
   describe('user withdrawal', async () => {
     let steakBalanceBefore : BigNumber
+
+    beforeEach(async function () {
+      await ctx.Tenderizer.withdraw(ctx.govUnboundLockID)
+      steakBalanceBefore = await ctx.Steak.balanceOf(ctx.signers[2].address)
+      tx = await ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.unbondLockID)
+    })
+
     it('reverts if account mismatch from unboondigLock', async () => {
       await expect(ctx.Tenderizer.connect(ctx.signers[1]).withdraw(ctx.unbondLockID))
         .to.be.revertedWith('ACCOUNT_MISTMATCH')
     })
 
     it('success - increases Steak balance', async () => {
-      steakBalanceBefore = await ctx.Steak.balanceOf(ctx.signers[2].address)
-      tx = await ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.unbondLockID)
       expect(await ctx.Steak.balanceOf(ctx.signers[2].address))
         .to.eq(steakBalanceBefore.add(ctx.withdrawAmount))
     })
