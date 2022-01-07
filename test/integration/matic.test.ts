@@ -1,4 +1,5 @@
 import hre, { ethers } from 'hardhat'
+import * as rpc from '../util/snapshot'
 import {
   SimpleToken, Tenderizer, TenderToken, TenderFarm, TenderSwap, LiquidityPoolToken, MaticMock
 } from '../../typechain'
@@ -35,6 +36,7 @@ import setterTests from './behaviors/setters.behavior'
 chai.use(solidity)
 
 describe('Matic Integration Test', () => {
+  let snapshotId: any
   let MaticMock: MaticMock
 
   let Matic: {[name: string]: Deployment}
@@ -42,14 +44,22 @@ describe('Matic Integration Test', () => {
   const protocolFeesPercent = ethers.utils.parseEther('0.025')
   const liquidityFeesPercent = ethers.utils.parseEther('0.025')
 
-  before('get signers', async function () {
+  beforeEach(async () => {
+    snapshotId = await rpc.snapshot()
+  })
+
+  afterEach(async () => {
+    await rpc.revert(snapshotId)
+  })
+
+  beforeEach('get signers', async function () {
     const namedAccs = await hre.getNamedAccounts()
     this.signers = await ethers.getSigners()
 
     this.deployer = namedAccs.deployer
   })
 
-  before('deploy Matic token', async function () {
+  beforeEach('deploy Matic token', async function () {
     const SimpleTokenFactory = await ethers.getContractFactory(
       'SimpleToken',
       this.signers[0]
@@ -58,7 +68,7 @@ describe('Matic Integration Test', () => {
     this.Steak = (await SimpleTokenFactory.deploy('Matic Token', 'MATIC', ethers.utils.parseEther('1000000'))) as SimpleToken
   })
 
-  before('deploy Matic', async function () {
+  beforeEach('deploy Matic', async function () {
     const MaticFac = await ethers.getContractFactory(
       'MaticMock',
       this.signers[0]
@@ -70,7 +80,7 @@ describe('Matic Integration Test', () => {
     this.NODE = MaticMock.address
   })
 
-  before('deploy Matic Tenderizer', async function () {
+  beforeEach('deploy Matic Tenderizer', async function () {
     const STEAK_AMOUNT = '100000'
     process.env.NAME = 'Matic'
     process.env.SYMBOL = 'MATIC'
@@ -118,7 +128,7 @@ describe('Matic Integration Test', () => {
   describe('Before intial deposits', beforeInitialDepsoits.bind(this))
 
   describe('After initial deposits', async function () {
-    before(async function () {
+    beforeEach(async function () {
       await addInitialDeposits(this)
     })
 
@@ -131,11 +141,11 @@ describe('Matic Integration Test', () => {
     let newStake: BigNumber
     describe('Rebases', async function () {
       context('Positive Rebase', async function () {
-        before(async function () {
+        beforeEach(async function () {
           this.increase = ethers.utils.parseEther('10')
           liquidityFees = percOf2(this.increase, liquidityFeesPercent)
           protocolFees = percOf2(this.increase, protocolFeesPercent)
-          newStake = this.deposit.add(this.initialStake).add(this.increase)
+          newStake = this.initialStake.add(this.increase)
           this.newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
 
           // set increase on mock
@@ -149,21 +159,20 @@ describe('Matic Integration Test', () => {
       })
 
       context('Neutral Rebase', async function () {
-        before(async function () {
-          this.stakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
+        beforeEach(async function () {
+          await this.Tenderizer.claimRewards()
+          this.expectedCP = this.initialStake
         })
         describe('Stake stays the same', stakeStaysSameTests.bind(this))
       })
 
       context('Negative Rebase', async function () {
-        before(async function () {
-          const stake = await this.StakingContract.staked()
+        beforeEach(async function () {
+          await this.Tenderizer.claimRewards()
           this.decrease = ethers.utils.parseEther('10')
-          // reduced stake is current stake - 100 from rewards previously
-          const reducedStake = stake.sub(this.decrease)
-          this.expectedCP = reducedStake.sub(liquidityFees).sub(protocolFees)
+          this.expectedCP = this.initialStake.sub(this.decrease)
           // reduce staked on mock
-          await this.StakingContract.setStaked(reducedStake)
+          await this.StakingContract.setStaked((await this.StakingContract.staked()).sub(this.decrease))
         })
         describe('Stake decreases', stakeDecreaseTests.bind(this))
       })
@@ -177,13 +186,13 @@ describe('Matic Integration Test', () => {
       describe('Withdrawal', userBasedWithdrawalTests.bind(this))
       describe('Gov unlock', async function () {
         context('Zero stake', async function () {
-          before(async function () {
+          beforeEach(async function () {
             await this.StakingContract.setStaked(0)
           })
           describe('No pending stake', govUnbondRevertIfNoStake.bind(this))
         })
         context('>0 Stake', async function () {
-          before(async function () {
+          beforeEach(async function () {
             await this.StakingContract.setStaked(
               await this.Tenderizer.totalStakedTokens()
             )

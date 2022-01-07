@@ -4,14 +4,16 @@ import { Context } from 'mocha'
 
 export default function suite () {
   let tx: Transaction
-  let ctx: Context
-  before(async function () {
+  let ctx: any
+  beforeEach(async function () {
     ctx = this.test?.ctx!
+    await ctx.Steak.approve(ctx.Tenderizer.address, ctx.deposit)
+    await ctx.Tenderizer.deposit(ctx.deposit)
+    tx = await ctx.Tenderizer.claimRewards()
   })
 
   it('bond succeeds', async () => {
     // ctx.StakingContract.function.will.return()
-    tx = await ctx.Tenderizer.claimRewards()
     expect(await ctx.StakingContract.staked()).to.eq(
       ctx.initialStake.add(ctx.deposit).sub(
         ctx.initialStake.add(ctx.deposit).mul(ctx.DELEGATION_TAX || 0).div(ctx.MAX_PPM || 1)
