@@ -1,10 +1,11 @@
 import { getCurrentBlockTimestamp } from '../../util/evm'
 import { expect } from 'chai'
+import { Context } from 'mocha'
 
 export default function suite () {
-  let ctx: any
+  let ctx: Context
   before(async function () {
-    ctx = this.test?.ctx
+    ctx = this.test?.ctx!
   })
 
   describe('swap against TenderSwap', () => {

@@ -2,13 +2,14 @@ import { BigNumber, Transaction } from 'ethers/lib/ethers'
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
 import { getSighash } from '../../util/helpers'
+import { Context } from 'mocha'
 
 export default function suite () {
   let tx: Transaction
-  let ctx: any
+  let ctx: Context
 
   before(async function () {
-    ctx = this.test?.ctx
+    ctx = this.test?.ctx!
     const lock = await ctx.Tenderizer.unstakeLocks(ctx.unbondLockID)
     ctx.withdrawAmount = lock.amount
   })

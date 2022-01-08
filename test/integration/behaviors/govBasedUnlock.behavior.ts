@@ -2,16 +2,17 @@ import { BigNumber, Transaction } from 'ethers/lib/ethers'
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
 import { getSighash } from '../../util/helpers'
+import { Context } from 'mocha'
 
 export default function suite () {
   let tx: Transaction
-  let ctx: any
+  let ctx: Context
   const secondDeposit = ethers.utils.parseEther('10')
   const acceptableDelta = 2
   let balOtherAcc: BigNumber
 
   before(async function () {
-    ctx = this.test?.ctx
+    ctx = this.test?.ctx!
     // Move tenderTokens from deployer/gov
     const govBalance = await ctx.TenderToken.balanceOf(ctx.deployer)
     await ctx.TenderToken.transfer(ctx.signers[3].address, govBalance)

@@ -2,12 +2,13 @@ import { ContractTransaction } from 'ethers/lib/ethers'
 import { expect } from 'chai'
 import { smockit } from '@eth-optimism/smock'
 import { ethers } from 'hardhat'
+import { Context } from 'mocha'
 
 export default function suite () {
   let tx: ContractTransaction
-  let ctx: any
+  let ctx: Context
   before(async function () {
-    ctx = this.test?.ctx
+    ctx = this.test?.ctx!
   })
   describe('setting staking contract', () => {
     it('sets staking contract', async () => {
