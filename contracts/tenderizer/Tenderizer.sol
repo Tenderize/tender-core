@@ -49,6 +49,11 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         _;
     }
 
+    modifier ensureRewardsClaimed() {
+        if (msg.sender != gov) _claimRewards();
+        _;
+    }
+
     function _initialize(
         IERC20 _steak,
         string memory _symbol,
@@ -118,9 +123,8 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     /// @inheritdoc ITenderizer
-    function unstake(uint256 _amount) external override returns (uint256 unstakeLockID) {
+    function unstake(uint256 _amount) external override ensureRewardsClaimed returns (uint256 unstakeLockID) {
         // Burn tenderTokens if not gov
-        // TODO: CHECK THIS!
         if (msg.sender != gov) {
             require(tenderToken.burn(msg.sender, _amount), "TENDER_BURN_FAILED");
         }
@@ -264,7 +268,6 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     function _claimRewards() internal virtual;
 
     function _processNewStake(uint256 _newStake) internal {
-        // TODO: all of the below could be a general internal function in Tenderizer.sol
         uint256 currentPrincipal_ = currentPrincipal;
 
         // adjust current token balance for potential protocol specific taxes or staking fees
