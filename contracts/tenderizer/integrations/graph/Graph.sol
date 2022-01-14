@@ -162,6 +162,8 @@ contract Graph is Tenderizer {
         uint256 totalShares = delPool.shares;
         uint256 totalTokens = delPool.tokens;
 
+        if (totalShares == 0) return;
+
         uint256 stake = (delShares * totalTokens) / totalShares;
 
         Tenderizer._processNewStake(stake);

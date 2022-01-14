@@ -13,6 +13,8 @@ import {
 import { Deployment } from 'hardhat-deploy/dist/types'
 import { BigNumber } from '@ethersproject/bignumber'
 
+import beforeInitialDepsoits from './behaviors/beforeInitialDeposits.behavior'
+import addInitialDeposits from './behaviors/addInitialDeposits'
 import initialStateTests from './behaviors/initialState.behavior'
 import depositTests from './behaviors/deposit.behavior'
 import stakeTests from './behaviors/stake.behavior'
@@ -30,8 +32,6 @@ import unlockTests from './behaviors/govBasedUnlock.behavior'
 import withdrawTests from './behaviors/govBasedWithdrawal.behavior'
 import upgradeTests from './behaviors/upgrade.behavior'
 import setterTests from './behaviors/setters.behavior'
-
-import { getCurrentBlockTimestamp } from '../util/evm'
 
 chai.use(solidity)
 
@@ -110,89 +110,80 @@ describe('Graph Integration Test', () => {
     // Set contract variables
     await this.Tenderizer.setProtocolFee(protocolFeesPercent)
     await this.Tenderizer.setLiquidityFee(liquidityFeesPercent)
-
-    // Deposit initial stake
-    await this.Steak.approve(this.Tenderizer.address, this.initialStake)
-    await this.Tenderizer.deposit(this.initialStake)
-    // await this.Tenderizer.claimRewards()
-    // Add initial liquidity
-    const tokensAfterTax = this.initialStake.sub(this.initialStake.mul(this.DELEGATION_TAX).div(this.MAX_PPM))
-    await this.Steak.approve(this.TenderSwap.address, tokensAfterTax)
-    await this.TenderToken.approve(this.TenderSwap.address, tokensAfterTax)
-    const lpTokensOut = await this.TenderSwap.calculateTokenAmount([tokensAfterTax, tokensAfterTax], true)
-    await this.TenderSwap.addLiquidity([tokensAfterTax, tokensAfterTax], lpTokensOut, (await getCurrentBlockTimestamp()) + 1000)
-    console.log('HEAREAS')
-    console.log('added liquidity')
-    console.log('calculated', lpTokensOut.toString(), 'actual', (await this.LpToken.balanceOf(this.deployer)).toString())
-    await this.LpToken.approve(this.TenderFarm.address, lpTokensOut)
-    await this.TenderFarm.farm(lpTokensOut)
-    console.log('farmed LP tokens')
   })
 
   // Run tests
-  describe('Initial State', initialStateTests.bind(this))
-  describe('Deposit', depositTests.bind(this))
-  describe('Stake', stakeTests.bind(this))
+  describe('Before intial deposits', beforeInitialDepsoits.bind(this))
 
-  let liquidityFees: BigNumber
-  let protocolFees: BigNumber
-  let newStake: BigNumber
-  describe('Rebases', async function () {
-    context('Positive Rebase', async function () {
-      before(async function () {
-        this.increase = ethers.utils.parseEther('10')
-        liquidityFees = percOf2(this.increase, liquidityFeesPercent)
-        protocolFees = percOf2(this.increase, protocolFeesPercent)
-        newStake = this.deposit.add(this.initialStake)
-          .sub(this.deposit.add(this.initialStake).mul(this.DELEGATION_TAX).div(this.MAX_PPM))
-          .add(this.increase)
-        this.newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
-
-        // set increase on mock
-        await this.StakingContract.setStaked(this.increase.add(await this.StakingContract.staked()))
-
-        // With mock values set correctly, adjust increase with fees
-        // for assertions
-        this.increase = this.increase.sub(protocolFees.add(liquidityFees))
-      })
-      describe('Stake increases', stakeIncreaseTests.bind(this))
-    })
-
-    context('Neutral Rebase', async function () {
-      before(async function () {
-        this.stakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
-      })
-      describe('Stake stays the same', stakeStaysSameTests.bind(this))
-    })
-
-    context('Negative Rebase', async function () {
-      before(async function () {
-        const stake = await this.StakingContract.staked()
-        this.decrease = ethers.utils.parseEther('10')
-        // reduced stake is current stake - 100 from rewards previously
-        const reducedStake = stake.sub(this.decrease)
-        this.expectedCP = reducedStake.sub(liquidityFees).sub(protocolFees)
-        // reduce staked on mock
-        await this.StakingContract.setStaked(reducedStake)
-      })
-      describe('Stake decreases', stakeDecreaseTests.bind(this))
-    })
-  })
-
-  describe('Collect fees', protocolFeeTests.bind(this))
-  describe('Collect Liquidity fees', liquidityFeeTests.bind(this))
-  describe('Swap', swapTests.bind(this))
-
-  describe('Unlock and Withdraw', async function () {
+  describe('After initial deposits', async function () {
     before(async function () {
-      this.withdrawAmount = await this.TenderToken.balanceOf(this.deployer)
-      await this.StakingContract.setStaked(
-        await this.Tenderizer.totalStakedTokens()
-      )
+      await addInitialDeposits(this)
     })
-    describe('Unstake', unlockTests.bind(this))
-    describe('Withdrawl', withdrawTests.bind(this))
+
+    describe('Initial State', initialStateTests.bind(this))
+    describe('Deposit', depositTests.bind(this))
+    describe('Stake', stakeTests.bind(this))
+
+    let liquidityFees: BigNumber
+    let protocolFees: BigNumber
+    let newStake: BigNumber
+    describe('Rebases', async function () {
+      context('Positive Rebase', async function () {
+        before(async function () {
+          this.increase = ethers.utils.parseEther('10')
+          liquidityFees = percOf2(this.increase, liquidityFeesPercent)
+          protocolFees = percOf2(this.increase, protocolFeesPercent)
+          newStake = this.deposit.add(this.initialStake)
+            .sub(this.deposit.add(this.initialStake).mul(this.DELEGATION_TAX).div(this.MAX_PPM))
+            .add(this.increase)
+          this.newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
+
+          // set increase on mock
+          await this.StakingContract.setStaked(this.increase.add(await this.StakingContract.staked()))
+
+          // With mock values set correctly, adjust increase with fees
+          // for assertions
+          this.increase = this.increase.sub(protocolFees.add(liquidityFees))
+        })
+        describe('Stake increases', stakeIncreaseTests.bind(this))
+      })
+
+      context('Neutral Rebase', async function () {
+        before(async function () {
+          this.stakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
+        })
+        describe('Stake stays the same', stakeStaysSameTests.bind(this))
+      })
+
+      context('Negative Rebase', async function () {
+        before(async function () {
+          const stake = await this.StakingContract.staked()
+          this.decrease = ethers.utils.parseEther('10')
+          // reduced stake is current stake - 100 from rewards previously
+          const reducedStake = stake.sub(this.decrease)
+          this.expectedCP = reducedStake.sub(liquidityFees).sub(protocolFees)
+          // reduce staked on mock
+          await this.StakingContract.setStaked(reducedStake)
+        })
+        describe('Stake decreases', stakeDecreaseTests.bind(this))
+      })
+    })
+
+    describe('Collect fees', protocolFeeTests.bind(this))
+    describe('Collect Liquidity fees', liquidityFeeTests.bind(this))
+    describe('Swap', swapTests.bind(this))
+
+    describe('Unlock and Withdraw', async function () {
+      before(async function () {
+        this.withdrawAmount = await this.TenderToken.balanceOf(this.deployer)
+        await this.StakingContract.setStaked(
+          await this.Tenderizer.totalStakedTokens()
+        )
+      })
+      describe('Unstake', unlockTests.bind(this))
+      describe('Withdrawl', withdrawTests.bind(this))
+    })
+    describe('Upgrades', upgradeTests.bind(this))
+    describe('Setting contract variables', setterTests.bind(this))
   })
-  describe('Upgrades', upgradeTests.bind(this))
-  describe('Setting contract variables', setterTests.bind(this))
 })
