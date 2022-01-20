@@ -725,6 +725,8 @@ library SwapUtils {
         // precision adjusted balance
         uint256 toXp = _xp(toBalance, tokenTo.precisionMultiplier);
 
+        if (fromXp == 0 || toXp == 0) return (dy, dyFee);
+
         // x is the new total amount of tokenFrom
         uint256 x = _xp(dx, tokenFrom.precisionMultiplier) + fromXp;
 
@@ -778,7 +780,7 @@ library SwapUtils {
 
         for (uint256 i = 0; i < tokens.length; i++) {
             uint256 balance = _getTokenBalance(tokens[i].token);
-            outAmounts[i] = (balance * amount) / totalSupply;
+            outAmounts[i] = balance * amount / totalSupply;
         }
         return outAmounts;
     }
