@@ -61,7 +61,7 @@ describe('Audius Mainnet Fork Test', () => {
   const claimsManagerAddr = '0x44617F9dCEd9787C3B06a05B35B4C779a2AA1334'
   const govAddr = '0x4DEcA517D6817B6510798b7328F2314d3003AbAC'
   const guardianAddr = '0x7eE3c2091471474c9c4831A550f1a79DaBA0CcEf'
-  const AUDIOHolder = '0x9416fd2bc773c85a65d699ca9fc9525f1424df94'
+  const AUDIOHolder = '0x352e0242a58c4f43dc40f3ee9a2ea14ccc6bb2ea'
 
   const undelegateStakeRequestedTopic = '0x0c0ebdfe3f3ccdb3ad070f98a3fb9656a7b8781c299a5c0cd0f37e4d5a02556d'
 
@@ -88,6 +88,11 @@ describe('Audius Mainnet Fork Test', () => {
     process.env.VALIDATOR = NODE
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
 
+    await hre.network.provider.send('hardhat_setBalance', [
+      AUDIOHolder,
+      `0x${ethers.utils.parseEther('100').toString()}`
+    ])
+
     await hre.network.provider.request({
       method: 'hardhat_impersonateAccount',
       params: [AUDIOHolder]
@@ -95,12 +100,10 @@ describe('Audius Mainnet Fork Test', () => {
     const AUDIOHolderSigner = await ethers.provider.getSigner(AUDIOHolder)
 
     // Transfer some ETH to Gov to execute txs
-    const ETHHolder = '0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8'
-    await hre.network.provider.request({
-      method: 'hardhat_impersonateAccount',
-      params: [ETHHolder]
-    })
-    await hre.web3.eth.sendTransaction({ from: ETHHolder, to: guardianAddr, value: ethers.utils.parseEther('10').toString() })
+    await hre.network.provider.send('hardhat_setBalance', [
+      guardianAddr,
+      `0x${ethers.utils.parseEther('100').toString()}`
+    ])
 
     // Transfer some AUDIO
     AudiusToken = (await ethers.getContractAt('ERC20', process.env.TOKEN)) as ERC20
