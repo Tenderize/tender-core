@@ -570,7 +570,7 @@ library SwapUtils {
         // swap from counterpart to receive (so counterpart is from and receive is to)
         v.d0 = getD(xpC, xpR, v.preciseA);
         v.d1 = v.d0 - ((tokenAmount * v.d0) / totalSupply);
-        
+
         require(tokenAmount <= xpR, "AMOUNT_EXCEEDS_AVAILABLE");
 
         v.newY = getYD(v.preciseA, xpR, v.d1);

@@ -77,7 +77,13 @@ contract TenderFarm is Initializable, ITenderFarm, SelfPermit {
     }
 
     /// @inheritdoc ITenderFarm
-    function farmWithPermit(uint256 _amount, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s) public override {
+    function farmWithPermit(
+        uint256 _amount,
+        uint256 _deadline,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) public override {
         _selfPermit(address(token), _amount, _deadline, _v, _r, _s);
         _farmFor(msg.sender, _amount);
     }
