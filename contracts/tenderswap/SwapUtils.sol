@@ -570,7 +570,7 @@ library SwapUtils {
         // swap from counterpart to receive (so counterpart is from and receive is to)
         v.d0 = getD(xpC, xpR, v.preciseA);
         v.d1 = v.d0 - ((tokenAmount * v.d0) / totalSupply);
-
+        
         require(tokenAmount <= xpR, "AMOUNT_EXCEEDS_AVAILABLE");
 
         v.newY = getYD(v.preciseA, xpR, v.d1);
@@ -583,7 +583,7 @@ library SwapUtils {
         uint256 xpRReduced = xpR - (((xpR * v.d1) / v.d0 - v.newY) * v.feePerToken) / FEE_DENOMINATOR;
         // uint256 xpCReduced = xpC - (xpC - (xpC * v.d1 / v.d0)) * v.feePerToken / FEE_DENOMINATOR;
 
-        uint256 dy = xpRReduced - getYD(v.preciseA, xpR, v.d1);
+        uint256 dy = xpRReduced - getYD(v.preciseA, xpRReduced, v.d1);
 
         dy = (dy - 1) / tokenReceive.precisionMultiplier;
 

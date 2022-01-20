@@ -481,12 +481,12 @@ describe('TenderSwap', () => {
       // User 1 adds liquidity
       await swap
         .connect(user1)
-        .addLiquidity([String(2e18), String(1e16)], 0, constants.MaxUint256)
+        .addLiquidity([String(2e18), String(2e18)], 0, constants.MaxUint256)
       const currentUser1Balance = await swapToken.balanceOf(user1Address)
-      expect(currentUser1Balance).to.eq(BigNumber.from('1996275270169644725'))
+      expect(currentUser1Balance).to.eq(BigNumber.from('4000000000000000000'))
 
       await expect(
-        swap.calculateRemoveLiquidityOneToken(currentUser1Balance.mul(2), firstToken.address)
+        swap.calculateRemoveLiquidityOneToken(currentUser1Balance, firstToken.address)
       ).to.be.revertedWith('AMOUNT_EXCEEDS_AVAILABLE')
     })
 
@@ -494,31 +494,39 @@ describe('TenderSwap', () => {
       // User 1 adds liquidity
       await swap
         .connect(user1)
-        .addLiquidity([String(2e18), String(1e16)], 0, constants.MaxUint256)
+        .addLiquidity([String(2e18), String(2e18)], 0, constants.MaxUint256)
       const currentUser1Balance = await swapToken.balanceOf(user1Address)
-      expect(currentUser1Balance).to.eq(BigNumber.from('1996275270169644725'))
+      expect(currentUser1Balance).to.eq(BigNumber.from('4000000000000000000'))
+
+      const amountToWithdraw = currentUser1Balance.div(2)
 
       // User 1 calculates the amount of underlying token to receive.
       const calculatedFirstTokenAmount =
-        await swap.calculateRemoveLiquidityOneToken(currentUser1Balance, firstToken.address)
+        await swap.calculateRemoveLiquidityOneToken(amountToWithdraw, firstToken.address)
       expect(calculatedFirstTokenAmount).to.eq(
-        BigNumber.from('2992749992078990271')
+        BigNumber.from('1986362575221751842')
+      )
+
+      const calculatedSecondTokenAmount =
+      await swap.calculateRemoveLiquidityOneToken(amountToWithdraw, secondToken.address)
+      expect(calculatedSecondTokenAmount).to.eq(
+        BigNumber.from('1986362575221751842')
       )
 
       // User 1 initiates one token withdrawal
       const before = await firstToken.balanceOf(user1Address)
-      swapToken.connect(user1).approve(swap.address, currentUser1Balance)
+      swapToken.connect(user1).approve(swap.address, amountToWithdraw)
       await swap
         .connect(user1)
         .removeLiquidityOneToken(
-          currentUser1Balance,
+          amountToWithdraw,
           firstToken.address,
           calculatedFirstTokenAmount,
           constants.MaxUint256
         )
       const after = await firstToken.balanceOf(user1Address)
 
-      expect(after.sub(before)).to.eq(BigNumber.from('2992749992078990271'))
+      expect(after.sub(before)).to.eq(BigNumber.from('1986362575221751842'))
     })
 
     it('Returns correct amount of received token', async () => {
@@ -559,15 +567,16 @@ describe('TenderSwap', () => {
       // User 1 adds liquidity
       await swap
         .connect(user1)
-        .addLiquidity([String(2e18), String(1e16)], 0, constants.MaxUint256)
+        .addLiquidity([String(2e18), String(2e18)], 0, constants.MaxUint256)
       const currentUser1Balance = await swapToken.balanceOf(user1Address)
-      expect(currentUser1Balance).to.eq(BigNumber.from('1996275270169644725'))
+      expect(currentUser1Balance).to.eq(BigNumber.from('4000000000000000000'))
 
+      const amountToWithdraw = currentUser1Balance.div(2)
       // User 1 calculates the amount of underlying token to receive.
       const calculatedFirstTokenAmount =
-        await swap.calculateRemoveLiquidityOneToken(currentUser1Balance, firstToken.address)
+        await swap.calculateRemoveLiquidityOneToken(amountToWithdraw, firstToken.address)
       expect(calculatedFirstTokenAmount).to.eq(
-        BigNumber.from('2992749992078990271')
+        BigNumber.from('1986362575221751842')
       )
 
       // User 2 adds liquidity before User 1 initiates withdrawal
@@ -576,12 +585,12 @@ describe('TenderSwap', () => {
         .addLiquidity([String(1e16), String(1e20)], 0, constants.MaxUint256)
 
       // User 1 initiates one token withdrawal
-      swapToken.connect(user1).approve(swap.address, currentUser1Balance)
+      swapToken.connect(user1).approve(swap.address, amountToWithdraw)
       await expect(
         swap
           .connect(user1)
           .removeLiquidityOneToken(
-            currentUser1Balance,
+            amountToWithdraw,
             firstToken.address,
             calculatedFirstTokenAmount,
             constants.MaxUint256
