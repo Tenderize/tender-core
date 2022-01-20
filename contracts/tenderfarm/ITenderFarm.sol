@@ -44,7 +44,13 @@ interface ITenderFarm {
      * @param _r r of signed Permit message
      * @param _s s of signed Permit message
      */
-    function farmWithPermit(uint256 _amount, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s) external;
+    function farmWithPermit(
+        uint256 _amount,
+        uint256 _deadline,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) external;
 
     /**
      * @notice stake liquidity pool tokens for a specific account so that it receives rewards
