@@ -66,12 +66,12 @@ contract GraphMock is MockStaking {
     function delegationPools(address _indexer) external view returns (DelegationPool memory) {
         return
             DelegationPool({
-                tokens: staked == 0 ? 1 : staked,
+                tokens: staked,
                 cooldownBlocks: 0,
                 indexingRewardCut: 0,
                 queryFeeCut: 0,
                 updatedAtBlock: 0,
-                shares: staked == 0 ? 1 : staked
+                shares: staked
             });
     }
 
