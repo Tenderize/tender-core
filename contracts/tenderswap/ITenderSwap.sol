@@ -64,6 +64,7 @@ interface ITenderSwap {
      * @param _fee default swap fee to be initialized with
      * @param _adminFee default adminFee to be initialized with
      * @param lpTokenTargetAddress the address of an existing LiquidityPoolToken contract to use as a target
+     * @return success true is successfully initialized
      */
     function initialize(
         IERC20 _token0,
@@ -74,86 +75,86 @@ interface ITenderSwap {
         uint256 _fee,
         uint256 _adminFee,
         LiquidityPoolToken lpTokenTargetAddress
-    ) external returns (bool);
+    ) external returns (bool success);
 
     /*** VIEW FUNCTIONS ***/
-    function lpToken() external view returns (LiquidityPoolToken);
+    function lpToken() external view returns (LiquidityPoolToken _lpToken);
 
     /**
      * @notice Return A, the amplification coefficient * n * (n - 1)
      * @dev See the StableSwap paper for details
-     * @return A parameter
+     * @return a A parameter
      */
-    function getA() external view returns (uint256);
+    function getA() external view returns (uint256 a);
 
     /**
      * @notice Return A in its raw precision form
      * @dev See the StableSwap paper for details
-     * @return A parameter in its raw precision form
+     * @return aPrecise A parameter in its raw precision form
      */
-    function getAPrecise() external view returns (uint256);
+    function getAPrecise() external view returns (uint256 aPrecise);
 
     /**
      * @notice Returns the contract address for token0
      * @dev EVM return type is IERC20
      * @return token0 contract address
      */
-    function getToken0() external view returns (IERC20);
+    function getToken0() external view returns (IERC20 token0);
 
     /**
      * @notice Returns the contract address for token1
      * @dev EVM return type is IERC20
      * @return token1 contract address
      */
-    function getToken1() external view returns (IERC20);
+    function getToken1() external view returns (IERC20 token1);
 
     /**
-     * @notice Return current balance of token0 in the pool
-     * @return current balance of the pooled token
+     * @notice Return current balance of token0 (tender) in the pool
+     * @return token0Balance current balance of the pooled tendertoken
      */
-    function getToken0Balance() external view returns (uint256);
+    function getToken0Balance() external view returns (uint256 token0Balance);
 
     /**
-     * @notice Return current balance of token1 in the pool
-     * @return current balance of the pooled token
+     * @notice Return current balance of token1 (underlying) in the pool
+     * @return token1Balance current balance of the pooled underlying token
      */
-    function getToken1Balance() external view returns (uint256);
+    function getToken1Balance() external view returns (uint256 token1Balance);
 
     /**
      * @notice Get the override price, to help calculate profit
-     * @return the override price, scaled to the POOL_PRECISION_DECIMALS
+     * @return virtualPrice the override price, scaled to the POOL_PRECISION_DECIMALS
      */
-    function getVirtualPrice() external view returns (uint256);
+    function getVirtualPrice() external view returns (uint256 virtualPrice);
 
     /**
      * @notice Calculate amount of tokens you receive on swap
      * @param _tokenFrom the token the user wants to sell
      * @param _dx the amount of tokens the user wants to sell. If the token charges
      * a fee on transfers, use the amount that gets transferred after the fee.
-     * @return amount of tokens the user will receive
+     * @return tokensToReceive amount of tokens the user will receive
      */
-    function calculateSwap(IERC20 _tokenFrom, uint256 _dx) external view returns (uint256);
+    function calculateSwap(IERC20 _tokenFrom, uint256 _dx) external view returns (uint256 tokensToReceive);
 
     /**
      * @notice A simple method to calculate amount of each underlying
      * tokens that is returned upon burning given amount of LP tokens
      * @param amount the amount of LP tokens that would be burned on withdrawal
-     * @return array of token balances that the user will receive
+     * @return tokensToReceive array of token balances that the user will receive
      */
-    function calculateRemoveLiquidity(uint256 amount) external view returns (uint256[2] memory);
+    function calculateRemoveLiquidity(uint256 amount) external view returns (uint256[2] memory tokensToReceive);
 
     /**
      * @notice Calculate the amount of underlying token available to withdraw
      * when withdrawing via only single token
      * @param tokenAmount the amount of LP token to burn
      * @param tokenReceive the token to receive
-     * @return availableTokenAmount calculated amount of underlying token
+     * @return tokensToReceive calculated amount of underlying token to be received.
      * available to withdraw
      */
     function calculateRemoveLiquidityOneToken(uint256 tokenAmount, IERC20 tokenReceive)
         external
         view
-        returns (uint256 availableTokenAmount);
+        returns (uint256 tokensToReceive);
 
     /**
      * @notice A simple method to calculate prices from deposits or
@@ -167,9 +168,12 @@ interface ITenderSwap {
      * corresponding to pool cardinality of [token0, token1]. The amount should be in each
      * pooled token's native precision.
      * @param deposit whether this is a deposit or a withdrawal
-     * @return token amount the user will receive
+     * @return tokensToReceive token amount the user will receive
      */
-    function calculateTokenAmount(uint256[] calldata amounts, bool deposit) external view returns (uint256);
+    function calculateTokenAmount(
+        uint256[] calldata amounts,
+        bool deposit
+    ) external view returns (uint256 tokensToReceive);
 
     /*** POOL FUNCTIONALITY ***/
 
@@ -180,13 +184,14 @@ interface ITenderSwap {
      * @param _dx the amount of tokens the user wants to swap from
      * @param _minDy the min amount the user would like to receive, or revert
      * @param _deadline latest timestamp to accept this transaction
+     * @return _dy amount of tokens received
      */
     function swap(
         IERC20 _tokenFrom,
         uint256 _dx,
         uint256 _minDy,
         uint256 _deadline
-    ) external returns (uint256);
+    ) external returns (uint256 _dy);
 
     /**
      * @notice Add liquidity to the pool with the given amounts of tokens
@@ -195,13 +200,13 @@ interface ITenderSwap {
      * @param _minToMint the minimum LP tokens adding this amount of liquidity
      * should mint, otherwise revert. Handy for front-running mitigation
      * @param _deadline latest timestamp to accept this transaction
-     * @return amount of LP token user minted and received
+     * @return lpMinted amount of LP token user minted and received
      */
     function addLiquidity(
         uint256[2] calldata _amounts,
         uint256 _minToMint,
         uint256 _deadline
-    ) external returns (uint256);
+    ) external returns (uint256 lpMinted);
 
     /**
      * @notice Burn LP tokens to remove liquidity from the pool.
@@ -211,13 +216,13 @@ interface ITenderSwap {
      *        acceptable for this burn. Useful as a front-running mitigation
      *        according to the cardinality of the pool [token0, token1]
      * @param deadline latest timestamp to accept this transaction
-     * @return amountsReceived is the amounts of tokens user received
+     * @return tokensReceived is the amounts of tokens user received
      */
     function removeLiquidity(
         uint256 amount,
         uint256[2] calldata minAmounts,
         uint256 deadline
-    ) external returns (uint256[2] memory amountsReceived);
+    ) external returns (uint256[2] memory tokensReceived);
 
     /**
      * @notice Remove liquidity from the pool all in one token.
@@ -225,14 +230,14 @@ interface ITenderSwap {
      * @param _tokenReceive the  token you want to receive
      * @param _minAmount the minimum amount to withdraw, otherwise revert
      * @param _deadline latest timestamp to accept this transaction
-     * @return amount of chosen token user received
+     * @return tokensReceived amount of chosen token user received
      */
     function removeLiquidityOneToken(
         uint256 _tokenAmount,
         IERC20 _tokenReceive,
         uint256 _minAmount,
         uint256 _deadline
-    ) external returns (uint256);
+    ) external returns (uint256 tokensReceived);
 
     /**
      * @notice Remove liquidity from the pool, weighted differently than the
@@ -242,13 +247,13 @@ interface ITenderSwap {
      * @param _maxBurnAmount the max LP token provider is willing to pay to
      * remove liquidity. Useful as a front-running mitigation.
      * @param _deadline latest timestamp to accept this transaction
-     * @return amount of LP tokens burned
+     * @return lpBurned amount of LP tokens burned
      */
     function removeLiquidityImbalance(
         uint256[2] calldata _amounts,
         uint256 _maxBurnAmount,
         uint256 _deadline
-    ) external returns (uint256);
+    ) external returns (uint256 lpBurned);
 
     /*** ADMIN FUNCTIONALITY ***/
     /**
