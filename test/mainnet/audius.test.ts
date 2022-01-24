@@ -203,7 +203,8 @@ describe('Audius Mainnet Fork Test', () => {
 
         // Mine blocks so new round can be initiated
         // Rounds can be initiated only once per week
-        for (let j = 0; j < 40000; j++) {
+        // TODO: Will promise.all() make things fater?
+        for (let j = 0; j < 50000; j++) {
           await hre.ethers.provider.send('evm_mine', [])
         }
 
