@@ -2,10 +2,11 @@ import { ethers } from 'hardhat'
 import { expect } from 'chai'
 import { BigNumber, ContractTransaction } from 'ethers'
 import { getSighash } from '../../util/helpers'
+import { Context } from 'mocha'
 
 // For protocols where unlocks are tracked per user
 export function userBasedUnlockByUser () {
-  let ctx: any
+  let ctx: Context
   const acceptableDelta = 2
   const secondDeposit = ethers.utils.parseEther('10')
   let tx: ContractTransaction
@@ -13,7 +14,7 @@ export function userBasedUnlockByUser () {
   let balOtherAcc: BigNumber
 
   before(async function () {
-    ctx = this.test?.ctx
+    ctx = this.test?.ctx!
     // Move tenderTokens from deployer/gov
     const govBalance = await ctx.TenderToken.balanceOf(ctx.deployer)
     await ctx.TenderToken.transfer(ctx.signers[3].address, govBalance)
@@ -28,7 +29,7 @@ export function userBasedUnlockByUser () {
 
   it('reverts if unbond() reverts', async () => {
     await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.unstake), true)
-    await expect(ctx.Tenderizer.connect(ctx.signers[2]).unstake()).to.be.reverted
+    await expect(ctx.Tenderizer.connect(ctx.signers[2]).unstake(secondDeposit)).to.be.reverted
     await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.unstake), false)
   })
 

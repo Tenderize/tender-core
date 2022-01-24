@@ -1,9 +1,10 @@
 import { BigNumber } from 'ethers/lib/ethers'
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
+import { Context } from 'mocha'
 
 export default function suite () {
-  let ctx: any
+  let ctx: Context
 
   const expFees = BigNumber.from(25).mul(BigNumber.from(10).pow(15))
   const expSwapFee = BigNumber.from(5).mul(BigNumber.from(10).pow(6))
@@ -11,7 +12,7 @@ export default function suite () {
   const expIntialA = BigNumber.from(8500)
 
   before(async function () {
-    ctx = this.test?.ctx
+    ctx = this.test?.ctx!
   })
 
   describe('Tenderizer', async function () {

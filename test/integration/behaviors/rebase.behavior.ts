@@ -2,18 +2,19 @@ import { BigNumber, ContractTransaction, Transaction } from 'ethers/lib/ethers'
 import { ethers } from 'hardhat'
 import { expect } from 'chai'
 import { sharesToTokens } from '../../util/helpers'
+import { Context } from 'mocha'
 
 const ONE = ethers.utils.parseEther('1')
 
 export function stakeIncreaseTests () {
   let tx: Transaction
-  let ctx: any
+  let ctx: Context
   let totalShares: BigNumber
   let dyBefore: BigNumber
   let swapStakeBalBefore: BigNumber
 
   before(async function () {
-    ctx = this.test?.ctx
+    ctx = this.test?.ctx!
     dyBefore = await ctx.TenderSwap.calculateSwap(ctx.TenderToken.address, ONE)
     swapStakeBalBefore = await ctx.Steak.balanceOf(ctx.TenderSwap.address)
     tx = await ctx.Tenderizer.claimRewards()
@@ -52,11 +53,11 @@ export function stakeIncreaseTests () {
 }
 
 export function stakeStaysSameTests () {
-  let ctx: any
+  let ctx: Context
   let feesBefore: BigNumber
 
   before(async function () {
-    ctx = this.test?.ctx
+    ctx = this.test?.ctx!
     feesBefore = await ctx.Tenderizer.pendingFees()
     await ctx.Tenderizer.claimRewards()
   })
@@ -71,7 +72,7 @@ export function stakeStaysSameTests () {
 }
 
 export function stakeDecreaseTests () {
-  let ctx: any
+  let ctx: Context
   let feesBefore: BigNumber
   let oldPrinciple: BigNumber
   let tx: ContractTransaction
@@ -80,7 +81,7 @@ export function stakeDecreaseTests () {
   let swapStakeBalBefore: BigNumber
 
   before(async function () {
-    ctx = this.test?.ctx
+    ctx = this.test?.ctx!
     feesBefore = await ctx.Tenderizer.pendingFees()
     oldPrinciple = await ctx.Tenderizer.currentPrincipal()
     dyBefore = await ctx.TenderSwap.calculateSwap(ctx.TenderToken.address, ONE)

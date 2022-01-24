@@ -1,18 +1,19 @@
 import { BigNumber, ContractTransaction } from 'ethers/lib/ethers'
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
+import { Context } from 'mocha'
 
 const acceptableDelta = 2
 
 export function protocolFeeTests () {
   let tx: ContractTransaction
-  let ctx: any
+  let ctx: Context
   let fees: BigNumber
   let ownerBalBefore: BigNumber
   let otherAccBalBefore: BigNumber
 
   before(async function () {
-    ctx = this.test?.ctx
+    ctx = this.test?.ctx!
     fees = await ctx.Tenderizer.pendingFees()
     ownerBalBefore = await ctx.TenderToken.balanceOf(ctx.deployer)
     otherAccBalBefore = await ctx.TenderToken.balanceOf(ctx.signers[2].address)

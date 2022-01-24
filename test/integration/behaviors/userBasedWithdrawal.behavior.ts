@@ -2,14 +2,15 @@ import { ethers } from 'hardhat'
 import { BigNumber, Transaction } from 'ethers/lib/ethers'
 import { expect } from 'chai'
 import { getSighash } from '../../util/helpers'
+import { Context } from 'mocha'
 
 export default function suite () {
   let tx: Transaction
-  let ctx: any
+  let ctx: Context
   let withdrawAmount : BigNumber
 
   before(async function () {
-    ctx = this.test?.ctx
+    ctx = this.test?.ctx!
   })
 
   it('reverts if wihtdraw() reverts', async () => {
