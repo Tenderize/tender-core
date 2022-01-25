@@ -181,7 +181,7 @@ describe('Graph Integration Test', () => {
         )
       })
       describe('Unstake', unlockTests.bind(this))
-      describe('Withdrawl', withdrawTests.bind(this))
+      describe('Withdrawal', withdrawTests.bind(this))
     })
     describe('Upgrades', upgradeTests.bind(this))
     describe('Setting contract variables', setterTests.bind(this))
