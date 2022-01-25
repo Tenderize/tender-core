@@ -494,9 +494,9 @@ describe('TenderSwap', () => {
       // User 1 adds liquidity
       await swap
         .connect(user1)
-        .addLiquidity([String(2e18), String(2e18)], 0, constants.MaxUint256)
+        .addLiquidity([String(2e18), String(1e16)], 0, constants.MaxUint256)
       const currentUser1Balance = await swapToken.balanceOf(user1Address)
-      expect(currentUser1Balance).to.eq(BigNumber.from('4000000000000000000'))
+      expect(currentUser1Balance).to.eq(BigNumber.from('1996275270169644725'))
 
       const amountToWithdraw = currentUser1Balance.div(2)
 
@@ -504,13 +504,13 @@ describe('TenderSwap', () => {
       const calculatedFirstTokenAmount =
         await swap.calculateRemoveLiquidityOneToken(amountToWithdraw, firstToken.address)
       expect(calculatedFirstTokenAmount).to.eq(
-        BigNumber.from('1986362575221751842')
+        BigNumber.from('1007337740817091393')
       )
 
       const calculatedSecondTokenAmount =
       await swap.calculateRemoveLiquidityOneToken(amountToWithdraw, secondToken.address)
       expect(calculatedSecondTokenAmount).to.eq(
-        BigNumber.from('1986362575221751842')
+        BigNumber.from('874340832599982753')
       )
 
       // User 1 initiates one token withdrawal
@@ -526,7 +526,7 @@ describe('TenderSwap', () => {
         )
       const after = await firstToken.balanceOf(user1Address)
 
-      expect(after.sub(before)).to.eq(BigNumber.from('1986362575221751842'))
+      expect(after.sub(before)).to.eq(BigNumber.from('1007337740817091393'))
     })
 
     it('Returns correct amount of received token', async () => {
@@ -541,6 +541,28 @@ describe('TenderSwap', () => {
         firstToken.address,
         0
       )
+    })
+
+    it('values returned are correct when pool is heavily imbalanced', async () => {
+      // Add liquidity in balance
+      const lpTokenSupply = await swapToken.totalSupply()
+
+      await swap
+        .connect(user1)
+        .addLiquidity([String(50e18), String(50e18)], 0, constants.MaxUint256)
+
+      expect(await swapToken.totalSupply()).to.eq(lpTokenSupply.add(String(100e18)))
+      expect(await swapToken.balanceOf(await user1.getAddress())).to.eq(String(100e18))
+
+      // Add very imbalanced liquidity by another user
+      await firstToken.mint(await user2.getAddress(), String(1e20))
+      await secondToken.mint(await user2.getAddress(), String(1e20))
+      await swap
+        .connect(user2)
+        .addLiquidity([String(50e18), '0'], 0, constants.MaxUint256)
+
+      expect(await swap.calculateRemoveLiquidityOneToken(String(50e18), firstToken.address)).to.eq('50171562343795212783')
+      expect(await swap.calculateRemoveLiquidityOneToken(String(10e18), secondToken.address)).to.eq('9876413622441569532')
     })
 
     it('Reverts when user tries to burn more LP tokens than they own', async () => {
@@ -576,7 +598,7 @@ describe('TenderSwap', () => {
       const calculatedFirstTokenAmount =
         await swap.calculateRemoveLiquidityOneToken(amountToWithdraw, firstToken.address)
       expect(calculatedFirstTokenAmount).to.eq(
-        BigNumber.from('1986362575221751842')
+        BigNumber.from('1986356449277922543')
       )
 
       // User 2 adds liquidity before User 1 initiates withdrawal

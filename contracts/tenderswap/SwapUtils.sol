@@ -573,17 +573,17 @@ library SwapUtils {
 
         require(tokenAmount <= xpR, "AMOUNT_EXCEEDS_AVAILABLE");
 
-        v.newY = getYD(v.preciseA, xpR, v.d1);
+        v.newY = getYD(v.preciseA, xpC, v.d1);
 
         v.feePerToken = _feePerToken(swapFee);
 
         // For xpR => dxExpected = xpR * d1 / d0 - newY
         // For xpC => dxExpected = xpC - (xpC * d1 / d0)
         // xpReduced -= dxExpected * fee / FEE_DENOMINATOR
-        uint256 xpRReduced = xpR - (((xpR * v.d1) / v.d0 - v.newY) * v.feePerToken) / FEE_DENOMINATOR;
-        // uint256 xpCReduced = xpC - (xpC - (xpC * v.d1 / v.d0)) * v.feePerToken / FEE_DENOMINATOR;
+        uint256 xpRReduced = xpR - (xpR * v.d1 / v.d0 - v.newY) * v.feePerToken / FEE_DENOMINATOR;
+        uint256 xpCReduced = xpC - (xpC - (xpC * v.d1 / v.d0)) * v.feePerToken / FEE_DENOMINATOR;
 
-        uint256 dy = xpRReduced - getYD(v.preciseA, xpRReduced, v.d1);
+        uint256 dy = xpRReduced - getYD(v.preciseA, xpCReduced, v.d1);
 
         dy = (dy - 1) / tokenReceive.precisionMultiplier;
 
@@ -662,17 +662,17 @@ library SwapUtils {
      * x_1 = (x_1**2 + c) / (2*x_1 + b)
      *
      * @param a the amplification coefficient * n * (n - 1). See the StableSwap paper for details.
-     * @param xpTo a precision-adjusted balance of the token to receive
+     * @param xpFrom a precision-adjusted balance of the token to send
      * @param d the stableswap invariant
      * @return the price of the token, in the same precision as in xp
      */
     function getYD(
         uint256 a,
-        uint256 xpTo,
+        uint256 xpFrom,
         uint256 d
     ) internal pure returns (uint256) {
-        uint256 c = (d * d) / (xpTo * NUM_TOKENS);
-        uint256 s = xpTo;
+        uint256 c = (d * d) / (xpFrom * NUM_TOKENS);
+        uint256 s = xpFrom;
         uint256 nA = a * NUM_TOKENS;
 
         c = (c * d * A_PRECISION) / (nA * NUM_TOKENS);
