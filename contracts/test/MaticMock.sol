@@ -28,6 +28,7 @@ contract MaticMock is MockStaking {
     {
         staked -= _claimAmount;
         unstakeLocks[nextUnstakeLockID] = UnstakeLock({ amount: _claimAmount, account: msg.sender });
+        nextUnstakeLockID++;
     }
 
     function unstakeClaimTokens_new(uint256 _unbondNonce) external reverted(this.unstakeClaimTokens_new.selector) {

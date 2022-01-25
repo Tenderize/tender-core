@@ -17,6 +17,7 @@ contract LivepeerMock is MockStaking {
     function unbond(uint256 _amount) external reverted(this.unbond.selector) {
         staked -= _amount;
         unstakeLocks[nextUnstakeLockID] = UnstakeLock({ amount: _amount, account: msg.sender });
+        nextUnstakeLockID++;
     }
 
     function rebondFromUnbonded(address _to, uint256 _unbondingLockId) external {

@@ -210,8 +210,9 @@ describe('Livepeer Integration Test', () => {
     describe('Collect Liquidity fees', liquidityFeeTests.bind(this))
     describe('Swap', swapTests.bind(this))
 
-    describe('Unlock and Withdraw', async function () {
+    describe('Unlock and Withdrawal', async function () {
       describe('User unlock', userBasedUnlockByUser.bind(this))
+      describe('Withdrawal', userBasedWithdrawalTests.bind(this))
       describe('Gov unlock', async function () {
         context('Zero stake', async function () {
           before(async function () {
@@ -228,7 +229,6 @@ describe('Livepeer Integration Test', () => {
           describe('Gov unlocks', userBasedUnlockByGov.bind(this))
         })
       })
-      describe('Withdraw', userBasedWithdrawalTests.bind(this))
     })
     describe('Upgrades', upgradeTests.bind(this))
     describe('Setting contract variables', setterTests.bind(this))

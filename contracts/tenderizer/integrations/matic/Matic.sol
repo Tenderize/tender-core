@@ -130,17 +130,18 @@ contract Matic is Tenderizer {
     function _withdraw(address _account, uint256 _unstakeID) internal override {
         UnstakeLock storage lock = unstakeLocks[_unstakeID];
         address account = lock.account;
-        uint256 amount = lock.amount;
 
         require(account == _account, "ACCOUNT_MISTMATCH");
-        // Check that a withdrawal is pending
-        require(amount > 0, "ZERO_AMOUNT");
 
         // Remove it from the locks
         delete unstakeLocks[_unstakeID];
 
-        // Withdraw stake, transfers steak tokens to address(this)
+        // Check for any slashes during undelegation
+        uint256 balBefore = steak.balanceOf(address(this));
         matic.unstakeClaimTokens_new(_unstakeID);
+        uint256 balAfter = steak.balanceOf(address(this));
+        uint256 amount = balAfter >= balBefore ? balAfter - balBefore : 0;
+        require(amount > 0, "ZERO_AMOUNT");
 
         // Transfer amount from unbondingLock to _account
         steak.transfer(account, amount);

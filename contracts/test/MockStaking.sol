@@ -17,7 +17,7 @@ contract MockStaking {
     }
 
     mapping(uint256 => UnstakeLock) public unstakeLocks;
-    uint256 nextUnstakeLockID;
+    uint256 public nextUnstakeLockID;
 
     mapping(bytes4 => bool) reverts;
 
@@ -40,5 +40,9 @@ contract MockStaking {
 
     function setReverts(bytes4 _sel, bool yn) public {
         reverts[_sel] = yn;
+    }
+
+    function changePendingUndelegation(uint256 _unstakeLockID, uint256 _newAmount) external {
+        unstakeLocks[_unstakeLockID].amount = _newAmount;
     }
 }
