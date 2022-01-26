@@ -15,14 +15,67 @@ import "../tenderfarm/ITenderFarm.sol";
  */
 interface ITenderizer {
     // Events
+
+    /**
+     * @notice Deposit gets emitted when an accounts deposits underlying tokens.
+     * @param from the account that deposited
+     * @param amount the amount of tokens deposited
+     */
     event Deposit(address indexed from, uint256 amount);
+
+    /**
+     * @notice Stake gets emitted when funds are staked/delegated from the Tenderizer contract
+     * into the underlying protocol.
+     * @param node the address the funds are staked to
+     * @param amount the amount staked
+     */
     event Stake(address indexed node, uint256 amount);
+
+    /**
+     * @notice Unstake gets emitted when an account burns TenderTokens to unlock
+     * tokens staked through the Tenderizer
+     * @param from the account that unstaked
+     * @param node the node in the underlying token from which tokens are unstaked
+     * @param amount the amount unstaked
+     */
     event Unstake(address indexed from, address indexed node, uint256 amount, uint256 unstakeLockID);
+
+    /**
+     * @notice Withdraw gets emitted when an account withdraws tokens that have been
+     * succesfully unstaked and thus unlocked for withdrawal.
+     * @param from the account withdrawing tokens
+     * @param amount the amount being withdrawn
+     * @param unstakeLockID the unstake lock ID being consumed
+     */
     event Withdraw(address indexed from, uint256 amount, uint256 unstakeLockID);
+
+    /**
+     * @notice RewardsClaimed gets emitted when the Tenderizer processes staking rewards (or slashing)
+     * from the underlying protocol.
+     * @param stakeDiff the stake difference since the last event, can be negative in case slashing occured
+     * @param currentPrincipal TVL after claiming rewards
+     * @param oldPrincipal TVL before claiming rewards
+     */
     event RewardsClaimed(int256 stakeDiff, uint256 currentPrincipal, uint256 oldPrincipal);
+
+    /**
+     * @notice ProtocolFeeCollected gets emitted when the treasury claims its outstanding
+     * protocol fees.
+     * @param amount the amount of fees claimed (in TenderTokens)
+     */
     event ProtocolFeeCollected(uint256 amount);
+
+    /**
+     * @notice LiquidityFeeCollected gets emitted when liquidity provider fees are moved to the TenderFarm.
+     * @param amount the amount of fees moved for farming
+     */
     event LiquidityFeeCollected(uint256 amount);
-    event GovernanceUpdate(string _param);
+
+    /**
+     * @notice GovernanceUpdate gets emitted when a parameter on the Tenderizer gets updated.
+     * @param param the parameter that got updated
+     */
+    event GovernanceUpdate(string param);
 
     /**
      * @notice Deposit tokens in Tenderizer.
