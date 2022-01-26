@@ -168,7 +168,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
         external
         view
         override
-        returns (uint256 availableTokenAmount)
+        returns (uint256)
     {
         return
             tokenReceive == token0.token

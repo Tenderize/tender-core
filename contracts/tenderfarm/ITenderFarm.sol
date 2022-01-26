@@ -81,33 +81,36 @@ interface ITenderFarm {
      * @notice add new rewards
      * @dev will 'start' a new 'epoch'.
      * @dev only callable by owner.
-     * @param amount amount of reward tokens to add
+     * @param _amount amount of reward tokens to add
      */
-    function addRewards(uint256 amount) external;
+    function addRewards(uint256 _amount) external;
 
     /**
-     * @notice Check available rewards for an address.
-     * @param _for address
-     * @return amount rewards for address
+     * @notice Check available rewards for an account.
+     * @param _for address address of the account to check rewards for.
+     * @return amount rewards for the provided account address.
      */
     function availableRewards(address _for) external view returns (uint256 amount);
 
     /**
-     * @notice Check stake for an address.
-     * @param _of address
+     * @notice Check stake for an account.
+     * @param _of address address of the account to check stake for.
      * @return amount LP tokens deposited for address
      */
     function stakeOf(address _of) external view returns (uint256 amount);
 
     /**
-     * @return _totalStake -  total amount of LP tokens staked
+     * @notice Return the total amount of LP tokens staked in this farm.
+     * @return stake total amount of LP tokens staked
      */
-    function totalStake() external view returns (uint256 _totalStake);
+    function totalStake() external view returns (uint256 stake);
 
     /**
-     * @return _nextTotalStake - LP Tokens staked for next round
+     * @notice Return the total amount of LP tokens staked
+     * for the next reward epoch.
+     * @return nextStake LP Tokens staked for next round
      */
-    function nextTotalStake() external view returns (uint256 _nextTotalStake);
+    function nextTotalStake() external view returns (uint256 nextStake);
 
     /**
      * @notice Changes the tenderizer of the contract

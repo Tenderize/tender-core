@@ -88,43 +88,45 @@ interface ITenderizer {
 
     /**
      * @notice Collect fees pulls any pending governance fees from the Tenderizer to the governance treasury.
-     * @return feesCollected Amount of protocol fees collected
+     * @return amount Amount of protocol fees collected
      * @dev Resets pendingFees.
      * @dev Fees claimed are added to total staked.
      */
-    function collectFees() external returns (uint256 feesCollected);
+    function collectFees() external returns (uint256 amount);
 
     /**
      * @notice Collect Liquidity fees pulls any pending LP fees from the Tenderizer to TenderFarm.
-     * @return liquidtyFeesCollected Amount of liquidity fees collected
+     * @return amount Amount of liquidity fees collected
      * @dev Resets pendingFees.
      * @dev Fees claimed are added to total staked.
      */
-    function collectLiquidityFees() external returns (uint256 liquidtyFeesCollected);
+    function collectLiquidityFees() external returns (uint256 amount);
 
     /**
      * @notice Total Staked Tokens returns the total amount of underlying tokens staked by this Tenderizer.
-     * @return _totalStakedTokens total amount staked by this Tenderizer
+     * @return totalStaked total amount staked by this Tenderizer
      */
-    function totalStakedTokens() external view returns (uint256 _totalStakedTokens);
+    function totalStakedTokens() external view returns (uint256 totalStaked);
 
     /**
      * @notice Returns the number of tenderTokens to be minted for amountIn deposit.
-     * @return depositOut number of tokens staked for depositIn.
+     * @return depositOut number of tokens staked for `amountIn`.
      * @dev used by controller to calculate tokens to be minted before depositing.
      * @dev to be used when there a delegation tax is deducted, for eg. in Graph.
      */
-    function calcDepositOut(uint256 amountIn) external returns (uint256 depositOut);
+    function calcDepositOut(uint256 _amountIn) external returns (uint256 depositOut);
 
     /**
-     * @return _pendingFees amount of fees pending since last claim
+     * @notice Returns the amount of pending protocool fees since last claiming..
+     * @return amount the amount of fees pending since last claim
      */
-    function pendingFees() external view returns (uint256 _pendingFees);
+    function pendingFees() external view returns (uint256 amount);
 
     /**
-     * @return _pendingLiquidityFees amount of liqudity fees pending since last claim
+     * @notice Returns the amount of pending liquidity provider fees since last claiming.
+     * @return amount the amount of liqudity fees pending since last claim
      */
-    function pendingLiquidityFees() external view returns (uint256 _pendingLiquidityFees);
+    function pendingLiquidityFees() external view returns (uint256 amount);
 
     /**
      * @notice Exectutes a transaction on behalf of the controller.

@@ -580,8 +580,8 @@ library SwapUtils {
         // For xpR => dxExpected = xpR * d1 / d0 - newY
         // For xpC => dxExpected = xpC - (xpC * d1 / d0)
         // xpReduced -= dxExpected * fee / FEE_DENOMINATOR
-        uint256 xpRReduced = xpR - (xpR * v.d1 / v.d0 - v.newY) * v.feePerToken / FEE_DENOMINATOR;
-        uint256 xpCReduced = xpC - (xpC - (xpC * v.d1 / v.d0)) * v.feePerToken / FEE_DENOMINATOR;
+        uint256 xpRReduced = xpR - (((xpR * v.d1) / v.d0 - v.newY) * v.feePerToken) / FEE_DENOMINATOR;
+        uint256 xpCReduced = xpC - ((xpC - ((xpC * v.d1) / v.d0)) * v.feePerToken) / FEE_DENOMINATOR;
 
         uint256 dy = xpRReduced - getYD(v.preciseA, xpCReduced, v.d1);
 

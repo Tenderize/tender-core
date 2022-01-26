@@ -78,12 +78,16 @@ interface ITenderSwap {
     ) external returns (bool success);
 
     /*** VIEW FUNCTIONS ***/
-    function lpToken() external view returns (LiquidityPoolToken _lpToken);
+    /**
+     * @notice Returns the liquidity pool token contract.
+     * @return lpTokenContract Liquidity pool token contract.
+     */
+    function lpToken() external view returns (LiquidityPoolToken lpTokenContract);
 
     /**
      * @notice Return A, the amplification coefficient * n * (n - 1)
      * @dev See the StableSwap paper for details
-     * @return a A parameter
+     * @return a the amplifaction coefficient
      */
     function getA() external view returns (uint256 a);
 
@@ -170,10 +174,10 @@ interface ITenderSwap {
      * @param deposit whether this is a deposit or a withdrawal
      * @return tokensToReceive token amount the user will receive
      */
-    function calculateTokenAmount(
-        uint256[] calldata amounts,
-        bool deposit
-    ) external view returns (uint256 tokensToReceive);
+    function calculateTokenAmount(uint256[] calldata amounts, bool deposit)
+        external
+        view
+        returns (uint256 tokensToReceive);
 
     /*** POOL FUNCTIONALITY ***/
 
