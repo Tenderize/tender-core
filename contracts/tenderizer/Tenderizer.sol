@@ -118,7 +118,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     /// @inheritdoc ITenderizer
-    function unstake(uint256 _amount) external override returns (uint256 unstakeLockID) {
+    function unstake(uint256 _amount) external override returns (uint256) {
         // Burn tenderTokens if not gov
         // TODO: CHECK THIS!
         if (msg.sender != gov) {
@@ -218,7 +218,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     /// @inheritdoc ITenderizer
-    function calcDepositOut(uint256 _amountIn) public view virtual override returns (uint256 amountOut) {
+    function calcDepositOut(uint256 _amountIn) public view virtual override returns (uint256) {
         return _calcDepositOut(_amountIn);
     }
 
@@ -245,7 +245,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
 
     // Internal functions
 
-    function _calcDepositOut(uint256 _amountIn) internal view virtual returns (uint256 amountOut) {
+    function _calcDepositOut(uint256 _amountIn) internal view virtual returns (uint256) {
         return _amountIn;
     }
 
