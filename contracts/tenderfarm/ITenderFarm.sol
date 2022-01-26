@@ -66,9 +66,9 @@ interface ITenderFarm {
      * @notice unstake liquidity pool tokens
      * @dev '_amount' needs to be approved for the 'TenderFarm' to transfer.
      * @dev harvests current rewards before accounting updates are made.
-     * @param _amount amount of liquidity pool tokens to stake
+     * @param amount amount of liquidity pool tokens to stake
      */
-    function unfarm(uint256 _amount) external;
+    function unfarm(uint256 amount) external;
 
     /**
      * @notice harvest outstanding rewards
@@ -81,23 +81,23 @@ interface ITenderFarm {
      * @notice add new rewards
      * @dev will 'start' a new 'epoch'.
      * @dev only callable by owner.
-     * @param _amount amount of reward tokens to add
+     * @param amount amount of reward tokens to add
      */
-    function addRewards(uint256 _amount) external;
+    function addRewards(uint256 amount) external;
 
     /**
      * @notice Check available rewards for an address.
      * @param _for address
-     * @return _amount rewards for address
+     * @return amount rewards for address
      */
-    function availableRewards(address _for) external view returns (uint256 _amount);
+    function availableRewards(address _for) external view returns (uint256 amount);
 
     /**
      * @notice Check stake for an address.
      * @param _of address
-     * @return _amount LP tokens deposited for address
+     * @return amount LP tokens deposited for address
      */
-    function stakeOf(address _of) external view returns (uint256 _amount);
+    function stakeOf(address _of) external view returns (uint256 amount);
 
     /**
      * @return _totalStake -  total amount of LP tokens staked

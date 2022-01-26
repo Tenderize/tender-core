@@ -65,6 +65,7 @@ interface ITenderizer {
     /**
      * @notice Unstake '_amount' of tokens from '_account'.
      * @param _amount amount to unstake
+     * @return unstakeLockID unstake lockID generated for unstake
      * @dev unstake from the default address.
      * @dev If '_amount' is 0, unstake the entire amount staked towards _account.
      */
@@ -87,35 +88,43 @@ interface ITenderizer {
 
     /**
      * @notice Collect fees pulls any pending governance fees from the Tenderizer to the governance treasury.
-     * @return Amount of protocol fees collected
+     * @return feesCollected Amount of protocol fees collected
      * @dev Resets pendingFees.
      * @dev Fees claimed are added to total staked.
      */
-    function collectFees() external returns (uint256);
+    function collectFees() external returns (uint256 feesCollected);
 
     /**
      * @notice Collect Liquidity fees pulls any pending LP fees from the Tenderizer to TenderFarm.
-     * @return Amount of liquidity fees collected
+     * @return liquidtyFeesCollected Amount of liquidity fees collected
      * @dev Resets pendingFees.
      * @dev Fees claimed are added to total staked.
      */
-    function collectLiquidityFees() external returns (uint256);
+    function collectLiquidityFees() external returns (uint256 liquidtyFeesCollected);
 
     /**
      * @notice Total Staked Tokens returns the total amount of underlying tokens staked by this Tenderizer.
-     * @return total amount staked by this Tenderizer
+     * @return _totalStakedTokens total amount staked by this Tenderizer
      */
-    function totalStakedTokens() external view returns (uint256);
+    function totalStakedTokens() external view returns (uint256 _totalStakedTokens);
 
     /**
      * @notice Returns the number of tenderTokens to be minted for amountIn deposit.
+     * @return depositOut number of tokens staked for depositIn.
      * @dev used by controller to calculate tokens to be minted before depositing.
+     * @dev to be used when there a delegation tax is deducted, for eg. in Graph.
      */
-    function calcDepositOut(uint256 amountIn) external returns (uint256);
+    function calcDepositOut(uint256 amountIn) external returns (uint256 depositOut);
 
-    function pendingFees() external view returns (uint256);
+    /**
+     * @return _pendingFees amount of fees pending since last claim
+     */
+    function pendingFees() external view returns (uint256 _pendingFees);
 
-    function pendingLiquidityFees() external view returns (uint256);
+    /**
+     * @return _pendingLiquidityFees amount of liqudity fees pending since last claim
+     */
+    function pendingLiquidityFees() external view returns (uint256 _pendingLiquidityFees);
 
     /**
      * @notice Exectutes a transaction on behalf of the controller.
