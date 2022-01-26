@@ -14,9 +14,33 @@ import "../tenderizer/ITenderizer.sol";
  * and a proportionaly rewarding them with TenderTokens over time.
  */
 interface ITenderFarm {
+    /**
+     * @notice Farm gets emitted when an account stakes LP tokens.
+     * @param account the account for which LP tokens were staked
+     * @param amount the amount of LP tokens staked
+     */
     event Farm(address indexed account, uint256 amount);
+
+    /**
+     * @notice Unfarm gets emitted when an account unstakes LP tokens.
+     * @param account the account for which LP tokens were unstaked
+     * @param amount the amount of LP tokens unstaked
+     */
     event Unfarm(address indexed account, uint256 amount);
+
+    /**
+     * @notice Harvest gets emitted when an accounts harvests outstanding
+     * rewards.
+     * @param account the account which harvested rewards
+     * @param amount the amount of rewards harvested
+     */
     event Harvest(address indexed account, uint256 amount);
+
+    /**
+     * @notice RewardsAdded gets emitted when new rewards are added
+     * and a new epoch begins
+     * @param amount amount of rewards that were addedd
+     */
     event RewardsAdded(uint256 amount);
 
     function initialize(
