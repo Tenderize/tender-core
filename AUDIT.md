@@ -1,11 +1,36 @@
 # Hacken audit - Jan 2022
-## Contracts
+
+## Overview
+
+Tenderize is a liquid staking protocol that uses delegation to aggregate user deposits and stake them on their respective networks. Depositers are TenderToken derivatives equal to their deposit. 
+
+TenderTokens are rebasing ERC20 tokens and their supply, and thus balances of accounts, will always match the amount of underlying tokens staked through Tenderize.
+
+## Documentation
 
 All natspec comments for functions can be found in their respective Interfaces. Do not hesitate to contact us for any clarifications/explainations.
 
-### Tenderizer
-The Tenderizer is the main contract that is responsible for accepting user deposits, issueing derivative TenderTokens, and making the actual deposits to the staking contracts of the underlying protcols (Livepeer, Graph, Matic, Audius).
-Each implementation for integrating implements the abstract `Tenderizer` contract and overrides the functions with protocol specific calls/requirements;
+Gitbook documentation can be found at https://docs.tenderize.me
+
+### Architecture
+
+Each deployment consists of the following components
+
+- **Tenderizer**: main contract for staking and compounding rewards
+- **TenderToken**: ERC20 rebasing token, derivative for staked assets
+- **TenderSwap**: A StableSwap pool to swap back and forth between a TenderToken derivative and its underlying asset
+- **TenderFarm**: A light-weight liquidity farming contract to deposit TenderSwap LP tokens and earn TenderToken rewards
+
+#### Ownership
+
+![](https://i.imgur.com/kVHRwa8.png)
+
+
+#### Tenderizer
+
+The Tenderizer is the main contract that is responsible for accepting user deposits, issuing derivative TenderTokens, and delegating stake to node operators on the underlying protcols (Livepeer, Graph, Matic, Audius).
+
+Each deployment implements the abstract `Tenderizer` contract and overrides the functions with protocol specific calls/requirements where necessary.
 
 Regarding deployment, an instance of the Tenderswap, Tenderfarm and TenderToken are first deployed. When a Tenderizer for a certain protocol is deployed, it clones each of the contracts mentioned before for each protocol.
 
@@ -15,25 +40,31 @@ Users can also unstake their positions via the Tenderizer. Based on the protocol
 
 A portion of the rewards earned are set aside as protocol fees and liquidity fees. Liquidity fees are transfered to the Tenderfarm. Protocol fees can be claimed by the owner (gov).
 
-### TenderToken
+#### TenderToken
+
 A rebasing ERC-20 token with shares, where total supply is read directly from the Tenderizer (total staked amount). So for every token staked the supply is "rebased" to meet that amount.
 
 TenderTokens work on the mechanism of shares ie. when new tokens are minted, the equivalent number of shares are minted for the address such that `tenderTokenBalance = shares * totalTokens / totalShares`, where totalTokens is Tenderizer.currentPrinciple ie. the amount of tokens that are staked.
 
-### TenderSwap
+#### TenderSwap
+
 A stableswap AMM for tenderTokens and the underlying assets eg. tLPT-LPT (mostly forked from Saddle Finanace). This is what makes staking liquid ie. using can isntantly swap their tenderTokens for their underlying assets without any unstaking period. LPs are awarded with LP tokens that can be farmed for rewards in the TenderFarm contract.
 
-### TenderFarm
+#### TenderFarm
+
 The Tenderfarm accepts LP tokens and awards tenderTokens over time based on the amounts farmed, which can be claimed at any time.
 
 ## Scope of the audit
 
 Scope of the Audit includes and is not exchaustive unless specified otherwise, with an emphasised focus on the loss of user funds:
-- Tenderizer base implementation and it's extenstions (contracts/tenderizer)
-    - The Tenderizer contracts, and how they interact with other contracts and the staking contracts from underlying protocols. ONLY Livepeer, Graph, Matic, we shall have Audius audited in the coming weeks, but the main focus would be the other three, it the order they are listed in.
-    - Attacks whereby users might be able to dodge slashes
-    - Attacks related to rebasing, eg. user stakes, then rebases, and immediately swaps
+
+- Tenderizer base implementation and its extenstions (contracts/tenderizer)
+    - The Tenderizer contracts, and how they interact with other contracts and the staking contracts from underlying protocols. ONLY Livepeer, Graph, Matic. (Audius is NOT in scope for the audit)
+    - Vulnerabilities that might lead to a partial or complete loss of user funds
 - TenderToken implementation (contracts/token/TenderToken.sol)
-    - Implications of rebasing supply, which is directly read from the Tenderizer
+    - Share based accounting instead of nominal token balances
+    - Vulnerabilities that might lead to loss of user funds
 - TenderFarm implementation (contracts/tenderfarm)
-- TenderSwap implementation can be EXCLUDED from the audit as it is mostly a fork from Saddle.Finance
+    - correct reward distribution according to stake
+    - Vulnerabilities that might lead to loss of user funds
+- TenderSwap implementation is NOT in scope as it's code is based off of several highly audited code bases.
