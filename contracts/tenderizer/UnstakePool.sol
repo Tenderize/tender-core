@@ -81,6 +81,22 @@ library UnstakePool {
         return _pool.amount;
     }
 
+    function epoch(WithdrawalPool storage _pool) internal view returns (uint256) {
+        return _pool.epoch;
+    }
+
+    function lastEpoch(WithdrawalPool storage _pool) internal view returns (uint256) {
+        return _pool.lastEpoch;
+    }
+
+    function getWithdrawal(WithdrawalPool storage _pool, uint256 _withdrawalID)
+        internal
+        view
+        returns (Withdrawal memory)
+    {
+        return _pool.withdrawals[_withdrawalID];
+    }
+
     function calcShares(WithdrawalPool storage _pool, uint256 _amount) internal view returns (uint256 shares) {
         uint256 totalTokens = _pool.amount + _pool.pendingUnlock;
         uint256 totalShares = _pool.shares;
