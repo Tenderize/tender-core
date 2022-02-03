@@ -25,8 +25,8 @@ library UnstakePool {
 
     function unlock(
         WithdrawalPool storage _pool,
-        uint256 _amount,
-        address _receiver
+        address _receiver,
+        uint256 _amount
     ) internal returns (uint256 withdrawalID) {
         withdrawalID = _pool.withdrawalID;
 
@@ -59,13 +59,16 @@ library UnstakePool {
         delete _pool.withdrawals[_withdrawalID];
     }
 
-    function processUnlocks(WithdrawalPool storage _pool, uint256 _epochID) internal {
+    function processUnlocks(WithdrawalPool storage _pool) internal returns (uint256 pendingUnlock_){
+        require(_pool.epoch == _pool.lastEpoch, "ONGOING_UNLOCK");
         _pool.pendingWithdrawal += _pool.pendingUnlock;
+        pendingUnlock_ = _pool.pendingUnlock;
         _pool.pendingUnlock = 0;
-        _pool.epoch = _epochID;
+        _pool.epoch = block.number;
     }
 
     function processWihdrawal(WithdrawalPool storage _pool, uint256 _received) internal {
+        require(_pool.epoch > _pool.lastEpoch, "ONGOING_UNLOCK");
         _pool.amount += _received;
         _pool.pendingWithdrawal = 0;
         _pool.lastEpoch = _pool.epoch;
@@ -73,17 +76,23 @@ library UnstakePool {
 
     function updateTotalTokens(WithdrawalPool storage _pool, uint256 _newAmount) internal {
         // calculate relative amounts to subtract from 'amount' and 'pendingUnlock'
-        uint256 amount = _pool.amount;
-        uint256 pendingUnlock = _pool.pendingUnlock;
+        uint256 amount_ = _pool.amount;
+        uint256 pendingUnlock_ = _pool.pendingUnlock;
         uint256 pendingWithdrawal = _pool.pendingWithdrawal;
-        uint256 total = amount + pendingUnlock + pendingWithdrawal;
-        _pool.amount = _newAmount * amount / total;
-        _pool.pendingUnlock = _newAmount * pendingUnlock / total;
-        _pool.pendingWithdrawal = _newAmount * pendingWithdrawal + total;
+        uint256 total = amount_ + pendingUnlock_ + pendingWithdrawal;
+        if(total > 0) {
+            _pool.amount = _newAmount * amount_ / total;
+            _pool.pendingUnlock = _newAmount * pendingUnlock_ / total;
+            _pool.pendingWithdrawal = _newAmount * pendingWithdrawal + total;
+        }
     }
 
     function totalTokens(WithdrawalPool storage _pool) internal view returns (uint256) {
         return  _pool.amount + _pool.pendingUnlock + _pool.pendingWithdrawal;
+    }
+
+    function amount(WithdrawalPool storage _pool) internal view returns (uint256) {
+        return  _pool.amount;
     }
 
     function epoch(WithdrawalPool storage _pool) internal view returns (uint256) {
@@ -103,17 +112,17 @@ library UnstakePool {
     }
 
     function calcShares(WithdrawalPool storage _pool, uint256 _amount) internal view returns (uint256 shares) {
-        uint256 totalTokens = totalTokens(_pool);
+        uint256 totalTokens_ = totalTokens(_pool);
         uint256 totalShares = _pool.shares;
 
-        if (totalTokens == 0) return _amount;
+        if (totalTokens_ == 0) return _amount;
 
         if (totalShares == 0) return _amount;
 
-        return MathUtils.percOf(_amount, totalShares, totalTokens);
+        return MathUtils.percOf(_amount, totalShares, totalTokens_);
     }
 
-    function calcAmount(WithdrawalPool storage _pool, uint256 _shares) internal view returns (uint256 amount) {
+    function calcAmount(WithdrawalPool storage _pool, uint256 _shares) internal view returns (uint256) {
         uint256 totalShares = _pool.shares;
         if (totalShares == 0) return 0;
 

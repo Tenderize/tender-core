@@ -263,7 +263,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
 
     function _claimRewards() internal virtual;
 
-    function _processNewStake(uint256 _newStake) internal {
+    function _processNewStake(uint256 _newStake) internal virtual {
         // TODO: all of the below could be a general internal function in Tenderizer.sol
         uint256 currentPrincipal_ = currentPrincipal;
 
