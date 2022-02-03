@@ -49,12 +49,6 @@ export default function suite () {
         .to.lte(acceptableDelta)
     })
 
-    it('should create unstakeLock', async () => {
-      const lock = await ctx.Tenderizer.unstakeLocks(ctx.unbondLockID)
-      expect(lock.account).to.eq(ctx.signers[2].address)
-      expect(lock.amount.sub(ctx.withdrawAmount).abs()).to.lte(acceptableDelta)
-    })
-
     it('should emit Unstake event from Tenderizer', async () => {
       expect(tx).to.emit(ctx.Tenderizer, 'Unstake')
         .withArgs(ctx.signers[2].address, ctx.NODE, ctx.withdrawAmount, ctx.unbondLockID)

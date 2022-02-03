@@ -21,11 +21,6 @@ import "../helpers/SelfPermit.sol";
  * @dev New implementations are required to inherit this contract and override any required internal functions.
  */
 abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
-    struct UnstakeLock {
-        uint256 amount;
-        address account;
-    }
-
     IERC20 public steak;
     ITenderToken public tenderToken;
     ITenderFarm public tenderFarm;
@@ -38,9 +33,6 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     uint256 public override pendingFees; // pending protocol fees since last distribution
     uint256 public override pendingLiquidityFees;
     uint256 public currentPrincipal; // Principal since last claiming earnings
-
-    mapping(uint256 => UnstakeLock) public unstakeLocks;
-    uint256 nextUnstakeLockID;
 
     address public gov;
 
@@ -263,7 +255,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
 
     function _claimRewards() internal virtual;
 
-    function _processNewStake(uint256 _newStake) internal {
+    function _processNewStake(uint256 _newStake) internal virtual {
         // TODO: all of the below could be a general internal function in Tenderizer.sol
         uint256 currentPrincipal_ = currentPrincipal;
 
