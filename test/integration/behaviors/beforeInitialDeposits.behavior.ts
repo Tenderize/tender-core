@@ -24,7 +24,7 @@ export default function suite () {
   })
 
   it('collectLiquidityFees() does not revert', async function () {
-    await expect(ctx.Tenderizer.collectFees()).to.be.not.reverted
+    await expect(ctx.Tenderizer.collectLiquidityFees()).to.be.not.reverted
   })
 
   it('TenderToken supply is 0', async function () {

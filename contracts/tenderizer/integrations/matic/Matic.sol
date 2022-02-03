@@ -23,6 +23,13 @@ contract Matic is Tenderizer {
     // Matic ValidatorShare
     IMatic matic;
 
+    struct UnstakeLock {
+        uint256 amount;
+        address account;
+    }
+    mapping(uint256 => UnstakeLock) public unstakeLocks;
+    uint256 nextUnstakeLockID;
+
     function initialize(
         IERC20 _steak,
         string calldata _symbol,
