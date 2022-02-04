@@ -18,6 +18,7 @@ library UnstakePool {
         uint256 shares; // total outstanding shares of the unstake pool
         uint256 amount; // total amount of available tokens
         uint256 pendingUnlock; // amount of tokens to unlock
+        uint256 pendingWithdrawal; // amount of tokens unlocked, pending withdrawal
         uint256 epoch; // current epoch start (e.g. incrementor or block number)
         uint256 lastEpoch; // last completed epoch (withdrawal completed)
     }
@@ -59,26 +60,30 @@ library UnstakePool {
     }
 
     function processUnlocks(WithdrawalPool storage _pool, uint256 _epochID) internal {
+        _pool.pendingWithdrawal += _pool.pendingUnlock;
         _pool.pendingUnlock = 0;
         _pool.epoch = _epochID;
     }
 
     function processWihdrawal(WithdrawalPool storage _pool, uint256 _received) internal {
         _pool.amount += _received;
+        _pool.pendingWithdrawal = 0;
         _pool.lastEpoch = _pool.epoch;
     }
 
-    function updateAmount(WithdrawalPool storage _pool, uint256 _newAmount) internal {
+    function updateTotalTokens(WithdrawalPool storage _pool, uint256 _newAmount) internal {
         // calculate relative amounts to subtract from 'amount' and 'pendingUnlock'
         uint256 amount = _pool.amount;
         uint256 pendingUnlock = _pool.pendingUnlock;
-        uint256 total = amount + pendingUnlock;
+        uint256 pendingWithdrawal = _pool.pendingWithdrawal;
+        uint256 total = amount + pendingUnlock + pendingWithdrawal;
         _pool.amount = _newAmount * amount / total;
         _pool.pendingUnlock = _newAmount * pendingUnlock / total;
+        _pool.pendingWithdrawal = _newAmount * pendingWithdrawal + total;
     }
 
-    function amount(WithdrawalPool storage _pool) internal view returns (uint256) {
-        return _pool.amount;
+    function totalTokens(WithdrawalPool storage _pool) internal view returns (uint256) {
+        return  _pool.amount + _pool.pendingUnlock + _pool.pendingWithdrawal;
     }
 
     function epoch(WithdrawalPool storage _pool) internal view returns (uint256) {
@@ -98,7 +103,7 @@ library UnstakePool {
     }
 
     function calcShares(WithdrawalPool storage _pool, uint256 _amount) internal view returns (uint256 shares) {
-        uint256 totalTokens = _pool.amount + _pool.pendingUnlock;
+        uint256 totalTokens = totalTokens(_pool);
         uint256 totalShares = _pool.shares;
 
         if (totalTokens == 0) return _amount;
@@ -112,6 +117,6 @@ library UnstakePool {
         uint256 totalShares = _pool.shares;
         if (totalShares == 0) return 0;
 
-        return MathUtils.percOf(_shares, _pool.amount + _pool.pendingUnlock, totalShares);
+        return MathUtils.percOf(_shares, totalTokens(_pool), totalShares);
     }
 }
