@@ -83,7 +83,7 @@ library UnstakePool {
         if(total > 0) {
             _pool.amount = _newAmount * amount_ / total;
             _pool.pendingUnlock = _newAmount * pendingUnlock_ / total;
-            _pool.pendingWithdrawal = _newAmount * pendingWithdrawal + total;
+            _pool.pendingWithdrawal = _newAmount * pendingWithdrawal / total;
         }
     }
 

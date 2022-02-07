@@ -166,7 +166,7 @@ contract Graph is Tenderizer {
 
         uint256 stake = (delShares * totalTokens) / totalShares;
 
-        Tenderizer._processNewStake(stake);
+        _processNewStake(stake);
     }
 
     function _processNewStake(uint256 _newStake) internal override {
@@ -189,7 +189,10 @@ contract Graph is Tenderizer {
             currentPrincipal = stake_;
             uint256 diff = currentPrincipal_ - stake_;
             // calculate amount to subtract relative to current principal
-            uint256 unstakePoolSlash = diff * unstakePoolTokens / (unstakePoolTokens + currentPrincipal);
+            uint256 totalTokens = unstakePoolTokens + currentPrincipal_;
+            if (totalTokens == 0) return;
+
+            uint256 unstakePoolSlash = diff * unstakePoolTokens / totalTokens;
             UnstakePool.updateTotalTokens(withdrawPool, unstakePoolTokens - unstakePoolSlash);
             
             emit RewardsClaimed(-int256(diff), stake_, currentPrincipal_);

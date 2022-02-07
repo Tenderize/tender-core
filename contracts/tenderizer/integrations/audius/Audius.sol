@@ -143,7 +143,7 @@ contract Audius is Tenderizer {
         // Get the new total delegator stake
         uint256 stake = audius.getTotalDelegatorStake(address(this));
 
-        Tenderizer._processNewStake(stake);
+        _processNewStake(stake);
     }
 
 
@@ -167,7 +167,10 @@ contract Audius is Tenderizer {
             currentPrincipal = stake_;
             uint256 diff = currentPrincipal_ - stake_;
             // calculate amount to subtract relative to current principal
-            uint256 unstakePoolSlash = diff * unstakePoolTokens / (unstakePoolTokens + currentPrincipal);
+            uint256 totalTokens = unstakePoolTokens + currentPrincipal_;
+            if (totalTokens == 0) return;
+
+            uint256 unstakePoolSlash = diff * unstakePoolTokens / totalTokens;
             UnstakePool.updateTotalTokens(withdrawPool, unstakePoolTokens - unstakePoolSlash);
             
             emit RewardsClaimed(-int256(diff), stake_, currentPrincipal_);
