@@ -436,12 +436,6 @@ describe('Audius Mainnet Fork Test', () => {
         expect(await TenderToken.balanceOf(deployer)).to.lte(acceptableDelta)
       })
 
-      it('should create unstakeLock', async () => {
-        const lock = await Tenderizer.unstakeLocks(unbondLockID)
-        expect(lock.account).to.eq(signers[2].address)
-        expect(lock.amount.sub(withdrawAmount).abs()).to.lte(acceptableDelta)
-      })
-
       it('should emit Unstake event from Tenderizer', async () => {
         expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(signers[2].address, NODE, withdrawAmount, unbondLockID)
       })
@@ -494,12 +488,6 @@ describe('Audius Mainnet Fork Test', () => {
         AUDIOBalanceBefore = await AudiusToken.balanceOf(signers[2].address)
         tx = await Tenderizer.connect(signers[2]).withdraw(unbondLockID)
         expect(await AudiusToken.balanceOf(signers[2].address)).to.eq(AUDIOBalanceBefore.add(withdrawAmount))
-      })
-
-      it('should delete unstakeLock', async () => {
-        const lock = await Tenderizer.unstakeLocks(unbondLockID)
-        expect(lock.account).to.eq(ethers.constants.AddressZero)
-        expect(lock.amount).to.eq(0)
       })
 
       it('should emit Withdraw event from Tenderizer', async () => {

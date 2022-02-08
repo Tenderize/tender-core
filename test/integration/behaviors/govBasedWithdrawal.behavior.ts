@@ -72,12 +72,6 @@ export default function suite () {
         .to.eq(steakBalanceBefore.add(ctx.withdrawAmount))
     })
 
-    it('should delete unstakeLock', async () => {
-      const lock = await ctx.Tenderizer.unstakeLocks(ctx.unbondLockID)
-      expect(lock.account).to.eq(ethers.constants.AddressZero)
-      expect(lock.amount).to.eq(0)
-    })
-
     it('should emit Withdraw event from Tenderizer', async () => {
       expect(tx).to.emit(ctx.Tenderizer, 'Withdraw')
         .withArgs(ctx.signers[2].address, ctx.withdrawAmount, ctx.unbondLockID)

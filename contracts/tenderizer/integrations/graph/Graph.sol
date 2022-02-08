@@ -23,9 +23,6 @@ contract Graph is Tenderizer {
 
     UnstakePool.WithdrawalPool withdrawPool;
 
-    // TODO: Simply use unstakeLock IDs instead
-    mapping(uint256 => uint256) withdrawalIDs;
-
     function initialize(
         IERC20 _steak,
         string calldata _symbol,
@@ -91,11 +88,10 @@ contract Graph is Tenderizer {
         uint256 _amount
     ) internal override returns (uint256 unstakeLockID) {
         uint256 amount = _amount;
-        unstakeLockID = nextUnstakeLockID;
 
         // Unstake from governance
         if (_account == gov) {
-            amount = UnstakePool.processUnlocks(withdrawPool);
+            (amount, unstakeLockID) = UnstakePool.processUnlocks(withdrawPool, _account);
 
             // Calculate the amount of shares to undelegate
             IGraph.DelegationPool memory delPool = graph.delegationPools(node);
@@ -111,35 +107,31 @@ contract Graph is Tenderizer {
         } else {
             require(amount > 0, "ZERO_AMOUNT");
 
-            withdrawalIDs[unstakeLockID] =  UnstakePool.unlock(withdrawPool, _account, amount);
+            unstakeLockID =  UnstakePool.unlock(withdrawPool, _account, amount);
 
             currentPrincipal -= amount;
         }
 
-        nextUnstakeLockID = unstakeLockID + 1;
-        unstakeLocks[unstakeLockID] = UnstakeLock({ amount: amount, account: _account });
-
         emit Unstake(_account, _node, amount, unstakeLockID);
     }
 
-    function _withdraw(address _account, uint256 _unstakeLockID) internal override {
-        UnstakeLock storage lock = unstakeLocks[_unstakeLockID];
-        address account = lock.account;
-        uint256 amount = lock.amount;
+    function _withdraw(address _account, uint256 _withdrawalID) internal override {
+        uint256 amount;
 
-        delete unstakeLocks[_unstakeLockID];
+        UnstakePool.Withdrawal memory withdrawal = UnstakePool.getWithdrawal(withdrawPool, _withdrawalID);
 
         // Check that a withdrawal is pending and valid
-        require(account == _account, "ACCOUNT_MISTMATCH");
-        require(amount > 0, "ZERO_AMOUNT");
+        // TODO: Move this to UnstakePool?
+        require(withdrawal.receiver == _account, "ACCOUNT_MISTMATCH");
 
         if (_account == gov) {
             uint256 balBefore = steak.balanceOf(address(this));
             graph.withdrawDelegated(node, address(0));
             uint256 balAfter = steak.balanceOf(address(this));
-            UnstakePool.processWihdrawal(withdrawPool, balAfter - balBefore);
+            amount = balAfter - balBefore;
+            UnstakePool.processWihdrawal(withdrawPool, amount, _withdrawalID);
         } else {
-            amount = UnstakePool.withdraw(withdrawPool, withdrawalIDs[_unstakeLockID]);
+            amount = UnstakePool.withdraw(withdrawPool, _withdrawalID);
 
             // Transfer amount from unbondingLock to _account
             try steak.transfer(_account, amount) {} catch {
@@ -151,7 +143,7 @@ contract Graph is Tenderizer {
             }
         }
 
-        emit Withdraw(account, amount, _unstakeLockID);
+        emit Withdraw(_account, amount, _withdrawalID);
     }
 
     function _claimRewards() internal override {

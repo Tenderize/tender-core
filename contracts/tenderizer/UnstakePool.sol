@@ -59,19 +59,32 @@ library UnstakePool {
         delete _pool.withdrawals[_withdrawalID];
     }
 
-    function processUnlocks(WithdrawalPool storage _pool) internal returns (uint256 pendingUnlock_){
+    function processUnlocks(
+        WithdrawalPool storage _pool,
+        address _account
+    ) internal returns (uint256 pendingUnlock_, uint256 withdrawID){
         require(_pool.epoch == _pool.lastEpoch, "ONGOING_UNLOCK");
         _pool.pendingWithdrawal += _pool.pendingUnlock;
         pendingUnlock_ = _pool.pendingUnlock;
         _pool.pendingUnlock = 0;
         _pool.epoch = block.number;
+
+        withdrawID = _pool.withdrawalID;
+        _pool.withdrawals[withdrawID] = Withdrawal({
+            shares: calcShares(_pool, _pool.pendingUnlock),
+            receiver: _account,
+            epoch: _pool.epoch
+        });
+
+        _pool.withdrawalID++;
     }
 
-    function processWihdrawal(WithdrawalPool storage _pool, uint256 _received) internal {
+    function processWihdrawal(WithdrawalPool storage _pool, uint256 _received, uint256 _withdrawalID) internal {
         require(_pool.epoch > _pool.lastEpoch, "ONGOING_UNLOCK");
         _pool.amount += _received;
         _pool.pendingWithdrawal = 0;
         _pool.lastEpoch = _pool.epoch;
+        delete _pool.withdrawals[_withdrawalID];
     }
 
     function updateTotalTokens(WithdrawalPool storage _pool, uint256 _newAmount) internal {
