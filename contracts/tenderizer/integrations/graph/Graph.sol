@@ -132,7 +132,6 @@ contract Graph is Tenderizer {
             UnstakePool.processWihdrawal(withdrawPool, amount, _withdrawalID);
         } else {
             amount = UnstakePool.withdraw(withdrawPool, _withdrawalID);
-
             // Transfer amount from unbondingLock to _account
             try steak.transfer(_account, amount) {} catch {
                 // Account for roundoff errors in shares calculations
@@ -168,11 +167,12 @@ contract Graph is Tenderizer {
         // adjust current token balance for potential protocol specific taxes or staking fees
         uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)));
         uint256 unstakePoolTokens = UnstakePool.amount(withdrawPool);
+        uint256 unstakePoolTokensAfterTax = _calcDepositOut(UnstakePool.amount(withdrawPool));
 
         // calculate what the new currentPrinciple would be after the call
         // but excluding fees from rewards for this rebase
         // which still need to be calculated if stake >= currentPrincipal
-        uint256 stake_ = _newStake + currentBal - unstakePoolTokens
+        uint256 stake_ = _newStake + currentBal - unstakePoolTokensAfterTax
             - pendingFees - pendingLiquidityFees;
 
         // Difference is negative, no rewards have been earnt
