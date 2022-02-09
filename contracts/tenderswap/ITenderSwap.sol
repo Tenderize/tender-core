@@ -24,18 +24,18 @@ interface ITenderSwap {
 
     /**
      * @notice Swap gets emitted when an accounts exchanges tokens.
-     * @param buyer the account that swaps
-     * @param tokenSold the token that the account sends
-     * @param amountSold the amount of tokens that the account sends
+     * @param buyer address of the account initiating the swap
+     * @param tokenSold address of the swapped token
+     * @param amountSold amount of tokens swapped
      * @param amountReceived the amount of tokens received in exchange
      */
     event Swap(address indexed buyer, IERC20 tokenSold, uint256 amountSold, uint256 amountReceived);
 
     /**
      * @notice AddLiquidity gets emitted when liquidity is added to the pool.
-     * @param provider the account that provides liquidity
-     * @param tokenAmounts array of amounts of tokens added
-     * @param fees fees deducted for each of the tokens added
+     * @param provider address of the account providing liquidity
+     * @param tokenAmounts array of token amounts provided corresponding to pool cardinality of [token0, token1]
+     * @param fees fees deducted for each of the tokens added corresponding to pool cardinality of [token0, token1]
      * @param invariant pool invariant after adding liquidity
      * @param lpTokenSupply the lpToken supply after minting
      */
@@ -48,22 +48,22 @@ interface ITenderSwap {
     );
 
     /**
-     * @notice RemoveLiquidity gets emitted when liquidity from both tokens 
+     * @notice RemoveLiquidity gets emitted when liquidity for both tokens 
      * is removed from the pool.
-     * @param provider the account that is removing liquidity
-     * @param tokenAmounts array of amounts of tokens removed
-     * @param lpTokenSupply the lpToken supply after burning
+     * @param provider address of the account removing liquidity
+     * @param tokenAmounts array of token amounts removed corresponding to pool cardinality of [token0, token1]
+     * @param lpTokenSupply total supply of liquidity pool token after removing liquidity
      */
     event RemoveLiquidity(address indexed provider, uint256[2] tokenAmounts, uint256 lpTokenSupply);
 
     /**
-     * @notice RemoveLiquidityOne gets emitted when liquidity from a single tokens 
-     * is removed from the pool.
-     * @param provider the account that is removing liquidity
-     * @param lpTokenAmount the amount of LP Tokens burned
-     * @param lpTokenSupply the lpToken supply after burning
-     * @param tokenReceived the address of the token removed from the pool
-     * @param receivedAmount the amount of tokens removed from the pool
+     * @notice RemoveLiquidityOne gets emitted when single-sided liquidity is removed 
+     * @param provider address of the account removing liquidity
+     * @param lpTokenAmount amount of liquidity pool tokens burnt
+     * @param lpTokenSupply total supply of liquidity pool token after removing liquidity
+
+     * @param tokenReceived address of the token for which liquidity was removed
+     * @param receivedAmount amount of tokens received
      */
     event RemoveLiquidityOne(
         address indexed provider,
@@ -74,13 +74,14 @@ interface ITenderSwap {
     );
 
     /**
-     * @notice RemoveLiquidityImbalance gets emitted when liquidity is removed
+     * @notice RemoveLiquidityImbalance gets emitted when liquidity is removed weighted differently than the
+     * pool's current balances.
      * with different weights than that of the pool.
-     * @param provider the account that is removing liquidity
-     * @param tokenAmounts array of amounts of tokens being removed
-     * @param fees fees for each of the tokens removed
+     * @param provider address of the the account removing liquidity imbalanced
+     * @param tokenAmounts array of amounts of tokens being removed corresponding to pool cardinality of [token0, token1]
+     * @param fees fees for each of the tokens removed corresponding to pool cardinality of [token0, token1]
      * @param invariant pool invariant after removing liquidity
-     * @param lpTokenSupply the lpToken supply after burning
+     * @param lpTokenSupply total supply of liquidity pool token after removing liquidity
      */
     event RemoveLiquidityImbalance(
         address indexed provider,
@@ -91,29 +92,29 @@ interface ITenderSwap {
     );
 
     /**
-     * @notice NewAdminFee gets emitted when the amdin fee is updated.
-     * @param newAdminFee the new updated admin fee
+     * @notice NewAdminFee gets emitted when the admin fee is updated.
+     * @param newAdminFee admin fee after update
      */
     event NewAdminFee(uint256 newAdminFee);
 
     /**
      * @notice NewSwapFee gets emitted when the swap fee is updated.
-     * @param newSwapFee the new updated swap fee
+     * @param newSwapFee swap fee after update
      */
     event NewSwapFee(uint256 newSwapFee);
 
     /**
      * @notice RampA gets emitted when A has started ramping up.
      * @param oldA initial A value
-     * @param newA the target value of A to ramp up to
+     * @param newA target value of A to ramp up to
      * @param initialTime ramp start timestamp
-     * @param futureTime ram end timestamp
+     * @param futureTime ramp end timestamp
      */
     event RampA(uint256 oldA, uint256 newA, uint256 initialTime, uint256 futureTime);
 
     /**
-     * @notice StopRampA gets emitted ramping is stopped manually
-     * @param currentA the value of A at time of stopping
+     * @notice StopRampA gets emitted when ramping A is stopped manually
+     * @param currentA current value of A
      * @param time timestamp of when ramp is stopped
      */
     event StopRampA(uint256 currentA, uint256 time);
