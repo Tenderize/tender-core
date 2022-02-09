@@ -112,7 +112,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     /// @inheritdoc ITenderizer
     function unstake(uint256 _amount) external override returns (uint256) {
         // Burn tenderTokens if not gov
-        // TODO: CHECK THIS!
+        // TODO: Remove this check after adding rescue functions
         if (msg.sender != gov) {
             require(tenderToken.burn(msg.sender, _amount), "TENDER_BURN_FAILED");
         }

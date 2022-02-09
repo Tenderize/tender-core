@@ -8,20 +8,24 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../../libs/MathUtils.sol";
 
 import "../../Tenderizer.sol";
-import "../../UnstakePool.sol";
+import "../../WithdrawalPools.sol";
 import "./IGraph.sol";
 
 import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
 
 contract Graph is Tenderizer {
-    using UnstakePool for *;
+    using WithdrawalPools for WithdrawalPools.Pool;
+
+    // Eventws for WithdrawalPool
+    event ProcessUnstakes(address indexed from, address indexed node, uint256 amount);
+    event ProcessWithdraws(address indexed from, uint256 amount);
     
     // 100% in parts per million
     uint32 private constant MAX_PPM = 1000000;
 
     IGraph graph;
 
-    UnstakePool.WithdrawalPool withdrawPool;
+    WithdrawalPools.Pool withdrawPool;
 
     function initialize(
         IERC20 _steak,
@@ -60,13 +64,13 @@ contract Graph is Tenderizer {
     function _stake(address _node, uint256 _amount) internal override {
         // check that there are enough tokens to stake
         uint256 amount = _amount;
-        uint256 pedingWithdrawals = UnstakePool.amount(withdrawPool);
+        uint256 pendingWithdrawals = withdrawPool.getAmount();
 
-        if (amount <= pedingWithdrawals) {
+        if (amount <= pendingWithdrawals) {
             return;
         }
 
-        amount -= pedingWithdrawals;
+        amount -= pendingWithdrawals;
 
         // if no _node is specified, return
         if (_node == address(0)) {
@@ -89,60 +93,71 @@ contract Graph is Tenderizer {
     ) internal override returns (uint256 unstakeLockID) {
         uint256 amount = _amount;
 
-        // Unstake from governance
-        if (_account == gov) {
-            (amount, unstakeLockID) = UnstakePool.processUnlocks(withdrawPool, _account);
+        require(amount > 0, "ZERO_AMOUNT");
 
-            // Calculate the amount of shares to undelegate
-            IGraph.DelegationPool memory delPool = graph.delegationPools(node);
+        unstakeLockID = withdrawPool.unlock(_account, amount);
 
-            uint256 totalShares = delPool.shares;
-            uint256 totalTokens = delPool.tokens;
-
-            uint256 shares = (amount * totalShares) / totalTokens;
-
-            // Shares =  amount * totalShares / totalTokens
-            // undelegate shares
-            graph.undelegate(_node, shares);
-        } else {
-            require(amount > 0, "ZERO_AMOUNT");
-
-            unstakeLockID =  UnstakePool.unlock(withdrawPool, _account, amount);
-
-            currentPrincipal -= amount;
-        }
+        currentPrincipal -= amount;
 
         emit Unstake(_account, _node, amount, unstakeLockID);
     }
 
+    function processUnstake(address _node) external onlyGov {
+        uint256 amount = withdrawPool.processUnlocks();
+
+        // if no _node is specified, use default
+        address node_ = _node;
+        if (node_ == address(0)) {
+            node_ = node;
+        }
+
+        // Calculate the amount of shares to undelegate
+        IGraph.DelegationPool memory delPool = graph.delegationPools(node_);
+
+        uint256 totalShares = delPool.shares;
+        uint256 totalTokens = delPool.tokens;
+
+        uint256 shares = (amount * totalShares) / totalTokens;
+
+        // Shares =  amount * totalShares / totalTokens
+        // undelegate shares
+        graph.undelegate(node_, shares);
+
+        emit ProcessUnstakes(msg.sender, node_, amount);
+    }
+
     function _withdraw(address _account, uint256 _withdrawalID) internal override {
-        uint256 amount;
+        uint256 amount = withdrawPool.withdraw(_withdrawalID, _account);
 
-        UnstakePool.Withdrawal memory withdrawal = UnstakePool.getWithdrawal(withdrawPool, _withdrawalID);
-
-        // Check that a withdrawal is pending and valid
-        // TODO: Move this to UnstakePool?
-        require(withdrawal.receiver == _account, "ACCOUNT_MISTMATCH");
-
-        if (_account == gov) {
-            uint256 balBefore = steak.balanceOf(address(this));
-            graph.withdrawDelegated(node, address(0));
-            uint256 balAfter = steak.balanceOf(address(this));
-            amount = balAfter - balBefore;
-            UnstakePool.processWihdrawal(withdrawPool, amount, _withdrawalID);
-        } else {
-            amount = UnstakePool.withdraw(withdrawPool, _withdrawalID);
-            // Transfer amount from unbondingLock to _account
-            try steak.transfer(_account, amount) {} catch {
-                // Account for roundoff errors in shares calculations
-                uint256 steakBal = steak.balanceOf(address(this));
-                if (amount > steakBal) {
-                    steak.transfer(_account, steakBal);
-                }
+        // Transfer amount from unbondingLock to _account
+        try steak.transfer(_account, amount) {} catch {
+            // Account for roundoff errors in shares calculations
+            uint256 steakBal = steak.balanceOf(address(this));
+            if (amount > steakBal) {
+                steak.transfer(_account, steakBal);
             }
         }
 
         emit Withdraw(_account, amount, _withdrawalID);
+    }
+
+    function processWithdraw(address _node) external onlyGov {
+        // if no _node is specified, use default
+        address node_ = _node;
+        if (node_ == address(0)) {
+            node_ = node;
+        }
+
+        uint256 balBefore = steak.balanceOf(address(this));
+        
+        graph.withdrawDelegated(node_, address(0));
+        
+        uint256 balAfter = steak.balanceOf(address(this));
+        uint256 amount = balAfter - balBefore;
+        
+        withdrawPool.processWihdrawal(amount);
+
+        emit ProcessWithdraws(msg.sender, amount);
     }
 
     function _claimRewards() internal override {
@@ -165,14 +180,12 @@ contract Graph is Tenderizer {
         uint256 currentPrincipal_ = currentPrincipal;
 
         // adjust current token balance for potential protocol specific taxes or staking fees
-        uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)));
-        uint256 unstakePoolTokens = UnstakePool.amount(withdrawPool);
-        uint256 unstakePoolTokensAfterTax = _calcDepositOut(UnstakePool.amount(withdrawPool));
+        uint256 toBeStaked = _calcDepositOut(steak.balanceOf(address(this)) - withdrawPool.amount);
 
         // calculate what the new currentPrinciple would be after the call
         // but excluding fees from rewards for this rebase
         // which still need to be calculated if stake >= currentPrincipal
-        uint256 stake_ = _newStake + currentBal - unstakePoolTokensAfterTax
+        uint256 stake_ = _newStake + toBeStaked - withdrawPool.pendingUnlock
             - pendingFees - pendingLiquidityFees;
 
         // Difference is negative, no rewards have been earnt
@@ -181,11 +194,12 @@ contract Graph is Tenderizer {
             currentPrincipal = stake_;
             uint256 diff = currentPrincipal_ - stake_;
             // calculate amount to subtract relative to current principal
-            uint256 totalTokens = unstakePoolTokens + currentPrincipal_;
+            uint256 totalUnstakePoolTokens = withdrawPool.totalTokens();
+            uint256 totalTokens = totalUnstakePoolTokens + currentPrincipal_;
             if (totalTokens == 0) return;
 
-            uint256 unstakePoolSlash = diff * unstakePoolTokens / totalTokens;
-            UnstakePool.updateTotalTokens(withdrawPool, unstakePoolTokens - unstakePoolSlash);
+            uint256 unstakePoolSlash = diff * totalUnstakePoolTokens / totalTokens;
+            withdrawPool.updateTotalTokens(totalUnstakePoolTokens - unstakePoolSlash);
             
             emit RewardsClaimed(-int256(diff), stake_, currentPrincipal_);
 

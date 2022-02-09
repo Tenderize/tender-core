@@ -8,19 +8,23 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../../libs/MathUtils.sol";
 
 import "../../Tenderizer.sol";
-import "../../UnstakePool.sol";
+import "../../WithdrawalPools.sol";
 import "./IAudius.sol";
 
 import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
 
 contract Audius is Tenderizer {
-    using UnstakePool for *;
+    using WithdrawalPools for WithdrawalPools.Pool;
+
+    // Eventws for WithdrawalPool
+    event ProcessUnstakes(address indexed from, address indexed node, uint256 amount);
+    event ProcessWithdraws(address indexed from, uint256 amount);
 
     IAudius audius;
 
     address audiusStaking;
 
-    UnstakePool.WithdrawalPool withdrawPool;
+    WithdrawalPools.Pool withdrawPool;
 
     function initialize(
         IERC20 _steak,
@@ -56,13 +60,13 @@ contract Audius is Tenderizer {
     function _stake(address _node, uint256 _amount) internal override {
        // check that there are enough tokens to stake
         uint256 amount = _amount;
-        uint256 pedingWithdrawals = UnstakePool.amount(withdrawPool);
+        uint256 pendingWithdrawals = withdrawPool.getAmount();
 
-        if (amount <= pedingWithdrawals) {
+        if (amount <= pendingWithdrawals) {
             return;
         }
 
-        amount -= pedingWithdrawals;
+        amount -= pendingWithdrawals;
 
         // if no _node is specified, return
         if (_node == address(0)) {
@@ -85,47 +89,50 @@ contract Audius is Tenderizer {
     ) internal override returns (uint256 unstakeLockID) {
         uint256 amount = _amount;
 
-        // If caller is controller, process all user unstake requests
-        if (_account == gov) {
-             (amount, unstakeLockID) = UnstakePool.processUnlocks(withdrawPool, _account);
-            // Undelegate from audius
-            audius.requestUndelegateStake(_node, amount);
-        } else {
-            // Caller is a user, initialise unstake locally in Tenderizer
-            require(amount > 0, "ZERO_AMOUNT");
+        // Caller is a user, initialise unstake locally in Tenderizer
+        require(amount > 0, "ZERO_AMOUNT");
 
-            unstakeLockID =  UnstakePool.unlock(withdrawPool, _account, amount);
+        unstakeLockID =  withdrawPool.unlock(_account, amount);
 
-            currentPrincipal -= amount;
-        }
+        currentPrincipal -= amount;
 
         emit Unstake(_account, _node, amount, unstakeLockID);
     }
 
-    function _withdraw(address _account, uint256 _withdrawalID) internal override {
-        uint256 amount;
+    function processUnstake(address _node) external onlyGov {
+        uint256 amount = withdrawPool.processUnlocks();
 
-        UnstakePool.Withdrawal memory withdrawal = UnstakePool.getWithdrawal(withdrawPool, _withdrawalID);
-
-        // Check that a withdrawal is pending and valid
-        // TODO: Move this to UnstakePool?
-        require(withdrawal.receiver == _account, "ACCOUNT_MISTMATCH");
-
-        // If caller is controller, process all user unstakes
-        if (_account == gov) {
-            uint256 balBefore = steak.balanceOf(address(this));
-            // Withdraw from Audius
-            audius.undelegateStake();
-            uint256 balAfter = steak.balanceOf(address(this));
-            amount = balAfter - balBefore;
-            UnstakePool.processWihdrawal(withdrawPool, amount, _withdrawalID);
-        } else {
-            amount = UnstakePool.withdraw(withdrawPool, _withdrawalID);
-            // Transfer amount from unbondingLock to _account
-            steak.transfer(_account, amount);
+        // if no _node is specified, use default
+        address node_ = _node;
+        if (node_ == address(0)) {
+            node_ = node;
         }
+        
+        // Undelegate from audius
+        audius.requestUndelegateStake(node_, amount);
+
+        emit ProcessUnstakes(msg.sender, node_, amount);
+    }
+
+    function _withdraw(address _account, uint256 _withdrawalID) internal override {
+        uint256 amount = withdrawPool.withdraw(_withdrawalID, _account);
+        // Transfer amount from unbondingLock to _account
+        steak.transfer(_account, amount);
 
         emit Withdraw(_account, amount, _withdrawalID);
+    }
+
+    function processWithdraw(address /* _node */) external onlyGov {
+        uint256 balBefore = steak.balanceOf(address(this));
+        
+        audius.undelegateStake();
+        
+        uint256 balAfter = steak.balanceOf(address(this));
+        uint256 amount = balAfter - balBefore;
+        
+        withdrawPool.processWihdrawal(amount);
+
+        emit ProcessWithdraws(msg.sender, amount);
     }
 
     function _claimRewards() internal override {
@@ -145,12 +152,12 @@ contract Audius is Tenderizer {
 
         // adjust current token balance for potential protocol specific taxes or staking fees
         uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)));
-        uint256 unstakePoolTokens = UnstakePool.amount(withdrawPool);
 
         // calculate what the new currentPrinciple would be after the call
-        // but excluding fees from rewards for this rebase
+        // but excluding fees, pending unlocks and pending user withdrawals from rewards
         // which still need to be calculated if stake >= currentPrincipal
-        uint256 stake_ = _newStake + currentBal - unstakePoolTokens
+        uint256 stake_ = _newStake + currentBal
+            - withdrawPool.amount - withdrawPool.pendingUnlock
             - pendingFees - pendingLiquidityFees;
 
         // Difference is negative, no rewards have been earnt
@@ -158,14 +165,16 @@ contract Audius is Tenderizer {
         if (stake_ <= currentPrincipal_) {
             currentPrincipal = stake_;
             uint256 diff = currentPrincipal_ - stake_;
+
+            emit RewardsClaimed(-int256(diff), stake_, currentPrincipal_);
+            
             // calculate amount to subtract relative to current principal
+            uint256 unstakePoolTokens = withdrawPool.totalTokens();
             uint256 totalTokens = unstakePoolTokens + currentPrincipal_;
             if (totalTokens == 0) return;
 
             uint256 unstakePoolSlash = diff * unstakePoolTokens / totalTokens;
-            UnstakePool.updateTotalTokens(withdrawPool, unstakePoolTokens - unstakePoolSlash);
-            
-            emit RewardsClaimed(-int256(diff), stake_, currentPrincipal_);
+            withdrawPool.updateTotalTokens(unstakePoolTokens - unstakePoolSlash);
 
             return;
         }

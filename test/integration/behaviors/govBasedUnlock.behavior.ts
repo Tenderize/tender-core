@@ -58,22 +58,22 @@ export default function suite () {
   describe('gov unlock', async () => {
     it('reverts if unlock() reverts', async () => {
       await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.unstake), true)
-      await expect(ctx.Tenderizer.unstake(secondDeposit)).to.be.reverted
+      await expect(ctx.Tenderizer.processUnstake(ethers.constants.AddressZero)).to.be.reverted
       await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.unstake), false)
     })
 
     it('unlock() suceeds', async () => {
       const stakeBefore = await ctx.Tenderizer.totalStakedTokens()
 
-      tx = await ctx.Tenderizer.unstake(secondDeposit)
+      tx = await ctx.Tenderizer.processUnstake(ethers.constants.AddressZero)
       // staked tokens already updated by user unstaked, gov unstake just processes
       // user unstakes, so staked tokens stays the same
       expect(stakeBefore).to.eq(await ctx.Tenderizer.totalStakedTokens())
     })
 
     it('should emit Unstake event from Tenderizer', async () => {
-      expect(tx).to.emit(ctx.Tenderizer, 'Unstake')
-        .withArgs(ctx.deployer, ctx.NODE, ctx.withdrawAmount, ctx.govUnboundLockID)
+      expect(tx).to.emit(ctx.Tenderizer, 'ProcessUnstakes')
+        .withArgs(ctx.deployer, ctx.NODE, ctx.withdrawAmount)
     })
   })
 }
