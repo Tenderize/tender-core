@@ -22,7 +22,7 @@ export default function suite () {
     await ctx.Tenderizer.connect(ctx.signers[2]).unstake(ctx.withdrawAmount)
 
     // Gov Unstake
-    await ctx.Tenderizer.unstake(secondDeposit)
+    await ctx.Tenderizer.processUnstake(ethers.constants.AddressZero)
   })
 
   it('user withdrawal reverts if gov withdrawal pending', async () => {
@@ -33,12 +33,12 @@ export default function suite () {
   describe('gov withdrawal', async () => {
     beforeEach(async function () {
       balBefore = await ctx.Steak.balanceOf(ctx.Tenderizer.address)
-      tx = await ctx.Tenderizer.withdraw(ctx.govUnboundLockID)
+      tx = await ctx.Tenderizer.processWithdraw(ethers.constants.AddressZero)
     })
 
     it('reverts if undelegateStake() reverts', async () => {
       await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.withdrawStake), true)
-      await expect(ctx.Tenderizer.withdraw(ctx.govUnboundLockID)).to.be.reverted
+      await expect(ctx.Tenderizer.processWithdraw(ethers.constants.AddressZero)).to.be.reverted
       await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.withdrawStake), false)
     })
 
@@ -49,7 +49,7 @@ export default function suite () {
 
     it('should emit Withdraw event from Tenderizer', async () => {
       expect(tx).to.emit(ctx.Tenderizer, 'Withdraw')
-        .withArgs(ctx.deployer, ctx.withdrawAmount, ctx.govUnboundLockID)
+        .withArgs(ctx.deployer, ctx.withdrawAmount, 0)
     })
   })
 
@@ -57,7 +57,7 @@ export default function suite () {
     let steakBalanceBefore : BigNumber
 
     beforeEach(async function () {
-      await ctx.Tenderizer.withdraw(ctx.govUnboundLockID)
+      await ctx.Tenderizer.processWithdraw(ethers.constants.AddressZero)
       steakBalanceBefore = await ctx.Steak.balanceOf(ctx.signers[2].address)
       tx = await ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.unbondLockID)
     })
@@ -90,7 +90,7 @@ export default function suite () {
       const cpBefore = await ctx.Tenderizer.totalStakedTokens()
       await ctx.StakingContract.setStaked(staked.sub(slashAmount))
 
-      await ctx.Tenderizer.withdraw(ctx.govUnboundLockID)
+      await ctx.Tenderizer.processWithdraw(ethers.constants.AddressZero)
       await ctx.Tenderizer.claimRewards()
       slashFromWithdrawal = slashAmount.mul(ctx.withdrawAmount).div(cpBefore.add(ctx.withdrawAmount))
       steakBalanceBefore = await ctx.Steak.balanceOf(ctx.signers[2].address)
@@ -109,7 +109,7 @@ export default function suite () {
 
     beforeEach(async function (){
       // TODO: Add usntakes from other accounts
-      await ctx.Tenderizer.withdraw(ctx.govUnboundLockID)
+      await ctx.Tenderizer.processWithdraw(ethers.constants.AddressZero)
       // reduce staked on mock
       const slashAmount = ethers.utils.parseEther('1')
       let staked = await ctx.StakingContract.staked()

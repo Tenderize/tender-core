@@ -89,60 +89,72 @@ contract Graph is Tenderizer {
     ) internal override returns (uint256 unstakeLockID) {
         uint256 amount = _amount;
 
-        // Unstake from governance
-        if (_account == gov) {
-            (amount, unstakeLockID) = UnstakePool.processUnlocks(withdrawPool, _account);
+        require(amount > 0, "ZERO_AMOUNT");
 
-            // Calculate the amount of shares to undelegate
-            IGraph.DelegationPool memory delPool = graph.delegationPools(node);
+        unstakeLockID =  UnstakePool.unlock(withdrawPool, _account, amount);
 
-            uint256 totalShares = delPool.shares;
-            uint256 totalTokens = delPool.tokens;
-
-            uint256 shares = (amount * totalShares) / totalTokens;
-
-            // Shares =  amount * totalShares / totalTokens
-            // undelegate shares
-            graph.undelegate(_node, shares);
-        } else {
-            require(amount > 0, "ZERO_AMOUNT");
-
-            unstakeLockID =  UnstakePool.unlock(withdrawPool, _account, amount);
-
-            currentPrincipal -= amount;
-        }
+        currentPrincipal -= amount;
 
         emit Unstake(_account, _node, amount, unstakeLockID);
     }
 
+    function processUnstake(address _node) external onlyGov {
+        uint256 amount = UnstakePool.processUnlocks(withdrawPool);
+
+        // if no _node is specified, use default
+        address node_ = _node;
+        if (node_ == address(0)) {
+            node_ = node;
+        }
+
+        // Calculate the amount of shares to undelegate
+        IGraph.DelegationPool memory delPool = graph.delegationPools(node_);
+
+        uint256 totalShares = delPool.shares;
+        uint256 totalTokens = delPool.tokens;
+
+        uint256 shares = (amount * totalShares) / totalTokens;
+
+        // Shares =  amount * totalShares / totalTokens
+        // undelegate shares
+        graph.undelegate(node_, shares);
+
+        // TO CHECK: Not emit this for gov usntakes?
+        emit Unstake(msg.sender, node_, amount, 0);
+    }
+
     function _withdraw(address _account, uint256 _withdrawalID) internal override {
-        uint256 amount;
+        uint256 amount = UnstakePool.withdraw(withdrawPool, _withdrawalID, _account);
 
-        UnstakePool.Withdrawal memory withdrawal = UnstakePool.getWithdrawal(withdrawPool, _withdrawalID);
-
-        // Check that a withdrawal is pending and valid
-        // TODO: Move this to UnstakePool?
-        require(withdrawal.receiver == _account, "ACCOUNT_MISTMATCH");
-
-        if (_account == gov) {
-            uint256 balBefore = steak.balanceOf(address(this));
-            graph.withdrawDelegated(node, address(0));
-            uint256 balAfter = steak.balanceOf(address(this));
-            amount = balAfter - balBefore;
-            UnstakePool.processWihdrawal(withdrawPool, amount, _withdrawalID);
-        } else {
-            amount = UnstakePool.withdraw(withdrawPool, _withdrawalID);
-            // Transfer amount from unbondingLock to _account
-            try steak.transfer(_account, amount) {} catch {
-                // Account for roundoff errors in shares calculations
-                uint256 steakBal = steak.balanceOf(address(this));
-                if (amount > steakBal) {
-                    steak.transfer(_account, steakBal);
-                }
+        // Transfer amount from unbondingLock to _account
+        try steak.transfer(_account, amount) {} catch {
+            // Account for roundoff errors in shares calculations
+            uint256 steakBal = steak.balanceOf(address(this));
+            if (amount > steakBal) {
+                steak.transfer(_account, steakBal);
             }
         }
 
         emit Withdraw(_account, amount, _withdrawalID);
+    }
+
+    function processWithdraw(address _node) external onlyGov {
+        // if no _node is specified, use default
+        address node_ = _node;
+        if (node_ == address(0)) {
+            node_ = node;
+        }
+
+        uint256 balBefore = steak.balanceOf(address(this));
+        
+        graph.withdrawDelegated(node_, address(0));
+        
+        uint256 balAfter = steak.balanceOf(address(this));
+        uint256 amount = balAfter - balBefore;
+        
+        UnstakePool.processWihdrawal(withdrawPool, amount);
+
+        emit Withdraw(msg.sender, amount, 0);
     }
 
     function _claimRewards() internal override {

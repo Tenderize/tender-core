@@ -85,47 +85,51 @@ contract Audius is Tenderizer {
     ) internal override returns (uint256 unstakeLockID) {
         uint256 amount = _amount;
 
-        // If caller is controller, process all user unstake requests
-        if (_account == gov) {
-             (amount, unstakeLockID) = UnstakePool.processUnlocks(withdrawPool, _account);
-            // Undelegate from audius
-            audius.requestUndelegateStake(_node, amount);
-        } else {
-            // Caller is a user, initialise unstake locally in Tenderizer
-            require(amount > 0, "ZERO_AMOUNT");
+        // Caller is a user, initialise unstake locally in Tenderizer
+        require(amount > 0, "ZERO_AMOUNT");
 
-            unstakeLockID =  UnstakePool.unlock(withdrawPool, _account, amount);
+        unstakeLockID =  UnstakePool.unlock(withdrawPool, _account, amount);
 
-            currentPrincipal -= amount;
-        }
+        currentPrincipal -= amount;
 
         emit Unstake(_account, _node, amount, unstakeLockID);
     }
 
-    function _withdraw(address _account, uint256 _withdrawalID) internal override {
-        uint256 amount;
+    function processUnstake(address _node) external onlyGov {
+        uint256 amount = UnstakePool.processUnlocks(withdrawPool);
 
-        UnstakePool.Withdrawal memory withdrawal = UnstakePool.getWithdrawal(withdrawPool, _withdrawalID);
-
-        // Check that a withdrawal is pending and valid
-        // TODO: Move this to UnstakePool?
-        require(withdrawal.receiver == _account, "ACCOUNT_MISTMATCH");
-
-        // If caller is controller, process all user unstakes
-        if (_account == gov) {
-            uint256 balBefore = steak.balanceOf(address(this));
-            // Withdraw from Audius
-            audius.undelegateStake();
-            uint256 balAfter = steak.balanceOf(address(this));
-            amount = balAfter - balBefore;
-            UnstakePool.processWihdrawal(withdrawPool, amount, _withdrawalID);
-        } else {
-            amount = UnstakePool.withdraw(withdrawPool, _withdrawalID);
-            // Transfer amount from unbondingLock to _account
-            steak.transfer(_account, amount);
+        // if no _node is specified, use default
+        address node_ = _node;
+        if (node_ == address(0)) {
+            node_ = node;
         }
+        
+        // Undelegate from audius
+        audius.requestUndelegateStake(node_, amount);
+
+        // TO CHECK: Not emit this for gov usntakes?
+        emit Unstake(msg.sender, node_, amount, 0);
+    }
+
+    function _withdraw(address _account, uint256 _withdrawalID) internal override {
+        uint256 amount = UnstakePool.withdraw(withdrawPool, _withdrawalID, _account);
+        // Transfer amount from unbondingLock to _account
+        steak.transfer(_account, amount);
 
         emit Withdraw(_account, amount, _withdrawalID);
+    }
+
+    function processWithdraw(address /* _node */) external onlyGov {
+        uint256 balBefore = steak.balanceOf(address(this));
+        
+        audius.undelegateStake();
+        
+        uint256 balAfter = steak.balanceOf(address(this));
+        uint256 amount = balAfter - balBefore;
+        
+        UnstakePool.processWihdrawal(withdrawPool, amount);
+
+        emit Withdraw(msg.sender, amount, 0);
     }
 
     function _claimRewards() internal override {

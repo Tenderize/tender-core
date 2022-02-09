@@ -45,10 +45,15 @@ library UnstakePool {
         _pool.withdrawalID++;
     }
 
-    function withdraw(WithdrawalPool storage _pool, uint256 _withdrawalID) internal returns (uint256 withdrawAmount) {
+    function withdraw(
+        WithdrawalPool storage _pool,
+        uint256 _withdrawalID,
+        address _account
+    ) internal returns (uint256 withdrawAmount) {
         Withdrawal memory withdrawal = _pool.withdrawals[_withdrawalID];
 
         require(withdrawal.epoch < _pool.lastEpoch, "ONGOING_UNLOCK");
+        require(_account == withdrawal.receiver, "ACCOUNT_MISTMATCH");
 
         withdrawAmount = calcAmount(_pool, withdrawal.shares);
 
@@ -59,32 +64,19 @@ library UnstakePool {
         delete _pool.withdrawals[_withdrawalID];
     }
 
-    function processUnlocks(
-        WithdrawalPool storage _pool,
-        address _account
-    ) internal returns (uint256 pendingUnlock_, uint256 withdrawID){
+    function processUnlocks(WithdrawalPool storage _pool) internal returns (uint256 pendingUnlock_){
         require(_pool.epoch == _pool.lastEpoch, "ONGOING_UNLOCK");
         _pool.pendingWithdrawal += _pool.pendingUnlock;
         pendingUnlock_ = _pool.pendingUnlock;
         _pool.pendingUnlock = 0;
         _pool.epoch = block.number;
-
-        withdrawID = _pool.withdrawalID;
-        _pool.withdrawals[withdrawID] = Withdrawal({
-            shares: calcShares(_pool, _pool.pendingUnlock),
-            receiver: _account,
-            epoch: _pool.epoch
-        });
-
-        _pool.withdrawalID++;
     }
 
-    function processWihdrawal(WithdrawalPool storage _pool, uint256 _received, uint256 _withdrawalID) internal {
+    function processWihdrawal(WithdrawalPool storage _pool, uint256 _received) internal {
         require(_pool.epoch > _pool.lastEpoch, "ONGOING_UNLOCK");
         _pool.amount += _received;
         _pool.pendingWithdrawal = 0;
         _pool.lastEpoch = _pool.epoch;
-        delete _pool.withdrawals[_withdrawalID];
     }
 
     function updateTotalTokens(WithdrawalPool storage _pool, uint256 _newAmount) internal {

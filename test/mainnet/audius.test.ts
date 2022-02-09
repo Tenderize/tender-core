@@ -42,7 +42,6 @@ describe('Audius Mainnet Fork Test', () => {
 
   let tx: ContractTransaction
   const unbondLockID = 0
-  const govUnboundLockID = 1
   const protocolFeesPercent = ethers.utils.parseEther('0.025')
   const liquidityFeesPercent = ethers.utils.parseEther('0.025')
 
@@ -443,7 +442,7 @@ describe('Audius Mainnet Fork Test', () => {
 
     describe('gov unlock', async () => {
       before(async () => {
-        tx = await Tenderizer.unstake(ethers.utils.parseEther('0'))
+        tx = await Tenderizer.processUnstake(ethers.constants.AddressZero)
       })
 
       it('requestUndelegateStake() suceeds - event emitted', async () => {
@@ -453,7 +452,7 @@ describe('Audius Mainnet Fork Test', () => {
       })
 
       it('should emit Unstake event from Tenderizer', async () => {
-        expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(deployer, NODE, withdrawAmount, govUnboundLockID)
+        expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(deployer, NODE, withdrawAmount, 0)
       })
     })
   })
@@ -461,7 +460,7 @@ describe('Audius Mainnet Fork Test', () => {
   describe('withdraw', () => {
     describe('gov withdrawal', async () => {
       it('reverts if undelegateStake() reverts - lockup pending', async () => {
-        await expect(Tenderizer.withdraw(govUnboundLockID)).to.be.reverted
+        await expect(Tenderizer.processWithdraw(ethers.constants.AddressZero)).to.be.reverted
       })
 
       it('undelegateStake() succeeds', async () => {
@@ -469,11 +468,11 @@ describe('Audius Mainnet Fork Test', () => {
         for (let j = 0; j < 46523; j++) {
           await hre.ethers.provider.send('evm_mine', [])
         }
-        tx = await Tenderizer.withdraw(govUnboundLockID)
+        tx = await Tenderizer.processWithdraw(ethers.constants.AddressZero)
       }).timeout(testTimeout * 10)
 
       it('should emit Withdraw event from Tenderizer', async () => {
-        expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(deployer, withdrawAmount, govUnboundLockID)
+        expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(deployer, withdrawAmount, 0)
       })
     })
 

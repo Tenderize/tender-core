@@ -1,7 +1,7 @@
 import hre, { ethers } from 'hardhat'
 import * as rpc from '../util/snapshot'
 import {
-  SimpleToken, Tenderizer, TenderToken, AudiusMock, TenderFarm, TenderSwap, LiquidityPoolToken
+  SimpleToken, TenderToken, AudiusMock, TenderFarm, TenderSwap, LiquidityPoolToken, Audius
 } from '../../typechain'
 import { percOf2 } from '../util/helpers'
 import chai from 'chai'
@@ -105,8 +105,8 @@ describe('Audius Integration Test', () => {
     Audius = await hre.deployments.fixture(['Audius'], {
       keepExistingDeployments: false
     })
-    this.Tenderizer = (await ethers.getContractAt('Tenderizer', Audius.Audius.address)) as Tenderizer
-    this.TenderizerImpl = (await ethers.getContractAt('Tenderizer', Audius.Audius_Implementation.address)) as Tenderizer
+    this.Tenderizer = (await ethers.getContractAt('Audius', Audius.Audius.address)) as Audius
+    this.TenderizerImpl = (await ethers.getContractAt('Audius', Audius.Audius_Implementation.address)) as Audius
     this.TenderToken = (await ethers.getContractAt('TenderToken', await this.Tenderizer.tenderToken())) as TenderToken
     this.TenderSwap = (await ethers.getContractAt('TenderSwap', await this.Tenderizer.tenderSwap())) as TenderSwap
     this.TenderFarm = (await ethers.getContractAt('TenderFarm', await this.Tenderizer.tenderFarm())) as TenderFarm
