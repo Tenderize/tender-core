@@ -78,7 +78,8 @@ interface ITenderSwap {
      * pool's current balances.
      * with different weights than that of the pool.
      * @param provider address of the the account removing liquidity imbalanced
-     * @param tokenAmounts array of amounts of tokens being removed corresponding to pool cardinality of [token0, token1]
+     * @param tokenAmounts array of amounts of tokens being removed corresponding 
+     * to pool cardinality of [token0, token1]
      * @param fees fees for each of the tokens removed corresponding to pool cardinality of [token0, token1]
      * @param invariant pool invariant after removing liquidity
      * @param lpTokenSupply total supply of liquidity pool token after removing liquidity
