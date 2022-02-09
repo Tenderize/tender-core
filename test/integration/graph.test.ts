@@ -1,7 +1,7 @@
 import hre, { ethers } from 'hardhat'
 import * as rpc from '../util/snapshot'
 import {
-  SimpleToken, Tenderizer, TenderToken, TenderFarm, TenderSwap, LiquidityPoolToken, GraphMock
+  SimpleToken, TenderToken, TenderFarm, TenderSwap, LiquidityPoolToken, GraphMock, Graph
 } from '../../typechain'
 
 import { percOf2 } from '../util/helpers'
@@ -109,8 +109,8 @@ describe('Graph Integration Test', () => {
     Graph = await hre.deployments.fixture(['Graph'], {
       keepExistingDeployments: false
     })
-    this.Tenderizer = (await ethers.getContractAt('Tenderizer', Graph.Graph.address)) as Tenderizer
-    this.TenderizerImpl = (await ethers.getContractAt('Tenderizer', Graph.Graph_Implementation.address)) as Tenderizer
+    this.Tenderizer = (await ethers.getContractAt('Graph', Graph.Graph.address)) as Graph
+    this.TenderizerImpl = (await ethers.getContractAt('Graph', Graph.Graph_Implementation.address)) as Graph
     this.TenderToken = (await ethers.getContractAt('TenderToken', await this.Tenderizer.tenderToken())) as TenderToken
     this.TenderSwap = (await ethers.getContractAt('TenderSwap', await this.Tenderizer.tenderSwap())) as TenderSwap
     this.TenderFarm = (await ethers.getContractAt('TenderFarm', await this.Tenderizer.tenderFarm())) as TenderFarm

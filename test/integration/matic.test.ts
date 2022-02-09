@@ -1,7 +1,7 @@
 import hre, { ethers } from 'hardhat'
 import * as rpc from '../util/snapshot'
 import {
-  SimpleToken, Tenderizer, TenderToken, TenderFarm, TenderSwap, LiquidityPoolToken, MaticMock
+  SimpleToken, Matic, TenderToken, TenderFarm, TenderSwap, LiquidityPoolToken, MaticMock
 } from '../../typechain'
 import chai from 'chai'
 import { solidity } from 'ethereum-waffle'
@@ -108,8 +108,8 @@ describe('Matic Integration Test', () => {
     Matic = await hre.deployments.fixture(['Matic'], {
       keepExistingDeployments: false
     })
-    this.Tenderizer = (await ethers.getContractAt('Tenderizer', Matic.Matic.address)) as Tenderizer
-    this.TenderizerImpl = (await ethers.getContractAt('Tenderizer', Matic.Matic_Implementation.address)) as Tenderizer
+    this.Tenderizer = (await ethers.getContractAt('Matic', Matic.Matic.address)) as Matic
+    this.TenderizerImpl = (await ethers.getContractAt('Matic', Matic.Matic_Implementation.address)) as Matic
     this.TenderToken = (await ethers.getContractAt('TenderToken', await this.Tenderizer.tenderToken())) as TenderToken
     this.TenderSwap = (await ethers.getContractAt('TenderSwap', await this.Tenderizer.tenderSwap())) as TenderSwap
     this.TenderFarm = (await ethers.getContractAt('TenderFarm', await this.Tenderizer.tenderFarm())) as TenderFarm
