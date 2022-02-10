@@ -235,6 +235,37 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         }
     }
 
+    // Fund rescue functions
+
+    function rescueUnstake(address _node, address _newTenderizer) external virtual onlyGov returns (uint256) {
+        address node_ = _node;
+        if(node_ == address(0)){
+            node_ = node;
+        }
+
+        return _unstake(_newTenderizer, node_, currentPrincipal);
+    }
+
+    function rescueWithdraw(address _newTenderizer, uint256 _unstakeLockID) external virtual onlyGov {
+        _withdraw(_newTenderizer, _unstakeLockID);
+    }
+
+    function rescueDeposit(address _node) external virtual onlyGov {
+        address node_ = _node;
+        if(node_ == address(0)){
+            node_ = node;
+        }
+
+        uint256 amount = steak.balanceOf(address(this));
+
+        // TODO: No need for this?
+        require(amount > 0, "ZERO_STAKE");
+
+        _stake(node_, amount);
+
+        currentPrincipal = _calcDepositOut(amount);
+    }
+
     // Internal functions
 
     function _calcDepositOut(uint256 _amountIn) internal view virtual returns (uint256) {

@@ -157,6 +157,24 @@ contract Graph is Tenderizer {
         emit Withdraw(msg.sender, amount, 0);
     }
 
+    function rescueUnstake(
+        address _node,
+        address _newTenderizer
+    ) external virtual override onlyGov returns (uint256 withdrawalID) {
+        address node_ = _node;
+        if(node_ == address(0)){
+            node_ = node;
+        }
+
+        withdrawalID = _unstake(_newTenderizer, node_, currentPrincipal);
+        this.processUnstake(node_);
+    }
+
+    function rescueWithdraw(address _newTenderizer, uint256 _unstakeLockID) external virtual override onlyGov {
+        this.processWithdraw(node);
+        _withdraw(_newTenderizer, _unstakeLockID);
+    }
+
     function _claimRewards() internal override {
         IGraph.Delegation memory delegation = graph.getDelegation(node, address(this));
         IGraph.DelegationPool memory delPool = graph.delegationPools(node);
