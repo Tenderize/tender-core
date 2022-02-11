@@ -93,7 +93,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         require(_amount > 0, "ZERO_AMOUNT");
 
         // Calculate tenderTokens to be minted
-        uint256 amountOut = calcDepositOut(_amount);
+        uint256 amountOut = _calcDepositOut(_amount);
 
         // mint tenderTokens
         require(tenderToken.mint(msg.sender, amountOut), "TENDER_MINT_FAILED");
@@ -218,7 +218,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     /// @inheritdoc ITenderizer
-    function calcDepositOut(uint256 _amountIn) public view virtual override returns (uint256) {
+    function calcDepositOut(uint256 _amountIn) public view override returns (uint256) {
         return _calcDepositOut(_amountIn);
     }
 
