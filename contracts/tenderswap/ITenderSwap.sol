@@ -21,7 +21,24 @@ interface ITenderSwap {
 
     // events replicated from SwapUtils to make the ABI easier for dumb
     // clients
+
+    /**
+     * @notice Swap gets emitted when an accounts exchanges tokens.
+     * @param buyer address of the account initiating the swap
+     * @param tokenSold address of the swapped token
+     * @param amountSold amount of tokens swapped
+     * @param amountReceived amount of tokens received in exchange
+     */
     event Swap(address indexed buyer, IERC20 tokenSold, uint256 amountSold, uint256 amountReceived);
+
+    /**
+     * @notice AddLiquidity gets emitted when liquidity is added to the pool.
+     * @param provider address of the account providing liquidity
+     * @param tokenAmounts array of token amounts provided corresponding to pool cardinality of [token0, token1]
+     * @param fees fees deducted for each of the tokens added corresponding to pool cardinality of [token0, token1]
+     * @param invariant pool invariant after adding liquidity
+     * @param lpTokenSupply the lpToken supply after minting
+     */
     event AddLiquidity(
         address indexed provider,
         uint256[2] tokenAmounts,
@@ -29,7 +46,25 @@ interface ITenderSwap {
         uint256 invariant,
         uint256 lpTokenSupply
     );
+
+    /**
+     * @notice RemoveLiquidity gets emitted when liquidity for both tokens 
+     * is removed from the pool.
+     * @param provider address of the account removing liquidity
+     * @param tokenAmounts array of token amounts removed corresponding to pool cardinality of [token0, token1]
+     * @param lpTokenSupply total supply of liquidity pool token after removing liquidity
+     */
     event RemoveLiquidity(address indexed provider, uint256[2] tokenAmounts, uint256 lpTokenSupply);
+
+    /**
+     * @notice RemoveLiquidityOne gets emitted when single-sided liquidity is removed 
+     * @param provider address of the account removing liquidity
+     * @param lpTokenAmount amount of liquidity pool tokens burnt
+     * @param lpTokenSupply total supply of liquidity pool token after removing liquidity
+
+     * @param tokenReceived address of the token for which liquidity was removed
+     * @param receivedAmount amount of tokens received
+     */
     event RemoveLiquidityOne(
         address indexed provider,
         uint256 lpTokenAmount,
@@ -37,6 +72,18 @@ interface ITenderSwap {
         IERC20 tokenReceived,
         uint256 receivedAmount
     );
+
+    /**
+     * @notice RemoveLiquidityImbalance gets emitted when liquidity is removed weighted differently than the
+     * pool's current balances.
+     * with different weights than that of the pool.
+     * @param provider address of the the account removing liquidity imbalanced
+     * @param tokenAmounts array of amounts of tokens being removed corresponding 
+     * to pool cardinality of [token0, token1]
+     * @param fees fees for each of the tokens removed corresponding to pool cardinality of [token0, token1]
+     * @param invariant pool invariant after removing liquidity
+     * @param lpTokenSupply total supply of liquidity pool token after removing liquidity
+     */
     event RemoveLiquidityImbalance(
         address indexed provider,
         uint256[2] tokenAmounts,
@@ -44,9 +91,33 @@ interface ITenderSwap {
         uint256 invariant,
         uint256 lpTokenSupply
     );
+
+    /**
+     * @notice NewAdminFee gets emitted when the admin fee is updated.
+     * @param newAdminFee admin fee after update
+     */
     event NewAdminFee(uint256 newAdminFee);
+
+    /**
+     * @notice NewSwapFee gets emitted when the swap fee is updated.
+     * @param newSwapFee swap fee after update
+     */
     event NewSwapFee(uint256 newSwapFee);
+
+    /**
+     * @notice RampA gets emitted when A has started ramping up.
+     * @param oldA initial A value
+     * @param newA target value of A to ramp up to
+     * @param initialTime ramp start timestamp
+     * @param futureTime ramp end timestamp
+     */
     event RampA(uint256 oldA, uint256 newA, uint256 initialTime, uint256 futureTime);
+
+    /**
+     * @notice StopRampA gets emitted when ramping A is stopped manually
+     * @param currentA current value of A
+     * @param time timestamp of when ramp is stopped
+     */
     event StopRampA(uint256 currentA, uint256 time);
 
     /**
