@@ -12,8 +12,13 @@ export function protocolFeeTests () {
   let ownerBalBefore: BigNumber
   let otherAccBalBefore: BigNumber
 
-  before(async function () {
+  beforeEach(async function () {
     ctx = this.test?.ctx!
+
+    this.increase = ethers.utils.parseEther('10')
+    await this.StakingContract.setStaked(this.increase.add(await this.StakingContract.staked()))
+    await ctx.Tenderizer.claimRewards()
+
     fees = await ctx.Tenderizer.pendingFees()
     ownerBalBefore = await ctx.TenderToken.balanceOf(ctx.deployer)
     otherAccBalBefore = await ctx.TenderToken.balanceOf(ctx.signers[2].address)
@@ -46,8 +51,13 @@ export function liquidityFeeTests () {
   let farmBalanceBefore: BigNumber
   let acc0BalBefore: BigNumber
 
-  before(async function () {
+  beforeEach(async function () {
     ctx = this.test?.ctx
+
+    this.increase = ethers.utils.parseEther('10')
+    await this.StakingContract.setStaked(this.increase.add(this.initialStake))
+    await ctx.Tenderizer.claimRewards()
+        
     fees = await ctx.Tenderizer.pendingLiquidityFees()
     farmBalanceBefore = await ctx.TenderToken.balanceOf(ctx.TenderFarm.address)
     acc0BalBefore = await ctx.TenderToken.balanceOf(ctx.deployer)

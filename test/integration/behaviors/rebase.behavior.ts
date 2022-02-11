@@ -13,8 +13,9 @@ export function stakeIncreaseTests () {
   let dyBefore: BigNumber
   let swapStakeBalBefore: BigNumber
 
-  before(async function () {
+  beforeEach(async function () {
     ctx = this.test?.ctx!
+
     dyBefore = await ctx.TenderSwap.calculateSwap(ctx.TenderToken.address, ONE)
     swapStakeBalBefore = await ctx.Steak.balanceOf(ctx.TenderSwap.address)
     tx = await ctx.Tenderizer.claimRewards()
@@ -45,8 +46,8 @@ export function stakeIncreaseTests () {
   })
 
   it('should emit RewardsClaimed event from Tenderizer', async () => {
-    const oldPrinciple = ctx.deposit.add(ctx.initialStake)
-      .sub(ctx.deposit.add(ctx.initialStake).mul(ctx.DELEGATION_TAX).div(ctx.MAX_PPM))
+    const oldPrinciple = ctx.initialStake
+      .sub(ctx.initialStake.mul(ctx.DELEGATION_TAX).div(ctx.MAX_PPM))
     expect(tx).to.emit(ctx.Tenderizer, 'RewardsClaimed')
       .withArgs(ctx.increase, ctx.newStakeMinusFees, oldPrinciple)
   })
@@ -56,14 +57,14 @@ export function stakeStaysSameTests () {
   let ctx: Context
   let feesBefore: BigNumber
 
-  before(async function () {
+  beforeEach(async function () {
     ctx = this.test?.ctx!
     feesBefore = await ctx.Tenderizer.pendingFees()
     await ctx.Tenderizer.claimRewards()
   })
 
   it('currentPrincipal stays the same', async () => {
-    expect(await ctx.Tenderizer.currentPrincipal()).to.eq(ctx.stakeMinusFees)
+    expect(await ctx.Tenderizer.currentPrincipal()).to.eq(ctx.expectedCP)
   })
 
   it('pending fees stay the same', async () => {
@@ -80,7 +81,7 @@ export function stakeDecreaseTests () {
   let dyBefore: BigNumber
   let swapStakeBalBefore: BigNumber
 
-  before(async function () {
+  beforeEach(async function () {
     ctx = this.test?.ctx!
     feesBefore = await ctx.Tenderizer.pendingFees()
     oldPrinciple = await ctx.Tenderizer.currentPrincipal()
@@ -115,7 +116,7 @@ export function stakeDecreaseTests () {
   })
 
   it('price of the TenderTokens increases vs the underlying', async () => {
-    expect(await ctx.TenderSwap.calculateSwap(ctx.Steak.address, ONE)).to.be.gt(dyBefore)
+    expect(await ctx.TenderSwap.calculateSwap(ctx.TenderToken.address, ONE)).to.be.gt(dyBefore)
   })
   
   it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {

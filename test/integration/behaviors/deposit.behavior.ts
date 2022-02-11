@@ -16,7 +16,7 @@ export default function suite () {
 
   describe('deposits funds with permit', async () => {
     let supplyAfterTax: BigNumber
-    before(async () => {
+    beforeEach(async () => {
       supplyAfterTax = ctx.deposit.add(ctx.initialStake)
         .sub(ctx.deposit.add(ctx.initialStake).mul(ctx.DELEGATION_TAX).div(ctx.MAX_PPM))
 

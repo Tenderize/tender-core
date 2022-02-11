@@ -10,31 +10,32 @@ export default function suite () {
   const secondDeposit = ethers.utils.parseEther('10')
   const acceptableDelta = 2
   let balOtherAcc: BigNumber
+  let principleBefore: BigNumber
 
-  before(async function () {
+  beforeEach(async function () {
     ctx = this.test?.ctx!
+    // Stake with another account
+    await ctx.Steak.transfer(ctx.signers[2].address, secondDeposit)
+    await ctx.Steak.connect(ctx.signers[2]).approve(ctx.Tenderizer.address, secondDeposit)
+    await ctx.Tenderizer.connect(ctx.signers[2]).deposit(secondDeposit)
+
     // Move tenderTokens from deployer/gov
     const govBalance = await ctx.TenderToken.balanceOf(ctx.deployer)
     await ctx.TenderToken.transfer(ctx.signers[3].address, govBalance)
     balOtherAcc = await ctx.TenderToken.balanceOf(ctx.signers[3].address)
-  })
 
-  before('stake with another account', async () => {
-    await ctx.Steak.transfer(ctx.signers[2].address, secondDeposit)
-    await ctx.Steak.connect(ctx.signers[2]).approve(ctx.Tenderizer.address, secondDeposit)
-    await ctx.Tenderizer.connect(ctx.signers[2]).deposit(secondDeposit)
+    principleBefore = await ctx.Tenderizer.currentPrincipal()
+    ctx.withdrawAmount = await ctx.TenderToken.balanceOf(ctx.signers[2].address)
+    tx = await ctx.Tenderizer.connect(ctx.signers[2]).unstake(ctx.withdrawAmount)
   })
 
   describe('user unlock', async () => {
     it('reverts if user does not have enough tender token balance', async () => {
-      ctx.withdrawAmount = await ctx.TenderToken.balanceOf(ctx.signers[2].address)
       await expect(ctx.Tenderizer.connect(ctx.signers[2]).unstake(ctx.withdrawAmount.add(ethers.utils.parseEther('1'))))
         .to.be.revertedWith('BURN_AMOUNT_EXCEEDS_BALANCE')
     })
 
     it('on success - updates current pricinple', async () => {
-      const principleBefore = await ctx.Tenderizer.currentPrincipal()
-      tx = await ctx.Tenderizer.connect(ctx.signers[2]).unstake(ctx.withdrawAmount)
       expect(await ctx.Tenderizer.currentPrincipal()).to.eq(principleBefore.sub(ctx.withdrawAmount))
     })
 

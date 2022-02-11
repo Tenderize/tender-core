@@ -4,8 +4,10 @@ import { Context } from 'mocha'
 
 export default function suite () {
   let ctx: Context
-  before(async function () {
+  beforeEach(async function () {
     ctx = this.test?.ctx!
+    await ctx.Steak.approve(ctx.Tenderizer.address, ctx.deposit)
+    await ctx.Tenderizer.deposit(ctx.deposit)
   })
 
   describe('swap against TenderSwap', () => {

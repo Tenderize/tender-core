@@ -1,4 +1,5 @@
 import hre, { ethers } from 'hardhat'
+import * as rpc from '../util/snapshot'
 import {
   SimpleToken, Tenderizer, TenderToken, AudiusMock, TenderFarm, TenderSwap, LiquidityPoolToken
 } from '../../typechain'
@@ -31,6 +32,7 @@ import setterTests from './behaviors/setters.behavior'
 chai.use(solidity)
 
 describe('Audius Integration Test', () => {
+  let snapshotId: any
   let AudiusMock: AudiusMock
 
   let Audius: {[name: string]: Deployment}
@@ -38,14 +40,22 @@ describe('Audius Integration Test', () => {
   const protocolFeesPercent = ethers.utils.parseEther('0.025')
   const liquidityFeesPercent = ethers.utils.parseEther('0.025')
 
-  before('get signers', async function () {
+  beforeEach(async () => {
+    snapshotId = await rpc.snapshot()
+  })
+
+  afterEach(async () => {
+    await rpc.revert(snapshotId)
+  })
+
+  beforeEach('get signers', async function () {
     const namedAccs = await hre.getNamedAccounts()
     this.signers = await ethers.getSigners()
 
     this.deployer = namedAccs.deployer
   })
 
-  before('deploy Audius token', async function () {
+  beforeEach('deploy Audius token', async function () {
     const SimpleTokenFactory = await ethers.getContractFactory(
       'SimpleToken',
       this.signers[0]
@@ -54,7 +64,7 @@ describe('Audius Integration Test', () => {
     this.Steak = (await SimpleTokenFactory.deploy('Audius Token', 'AUDIO', ethers.utils.parseEther('1000000'))) as SimpleToken
   })
 
-  before('deploy Audius', async function () {
+  beforeEach('deploy Audius', async function () {
     const AudiusFac = await ethers.getContractFactory(
       'AudiusMock',
       this.signers[0]
@@ -66,7 +76,7 @@ describe('Audius Integration Test', () => {
 
   const STEAK_AMOUNT = '100000'
 
-  before('deploy Audius Tenderizer', async function () {
+  beforeEach('deploy Audius Tenderizer', async function () {
     this.NODE = '0xf4e8Ef0763BCB2B1aF693F5970a00050a6aC7E1B'
     process.env.NAME = 'Audius'
     process.env.SYMBOL = 'AUDIO'
@@ -111,7 +121,7 @@ describe('Audius Integration Test', () => {
   describe('Before intial deposits', beforeInitialDepsoits.bind(this))
 
   describe('After initial deposits', async function () {
-    before(async function () {
+    beforeEach(async function () {
       await addInitialDeposits(this)
     })
 
@@ -124,11 +134,11 @@ describe('Audius Integration Test', () => {
     let newStake: BigNumber
     describe('Rebases', async function () {
       context('Positive Rebase', async function () {
-        before(async function () {
+        beforeEach(async function () {
           this.increase = ethers.utils.parseEther('10')
           liquidityFees = percOf2(this.increase, liquidityFeesPercent)
           protocolFees = percOf2(this.increase, protocolFeesPercent)
-          newStake = this.deposit.add(this.initialStake).add(this.increase)
+          newStake = this.initialStake.add(this.increase)
           this.newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
 
           // set increase on mock
@@ -142,21 +152,20 @@ describe('Audius Integration Test', () => {
       })
 
       context('Neutral Rebase', async function () {
-        before(async function () {
-          this.stakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
+        beforeEach(async function () {
+          await this.Tenderizer.claimRewards()
+          this.expectedCP = this.initialStake
         })
         describe('Stake stays the same', stakeStaysSameTests.bind(this))
       })
 
       context('Negative Rebase', async function () {
-        before(async function () {
-          const stake = await this.StakingContract.staked()
+        beforeEach(async function () {
+          await this.Tenderizer.claimRewards()
           this.decrease = ethers.utils.parseEther('10')
-          // reduced stake is current stake - 100 from rewards previously
-          const reducedStake = stake.sub(this.decrease)
-          this.expectedCP = reducedStake.sub(liquidityFees).sub(protocolFees)
+          this.expectedCP = this.initialStake.sub(this.decrease)
           // reduce staked on mock
-          await this.StakingContract.setStaked(reducedStake)
+          await this.StakingContract.setStaked((await this.StakingContract.staked()).sub(this.decrease))
         })
         describe('Stake decreases', stakeDecreaseTests.bind(this))
       })
@@ -167,7 +176,7 @@ describe('Audius Integration Test', () => {
     describe('Swap', swapTests.bind(this))
 
     describe('Unlock and Withdraw', async function () {
-      before(async function () {
+      beforeEach(async function () {
         this.withdrawAmount = await this.TenderToken.balanceOf(this.deployer)
         await this.StakingContract.setStaked(
           await this.Tenderizer.totalStakedTokens()
