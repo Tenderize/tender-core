@@ -82,7 +82,7 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
 
     /// @inheritdoc ITenderToken
     function balanceOf(address _account) public view override(ITenderToken, ERC20Upgradeable) returns (uint256) {
-        return sharesToTokens(_sharesOf(_account));
+        return _sharesToTokens(_sharesOf(_account));
     }
 
     /// @inheritdoc ITenderToken
@@ -102,25 +102,12 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
 
     /// @inheritdoc ITenderToken
     function tokensToShares(uint256 _tokens) public view override returns (uint256) {
-        uint256 _totalPooledTokens = _getTotalPooledTokens();
-        uint256 _totalShares = _getTotalShares();
-        if (_totalPooledTokens == 0) {
-            return 0;
-        } else if (_totalShares == 0) {
-            return _tokens;
-        } else {
-            return MathUtils.percOf(_tokens, _totalShares, _totalPooledTokens);
-        }
+        return _tokensToShares(_tokens);
     }
 
     /// @inheritdoc ITenderToken
     function sharesToTokens(uint256 _shares) public view override returns (uint256) {
-        uint256 currShares = _getTotalShares();
-        if (currShares == 0) {
-            return 0;
-        } else {
-            return MathUtils.percOf(_shares, _getTotalPooledTokens(), currShares);
-        }
+        return _sharesToTokens(_shares);
     }
 
     /// @inheritdoc ITenderToken
@@ -181,7 +168,7 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
         if (_totalPooledTokens == 0) {
             _mintShares(_recipient, _amount);
         } else {
-            uint256 _sharesToMint = tokensToShares(_amount);
+            uint256 _sharesToMint = _tokensToShares(_amount);
             _mintShares(_recipient, _sharesToMint);
         }
         return true;
@@ -189,7 +176,7 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
 
     /// @inheritdoc ITenderToken
     function burn(address _account, uint256 _amount) public override onlyOwner returns (bool) {
-        uint256 _sharesToburn = tokensToShares(_amount);
+        uint256 _sharesToburn = _tokensToShares(_amount);
         _burnShares(_account, _sharesToburn);
         return true;
     }
@@ -220,7 +207,7 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
         address _recipient,
         uint256 _amount
     ) internal override {
-        uint256 _sharesToTransfer = tokensToShares(_amount);
+        uint256 _sharesToTransfer = _tokensToShares(_amount);
         _transferShares(_sender, _recipient, _sharesToTransfer);
         emit Transfer(_sender, _recipient, _amount);
     }
@@ -322,5 +309,26 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
         // This is equivalent to performing a send from `address` to each other token holder address,
         // but we cannot reflect this as it would require sending an unbounded number of events.
         totalShares = newTotalShares;
+    }
+
+    function _tokensToShares(uint256 _tokens) internal view returns (uint256) {
+        uint256 _totalPooledTokens = _getTotalPooledTokens();
+        uint256 _totalShares = _getTotalShares();
+        if (_totalPooledTokens == 0) {
+            return 0;
+        } else if (_totalShares == 0) {
+            return _tokens;
+        } else {
+            return MathUtils.percOf(_tokens, _totalShares, _totalPooledTokens);
+        }
+    }
+
+    function _sharesToTokens(uint256 _shares) internal view returns (uint256) {
+        uint256 currShares = _getTotalShares();
+        if (currShares == 0) {
+            return 0;
+        } else {
+            return MathUtils.percOf(_shares, _getTotalPooledTokens(), currShares);
+        }
     }
 }
