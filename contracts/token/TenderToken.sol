@@ -41,7 +41,7 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
     mapping(address => mapping(address => uint256)) private allowances;
 
     /**
-     * @dev Tendeizer address, to pull totalStakedTokens
+     * @dev Tenderizer address, to pull read total staked tokens
      */
     ITotalStakedReader public totalStakedReader;
 
