@@ -8,20 +8,20 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../../libs/MathUtils.sol";
 
 import "../../Tenderizer.sol";
-import "../../UnstakePool.sol";
+import "../../WithdrawalPools.sol";
 import "./IGraph.sol";
 
 import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
 
 contract Graph is Tenderizer {
-    using UnstakePool for *;
+    using WithdrawalPools for WithdrawalPools.Pool;
     
     // 100% in parts per million
     uint32 private constant MAX_PPM = 1000000;
 
     IGraph graph;
 
-    UnstakePool.WithdrawalPool withdrawPool;
+    WithdrawalPools.Pool withdrawPool;
 
     function initialize(
         IERC20 _steak,
@@ -60,13 +60,13 @@ contract Graph is Tenderizer {
     function _stake(address _node, uint256 _amount) internal override {
         // check that there are enough tokens to stake
         uint256 amount = _amount;
-        uint256 pedingWithdrawals = UnstakePool.amount(withdrawPool);
+        uint256 pendingWithdrawals = withdrawPool.getAmount();
 
-        if (amount <= pedingWithdrawals) {
+        if (amount <= pendingWithdrawals) {
             return;
         }
 
-        amount -= pedingWithdrawals;
+        amount -= pendingWithdrawals;
 
         // if no _node is specified, return
         if (_node == address(0)) {
@@ -91,7 +91,7 @@ contract Graph is Tenderizer {
 
         require(amount > 0, "ZERO_AMOUNT");
 
-        unstakeLockID =  UnstakePool.unlock(withdrawPool, _account, amount);
+        unstakeLockID =  withdrawPool.unlock(_account, amount);
 
         currentPrincipal -= amount;
 
@@ -99,7 +99,7 @@ contract Graph is Tenderizer {
     }
 
     function processUnstake(address _node) external onlyGov {
-        uint256 amount = UnstakePool.processUnlocks(withdrawPool);
+        uint256 amount = withdrawPool.processUnlocks();
 
         // if no _node is specified, use default
         address node_ = _node;
@@ -124,7 +124,7 @@ contract Graph is Tenderizer {
     }
 
     function _withdraw(address _account, uint256 _withdrawalID) internal override {
-        uint256 amount = UnstakePool.withdraw(withdrawPool, _withdrawalID, _account);
+        uint256 amount = withdrawPool.withdraw(_withdrawalID, _account);
 
         // Transfer amount from unbondingLock to _account
         try steak.transfer(_account, amount) {} catch {
@@ -152,7 +152,7 @@ contract Graph is Tenderizer {
         uint256 balAfter = steak.balanceOf(address(this));
         uint256 amount = balAfter - balBefore;
         
-        UnstakePool.processWihdrawal(withdrawPool, amount);
+        withdrawPool.processWihdrawal(amount);
 
         emit Withdraw(msg.sender, amount, 0);
     }
@@ -178,8 +178,8 @@ contract Graph is Tenderizer {
 
         // adjust current token balance for potential protocol specific taxes or staking fees
         uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)));
-        uint256 unstakePoolTokens = UnstakePool.amount(withdrawPool);
-        uint256 unstakePoolTokensAfterTax = _calcDepositOut(UnstakePool.amount(withdrawPool));
+        uint256 unstakePoolTokens = withdrawPool.getAmount();
+        uint256 unstakePoolTokensAfterTax = _calcDepositOut(unstakePoolTokens);
 
         // calculate what the new currentPrinciple would be after the call
         // but excluding fees from rewards for this rebase
@@ -197,7 +197,7 @@ contract Graph is Tenderizer {
             if (totalTokens == 0) return;
 
             uint256 unstakePoolSlash = diff * unstakePoolTokens / totalTokens;
-            UnstakePool.updateTotalTokens(withdrawPool, unstakePoolTokens - unstakePoolSlash);
+            withdrawPool.updateTotalTokens(unstakePoolTokens - unstakePoolSlash);
             
             emit RewardsClaimed(-int256(diff), stake_, currentPrincipal_);
 
