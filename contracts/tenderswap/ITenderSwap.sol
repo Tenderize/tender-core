@@ -27,7 +27,7 @@ interface ITenderSwap {
      * @param buyer address of the account initiating the swap
      * @param tokenSold address of the swapped token
      * @param amountSold amount of tokens swapped
-     * @param amountReceived the amount of tokens received in exchange
+     * @param amountReceived amount of tokens received in exchange
      */
     event Swap(address indexed buyer, IERC20 tokenSold, uint256 amountSold, uint256 amountReceived);
 
