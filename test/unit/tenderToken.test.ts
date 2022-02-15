@@ -143,7 +143,8 @@ describe('TenderToken', () => {
         const from = await signers[0].getAddress()
         const to = await signers[1].getAddress()
         const amount = ethers.utils.parseEther('1')
-
+        await tenderToken.mint(account0, amount)
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(ethers.constants.Zero)
         expect(await tenderToken.transfer(to, amount))
           .to.emit(tenderToken, 'Transfer').withArgs(from, to, amount)
 
@@ -408,6 +409,7 @@ describe('TenderToken', () => {
 
     it('allowance behavior is correct after slashing', async () => {
       await tenderToken.mint(account0, acc0Balance)
+      tenderizerMock.smocked.totalStakedTokens.will.return.with(acc0Balance)
       await tenderToken.mint(account2, acc2Balance)
 
       const amount = ethers.utils.parseEther('75')
@@ -456,7 +458,7 @@ describe('TenderToken', () => {
           .to.be.revertedWith('Ownable: caller is not the owner')
       })
 
-      it('mints no shares if there is no pooled ether', async () => {
+      it('mints no shares if there are no pooled tokens', async () => {
         const mint0 = ethers.utils.parseEther('0')
         await tenderToken.mint(account0, mint0)
 
@@ -518,6 +520,7 @@ describe('TenderToken', () => {
 
       it('minting after a rebase still mints correctly', async () => {
         await tenderToken.mint(account0, acc0Balance)
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(acc0Balance)
         await tenderToken.mint(account2, acc2Balance)
 
         const multiplier = BigNumber.from(2)
@@ -554,6 +557,7 @@ describe('TenderToken', () => {
 
       beforeEach(async () => {
         await tenderToken.mint(account0, acc0Balance)
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(acc0Balance)
         await tenderToken.mint(account1, acc1Balance)
         tenderizerMock.smocked.totalStakedTokens.will.return.with(totalSupply)
       })
@@ -651,13 +655,19 @@ describe('TenderToken', () => {
 
   describe('share-related getters', async () => {
     const zero = ethers.constants.Zero
+    const acc0Balance = ethers.utils.parseEther('100')
+
     describe('with zero totalPooledTokens (supply)', async () => {
+      beforeEach(async () => {
+        await tenderToken.mint(account0, acc0Balance)
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(zero)
+      })
       it('getTotalSupply', async () => {
         expect(await tenderToken.totalSupply()).to.eq(zero)
       })
 
       it('getTotalShares', async () => {
-        expect(await tenderToken.getTotalShares()).to.eq(zero)
+        expect(await tenderToken.getTotalShares()).to.eq(acc0Balance)
       })
 
       it('getTotalPooledTokens', async () => {
@@ -665,7 +675,7 @@ describe('TenderToken', () => {
       })
 
       it('sharesOf', async () => {
-        expect(await tenderToken.sharesOf(account0)).to.eq(zero)
+        expect(await tenderToken.sharesOf(account0)).to.eq(acc0Balance)
       })
 
       it('tokensToShares', async () => {
@@ -692,7 +702,9 @@ describe('TenderToken', () => {
       const acc2Balance = ethers.utils.parseEther('250')
       beforeEach(async () => {
         await tenderToken.mint(account0, acc0Balance)
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(acc0Balance)
         await tenderToken.mint(account1, acc1Balance)
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(acc0Balance.add(acc1Balance))
         await tenderToken.mint(account2, acc2Balance)
         tenderizerMock.smocked.totalStakedTokens.will.return.with(totalSupply)
       })
@@ -790,7 +802,9 @@ describe('TenderToken', () => {
       const totalSupply = acc0Balance.add(acc1Balance).add(acc2Balance)
       beforeEach(async () => {
         await tenderToken.mint(account0, acc0Balance)
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(acc0Balance)
         await tenderToken.mint(account1, acc1Balance)
+        tenderizerMock.smocked.totalStakedTokens.will.return.with(acc0Balance.add(acc1Balance))
         await tenderToken.mint(account2, acc2Balance)
         tenderizerMock.smocked.totalStakedTokens.will.return.with(totalSupply)
       })

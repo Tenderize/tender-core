@@ -316,8 +316,7 @@ interface ITenderSwap {
 
     /**
      * @notice Remove liquidity from the pool, weighted differently than the
-     * pool's current balances. Withdraw fee that decays linearly
-     * over period of 4 weeks since last deposit will apply.
+     * pool's current balances.
      * @param _amounts how much of each token to withdraw
      * @param _maxBurnAmount the max LP token provider is willing to pay to
      * remove liquidity. Useful as a front-running mitigation.
