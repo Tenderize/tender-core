@@ -16,10 +16,11 @@ import {
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Deployment } from 'hardhat-deploy/dist/types'
 import { BigNumber } from '@ethersproject/bignumber'
-import { ContractTransaction } from '@ethersproject/contracts'
+import { Contract, ContractTransaction } from '@ethersproject/contracts'
 
 import { percOf2 } from '../util/helpers'
 import { Signer } from '@ethersproject/abstract-signer'
+import { AlchemyProvider } from '@ethersproject/providers'
 
 chai.use(solidity)
 const {
@@ -70,8 +71,8 @@ describe('Graph Mainnet Fork Test', () => {
   const MAX_PPM = BigNumber.from(1000000)
 
   const hexDeploymentID = '0x7cf8f2026b1f49a36f29293fb9545ce31ac3f71c40009c7e038d42ccea1b2b98' // ethers.utils.base58.decode(deploymentID).slice(2)
-  let lastAllocationID = '0xf1f0a6d3814f9cc6a3417d7372638ed30bfc1982'
-  const lastPoi = '0x000000000000000000000000000000000000000000031cdd76a4d7fc9ba40000'
+  let lastAllocationID: string
+  let lastPoi: string
 
   const GRTHolder = '0xa64bc086d8bfaff4e05e277f971706d67559b1d1'
   const disputeArbitratorAddr = '0xe1fdd398329c6b74c14cf19100316f0826a492d3'
@@ -82,15 +83,28 @@ describe('Graph Mainnet Fork Test', () => {
 
   const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
 
+  const ALCHEMY_KEY = 's93KFT7TnttkCPdNS2Fg_HAoCpP6dEda'
+
   before('deploy Graph Tenderizer', async function () {
     this.timeout(testTimeout)
+
+    const latestBlockProvider = new AlchemyProvider('homestead', ALCHEMY_KEY)
+    const stakingContract = new Contract(stakingAddr, stakingAbi, latestBlockProvider)
+    const filter = await stakingContract.filters.AllocationClosed(NODE, null, null, null, null, null, null, null, null)
+    const allocationClosedEvents = await stakingContract.queryFilter(filter)
+    const allocationClosedTx = await allocationClosedEvents[allocationClosedEvents.length - 1].getTransaction()
+    const stakingInterface = new ethers.utils.Interface(stakingAbi)
+    const decodedInput = stakingInterface.parseTransaction({ data: allocationClosedTx.data, value: allocationClosedTx.value })
+    lastAllocationID = decodedInput.args._allocationID
+    lastPoi = decodedInput.args._poi
+
     // Fork from mainnet
     await hre.network.provider.request({
       method: 'hardhat_reset',
       params: [{
         forking: {
-          blockNumber: 13275324,
-          jsonRpcUrl: process.env.ALCHEMY_URL || 'https://eth-mainnet.alchemyapi.io/v2/s93KFT7TnttkCPdNS2Fg_HAoCpP6dEda'
+          blockNumber: allocationClosedTx.blockNumber! - 2,
+          jsonRpcUrl: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`
         }
       }]
     })
