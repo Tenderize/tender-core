@@ -29,7 +29,10 @@ function loadTasks () {
   })
 }
 
-if (fs.existsSync(path.join(__dirname, 'artifacts'))) {
+if (
+  fs.existsSync(path.join(__dirname, 'artifacts')) &&
+  fs.existsSync(path.join(__dirname, 'typechain'))
+) {
   loadTasks()
 }
 

@@ -76,7 +76,7 @@ describe('Audius Mainnet Fork Test', () => {
       method: 'hardhat_reset',
       params: [{
         forking: {
-          jsonRpcUrl: process.env.ALCHEMY_URL
+          jsonRpcUrl: process.env.ALCHEMY_MAINNET
         }
       }]
     })
