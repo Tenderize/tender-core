@@ -21,5 +21,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   })
 }
 
-func.tags = ['TenderFarm']
+func.tags = ['TenderFarm', 'Dependencies']
 export default func
