@@ -74,11 +74,12 @@ yarn test:coverage
 
 ## Deployment
 
-Make sure that an ETH node is accessible and that the network being deployed to is supported by the `hardhat.config.ts` configuration.
+Make sure that an ETH node is accessible and that the network being deployed to is supported by the `hardhat.config.ts` configuration. By default an in-memory Hardhat VM will be used, to specify another network use the `--network` flag.
 
-Make sure that you enter a `PRIVATE_KEY` and `INFURA_KEY` in the root's `.env` file when using a live network.
+### Environment Variables
 
-By default an in-memory Hardhat VM will be used, to specify another network use the `--network` flag.
+- Make sure that you enter a `PRIVATE_KEY` and `JSON_RPC` in the project root `.env` file when using a live network.
+- Adjust the necessary environment variables in `deploy/.env`
 
 ### Deploying dependencies
 
@@ -98,10 +99,11 @@ These commands will export the contract artifacts to `deployments/{networkName}/
 
 A Tenderizer is a combination of contracts, some general dependencies will be re-used. After deployment the new tenderizer will be registered with the `Registry`.
 
-To deploy a Tenderizer provide its name and then execute the deployment. E.g. `export NAME=Livepeer` will ensure that the Livepeer Tenderizer is deployed and saved to `deployments/{networkName}/Livepeer.json` with all its dependencies and contracts in a single file.
+To deploy a Tenderizer provide the required environment variables in `deploy/.env`, e.g. `NAME=Livepeer` will ensure that the Livepeer Tenderizer is deployed and saved to `deployments/{networkName}/Livepeer.json` with all its dependencies and contracts in a single file.
+
+Also make sure to set the the name of the Tenderizer you want to deploy from the console. This needs to be done separately because at the time the command is executed the `deploy/.env` has not yet been parsed.
 
 ```bash
-export NETWORK=
-export NAME=
-yarn deploy:tenderizer
+export NAME=<Name e.g. "Livepeer">
+yarn deploy:tenderizer --network <networkName>
 ```

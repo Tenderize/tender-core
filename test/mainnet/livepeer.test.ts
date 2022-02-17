@@ -72,7 +72,7 @@ describe('Livepeer Mainnet Fork Test', () => {
 
   const ONE = ethers.utils.parseEther('1')
 
-  const ALCHEMY_URL = process.env.ALCHEMY_URL || 'https://eth-mainnet.alchemyapi.io/v2/_zIq0VgpYJ8sVLCgsOhsOxD_-HTMPOA6'
+  const ALCHEMY_URL = process.env.ALCHEMY_URL
 
   before('deploy Livepeer Tenderizer', async function () {
     this.timeout(testTimeout)
