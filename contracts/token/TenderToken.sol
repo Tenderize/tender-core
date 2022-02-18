@@ -254,7 +254,7 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
         uint256 currentSenderShares = shares[_sender];
         require(_shares <= currentSenderShares, "TRANSFER_AMOUNT_EXCEEDS_BALANCE");
 
-        shares[_sender] -= _shares;
+        shares[_sender] = currentSenderShares - _shares;
         shares[_recipient] += _shares;
     }
 
@@ -295,7 +295,7 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
 
         newTotalShares = totalShares - _shares;
 
-        shares[_account] -= _shares;
+        shares[_account] = accountShares - _shares;
 
         // Notice: we're not emitting a Transfer event to the zero address here since shares burn
         // works by redistributing the amount of tokens corresponding to the burned shares between
