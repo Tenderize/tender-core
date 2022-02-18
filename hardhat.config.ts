@@ -15,23 +15,30 @@ import 'solidity-coverage'
 import { HardhatUserConfig } from 'hardhat/types'
 
 import dotenv from 'dotenv'
+import path from 'path'
+import fs from 'fs'
+
 dotenv.config()
-const PRIVATE_KEY = process.env.PRIVATE_KEY || '182f9c4b5181c9bbf54cb7c142e13157353b62e4be815632a846ba351f3f78b0'
-const INFURA_KEY = process.env.INFURA_KEY || '435466a7f0414c32a3bf15f940d31da4'
+const PRIVATE_KEY = process.env.PRIVATE_KEY
+const JSON_RPC = process.env.JSON_RPC
+
+function loadTasks () {
+  const tasksPath = path.join(__dirname, 'tasks')
+  fs.readdirSync(tasksPath).forEach(task => {
+    require(`${tasksPath}/${task}`)
+  })
+}
+
+if (
+  fs.existsSync(path.join(__dirname, 'artifacts')) &&
+  fs.existsSync(path.join(__dirname, 'typechain'))
+) {
+  loadTasks()
+}
 
 const config: HardhatUserConfig = {
   solidity: {
     compilers: [
-      {
-        version: '0.5.12',
-        settings: {
-          evmVersion: 'istanbul',
-          optimizer: {
-            enabled: true,
-            runs: 200
-          }
-        }
-      },
       { version: '0.8.4', settings: {} },
       { version: '0.7.0', settings: {} }
     ]
@@ -42,19 +49,24 @@ const config: HardhatUserConfig = {
   defaultNetwork: 'hardhat',
   networks: {
     hardhat: {
-      gas: 12000000,
       allowUnlimitedContractSize: true,
       blockGasLimit: 12000000
     },
     mainnet: {
-      url: `https://mainnet.infura.io/v3/${INFURA_KEY}`,
-      accounts: [`0x${PRIVATE_KEY}`]
+      url: JSON_RPC,
+      accounts: PRIVATE_KEY ? [`0x${PRIVATE_KEY}`] : undefined
     },
     rinkeby: {
-      url: `https://rinkeby.infura.io/v3/${INFURA_KEY}`,
-      accounts: [`0x${PRIVATE_KEY}`],
-      allowUnlimitedContractSize: true,
-      blockGasLimit: 12000000
+      url: JSON_RPC,
+      accounts: PRIVATE_KEY ? [`0x${PRIVATE_KEY}`] : undefined
+    },
+    arbitrumMainnet: {
+      url: JSON_RPC,
+      accounts: PRIVATE_KEY ? [`0x${PRIVATE_KEY}`] : undefined
+    },
+    arbitrumRinkeby: {
+      url: JSON_RPC,
+      accounts: PRIVATE_KEY ? [`0x${PRIVATE_KEY}`] : undefined
     },
     localhost: {
       url: 'http://127.0.0.1:8545'

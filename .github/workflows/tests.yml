@@ -1,5 +1,9 @@
 name: Tests
 on: [push]
+env:
+  JSON_RPC: ${{ secrets.JSON_RPC }}
+  ALCHEMY_MAINNET: ${{ secrets.ALCHEMY_MAINNET }}
+  ALCHEMY_ARBITRUM: ${{ secrets.ALCHEMY_ARBITRUM }}
 jobs:
   coverage:
     runs-on: ubuntu-latest

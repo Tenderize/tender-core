@@ -8,9 +8,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await deploy('TenderToken', {
     from: deployer,
     log: true,
-    skipIfAlreadyDeployed: true
+    skipIfAlreadyDeployed: true,
+    estimateGasExtra: 5000000
   })
 }
 
-func.tags = ['TenderToken']
+func.tags = ['TenderToken', 'Dependencies']
 export default func
