@@ -5,6 +5,10 @@
 import "../libs/MathUtils.sol";
 pragma solidity 0.8.4;
 
+/**
+ * @title WithdrawalPools are used to batch user unlocks/withdrawals together
+ * @notice These are used for protocols that do not support simultaneous unlocks
+ */
 library WithdrawalPools {
     struct Withdrawal {
         uint256 shares; // shares

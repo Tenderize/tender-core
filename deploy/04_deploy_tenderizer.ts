@@ -82,7 +82,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
       return
     }
 
-    console.log(`Deploying ${SYMBOL} Faucet`)
     const Faucet = await deploy('TokenFaucet', {
       from: deployer,
       log: true,

@@ -42,14 +42,12 @@ export default function suite () {
       balAfter = await ctx.Steak.balanceOf(ctx.signers[2].address)
     })
 
-    it('increases Steak balance', async () => {
-      expect(balAfter.sub(balBefore)).to.eq(secondDeposit)
+    it('reverts if requested from the wrong account', async () => {
+      await expect(ctx.Tenderizer.connect(ctx.signers[1]).withdraw(ctx.lockID)).to.be.revertedWith('ACCOUNT_MISTMATCH')
     })
 
-    it('should delete unstakeLock', async () => {
-      const lock = await ctx.Tenderizer.unstakeLocks(ctx.lockID)
-      expect(lock.account).to.eq(ethers.constants.AddressZero)
-      expect(lock.amount).to.eq(0)
+    it('increases Steak balance', async () => {
+      expect(balAfter.sub(balBefore)).to.eq(secondDeposit)
     })
 
     it('should emit Withdraw event from Tenderizer', async () => {
