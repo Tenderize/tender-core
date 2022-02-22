@@ -18,8 +18,8 @@ task('add-liquidity', 'adds liquidity to pool')
 
     const signer = (await hre.ethers.getSigners())[0]
 
-    const tokenAmount = utils.formatEther(args.tokenamount)
-    const tenderAmount = utils.formatEther(args.tenderamount)
+    const tokenAmount = utils.parseEther(args.tokenamount.toString())
+    const tenderAmount = utils.parseEther(args.tenderamount.toString())
 
     const tenderizer = (await deployments.get(args.tenderizer)).address
 
@@ -39,7 +39,7 @@ task('add-liquidity', 'adds liquidity to pool')
       TenderToken.address,
       signer.address,
       TenderSwap.address,
-      tokenAmount
+      tokenAmount.toString()
     )
 
     const tx = await TenderSwap.multicall([
