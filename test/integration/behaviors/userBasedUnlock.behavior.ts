@@ -9,19 +9,19 @@ const secondDeposit = ethers.utils.parseEther('10')
 // For protocols where unlocks are tracked per user
 export function userBasedUnlockByUser () {
   describe('unbond() reverts', async function () {
-    let ctx: any
+    let ctx: Context
     beforeEach(async function () {
       ctx = this.test?.ctx!
     })
     it('unstake also reverts', async () => {
       await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.unstake), true)
-      await expect(ctx.Tenderizer.connect(ctx.signers[2]).unstake()).to.be.reverted
+      await expect(ctx.Tenderizer.connect(ctx.signers[2]).unstake(1)).to.be.reverted
       await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.unstake), false)
     })
   })
 
   describe('unbond() succeeds', async function () {
-    let ctx: any
+    let ctx: Context
     const acceptableDelta = 2
     let tx: ContractTransaction
     let withdrawAmount: BigNumber
@@ -30,7 +30,7 @@ export function userBasedUnlockByUser () {
     let cpBefore: BigNumber
 
   beforeEach(async function () {
-    ctx = this.test?.ctx
+    ctx = this.test?.ctx!
     // Move tenderTokens from deployer/gov
     const govBalance = await ctx.TenderToken.balanceOf(ctx.deployer)
     await ctx.TenderToken.transfer(ctx.signers[3].address, govBalance)
@@ -70,12 +70,6 @@ export function userBasedUnlockByUser () {
     expect(balOtherAcc.sub(await ctx.TenderToken.balanceOf(ctx.signers[3].address)).abs()).to.lte(acceptableDelta)
   })
 
-  it('should create unstakeLock', async () => {
-    const lock = await ctx.Tenderizer.unstakeLocks(ctx.lockID)
-    expect(lock.account).to.eq(ctx.signers[2].address)
-    expect(lock.amount).to.eq(withdrawAmount)
-  })
-
   it('should emit Unstake event from Tenderizer', async () => {
     expect(tx).to.emit(ctx.Tenderizer, 'Unstake')
       .withArgs(ctx.signers[2].address, ctx.NODE, withdrawAmount, ctx.lockID)
@@ -84,9 +78,9 @@ export function userBasedUnlockByUser () {
 }
 
 export function govUnbondRevertIfNoStake () {
-  let ctx: any
+  let ctx: Context
   before(async function () {
-    ctx = this.test?.ctx
+    ctx = this.test?.ctx!
   })
 
   it('Gov unbond() reverts if no pending stake', async () => {
@@ -96,7 +90,7 @@ export function govUnbondRevertIfNoStake () {
 
 // For protocols where unlocks are tracked per user
 export function userBasedUnlockByGov () {
-  let ctx: any
+  let ctx: Context
   let tx: any
 
   describe('Gov partial(half) unbond', async () => {
@@ -106,7 +100,7 @@ export function userBasedUnlockByGov () {
     let stakedBefore: BigNumber
     let cpBefore: BigNumber
     beforeEach('perform partial unbond', async function () {
-      ctx = this.test?.ctx
+      ctx = this.test?.ctx!
 
       await ctx.Steak.transfer(ctx.signers[2].address, secondDeposit)
       await ctx.Steak.connect(ctx.signers[2]).approve(ctx.Tenderizer.address, secondDeposit)

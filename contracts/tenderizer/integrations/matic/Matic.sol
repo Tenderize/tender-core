@@ -10,9 +10,13 @@ import "../../../libs/MathUtils.sol";
 import "../../Tenderizer.sol";
 import "./IMatic.sol";
 
+import "../../WithdrawalLocks.sol";
+
 import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
 
 contract Matic is Tenderizer {
+    using WithdrawalLocks for WithdrawalLocks.Locks;
+
     // Matic exchange rate precision
     uint256 constant EXCHANGE_RATE_PRECISION = 100; // For Validator ID < 8
     uint256 constant EXCHANGE_RATE_PRECISION_HIGH = 10**29; // For Validator ID >= 8
@@ -23,12 +27,7 @@ contract Matic is Tenderizer {
     // Matic ValidatorShare
     IMatic matic;
 
-    struct UnstakeLock {
-        uint256 amount;
-        address account;
-    }
-    mapping(uint256 => UnstakeLock) public unstakeLocks;
-    uint256 nextUnstakeLockID;
+    WithdrawalLocks.Locks withdrawLocks;
 
     function initialize(
         IERC20 _steak,
@@ -103,7 +102,7 @@ contract Matic is Tenderizer {
         address _account,
         address _node,
         uint256 _amount
-    ) internal override returns (uint256 unstakeLockID) {
+    ) internal override returns (uint256 withdrawalLockID) {
         uint256 amount = _amount;
 
         // use default validator share contract if _node isn't specified
@@ -127,33 +126,25 @@ contract Matic is Tenderizer {
         matic_.sellVoucher_new(amount, max);
 
         // Manage Livepeer unbonding locks
-        unstakeLockID = nextUnstakeLockID;
-        unstakeLocks[unstakeLockID] = UnstakeLock({ amount: amount, account: _account });
-        nextUnstakeLockID = unstakeLockID + 1;
+        withdrawalLockID = withdrawLocks.unlock(_account, amount);
 
-        emit Unstake(_account, address(matic_), amount, unstakeLockID);
+        emit Unstake(_account, address(matic_), amount, withdrawalLockID);
     }
 
-    function _withdraw(address _account, uint256 _unstakeID) internal override {
-        UnstakeLock storage lock = unstakeLocks[_unstakeID];
-        address account = lock.account;
-
-        require(account == _account, "ACCOUNT_MISTMATCH");
-
-        // Remove it from the locks
-        delete unstakeLocks[_unstakeID];
+    function _withdraw(address _account, uint256 _withdrawalID) internal override {
+        withdrawLocks.withdraw(_account, _withdrawalID);
 
         // Check for any slashes during undelegation
         uint256 balBefore = steak.balanceOf(address(this));
-        matic.unstakeClaimTokens_new(_unstakeID);
+        matic.unstakeClaimTokens_new(_withdrawalID);
         uint256 balAfter = steak.balanceOf(address(this));
         uint256 amount = balAfter >= balBefore ? balAfter - balBefore : 0;
         require(amount > 0, "ZERO_AMOUNT");
 
         // Transfer amount from unbondingLock to _account
-        steak.transfer(account, amount);
+        steak.transfer(_account, amount);
 
-        emit Withdraw(account, amount, _unstakeID);
+        emit Withdraw(_account, amount, _withdrawalID);
     }
 
     function _claimRewards() internal override {
