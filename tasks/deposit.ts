@@ -19,8 +19,8 @@ task('deposit', 'deposit tokens, receive tenderTokens')
     const Tenderizer: Tenderizer = (await ethers.getContractAt('Tenderizer', tenderizer)) as Tenderizer
     const Steak: ERC20 = (await ethers.getContractAt('ERC20', await Tenderizer.steak())) as ERC20
 
-    await Steak.approve(Tenderizer.address, tokenAmount)
-    const tx = await Tenderizer.deposit(tokenAmount)
-
+    let tx = await Steak.approve(Tenderizer.address, tokenAmount)
+    await tx.wait()
+    tx = await Tenderizer.deposit(tokenAmount)
     await tx.wait()
   })
