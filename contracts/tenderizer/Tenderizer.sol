@@ -103,11 +103,11 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
 
     /// @inheritdoc ITenderizer
     function unstake(uint256 _amount) external override returns (uint256) {
-        // Burn tenderTokens if not gov
-        // TODO: Remove this check after adding rescue functions
-        if (msg.sender != gov) {
-            require(tenderToken.burn(msg.sender, _amount), "TENDER_BURN_FAILED");
-        }
+        require(_amount > 0, "ZERO_AMOUNT");
+
+        require(tenderToken.burn(msg.sender, _amount), "TENDER_BURN_FAILED");
+        
+        currentPrincipal -= _amount;
 
         // Execute state updates to pending withdrawals
         // Unstake tokens
@@ -115,10 +115,20 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     /// @inheritdoc ITenderizer
+    function rescueUnlock() external override onlyGov returns (uint256) {
+        return _unstake(address(this), node, currentPrincipal);
+    }
+
+    /// @inheritdoc ITenderizer
     function withdraw(uint256 _unstakeLockID) external override {
         // Execute state updates to pending withdrawals
         // Transfer tokens to _account
         _withdraw(msg.sender, _unstakeLockID);
+    }
+
+    /// @inheritdoc ITenderizer
+    function rescueWithdraw(uint256 _unstakeLockID) external override onlyGov {
+        _withdraw(address(this), _unstakeLockID);
     }
 
     /// @inheritdoc ITenderizer

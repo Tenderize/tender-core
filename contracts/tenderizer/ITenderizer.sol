@@ -122,12 +122,27 @@ interface ITenderizer {
     function unstake(uint256 _amount) external returns (uint256 unstakeLockID);
 
     /**
+     * @notice RescueUnstake unstakes all tokens from underlying protocol
+     * @return unstakeLockID unstake lockID generated for unstake
+     * @dev Used to rescue all staked funds.
+     */
+    function rescueUnlock() external returns (uint256 unstakeLockID);
+
+    /**
      * @notice Withdraw '_amount' of tokens previously unstaked by '_account'.
      * @param _unstakeLockID ID for the lock to request the withdraw for
      * @dev If '_amount' isn't specified all unstake tokens by '_account' will be withdrawn.
      * @dev Requires '_account' to have unstaked prior to calling withdraw.
      */
     function withdraw(uint256 _unstakeLockID) external;
+
+    /**
+     * @notice RescueWithdraw withdraws all tokens into the Tenderizer from the underlying protocol 
+     * after the unlock period ends
+     * @dev To be called after rescueUnlock() with the unstakeLockID returned there.
+     * @dev Process unlocks/withdrawals before rescueWithdraw for integrations with WithdrawPools.
+     */
+    function rescueWithdraw(uint256 _unstakeLockID) external;
 
     /**
      * @notice Compound all the rewards and new deposits.

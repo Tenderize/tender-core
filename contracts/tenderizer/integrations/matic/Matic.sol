@@ -104,15 +104,6 @@ contract Matic is Tenderizer {
         uint256 exhangeRatePrecision = _getExchangeRatePrecision(matic_);
         uint256 fxRate = _getExchangeRate(matic_);
 
-        if (_account != gov) require(amount > 0, "ZERO_AMOUNT");
-        if (amount == 0) {
-            uint256 shares = matic_.balanceOf(address(this));
-            amount = (shares * fxRate) / exhangeRatePrecision;
-            require(amount > 0, "ZERO_STAKE");
-        }
-
-        currentPrincipal -= amount;
-
         // Unbond tokens
         uint256 max = ((amount * exhangeRatePrecision) / fxRate) + 1;
         matic_.sellVoucher_new(amount, max);

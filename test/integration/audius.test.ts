@@ -24,7 +24,10 @@ import {
   liquidityFeeTests
 } from './behaviors/fees.behavior'
 import swapTests from './behaviors/swap.behavior'
-import unlockTests from './behaviors/govBasedUnlock.behavior'
+import {
+  govBasedUnlock,
+  rescueFunctions
+} from './behaviors/govBasedUnlock.behavior'
 import withdrawTests from './behaviors/govBasedWithdrawal.behavior'
 import upgradeTests from './behaviors/upgrade.behavior'
 import setterTests from './behaviors/setters.behavior'
@@ -182,9 +185,10 @@ describe('Audius Integration Test', () => {
           await this.Tenderizer.totalStakedTokens()
         )
       })
-      describe('Unstake', unlockTests.bind(this))
+      describe('Unstake', govBasedUnlock.bind(this))
       describe('Withdrawal', withdrawTests.bind(this))
     })
+    describe('Rescue Functions', rescueFunctions.bind(this))
     describe('Upgrades', upgradeTests.bind(this))
     describe('Setting contract variables', setterTests.bind(this))
   })
