@@ -68,7 +68,7 @@ contract Matic is Tenderizer {
         emit Deposit(_from, _amount);
     }
 
-    function _stake(address _node, uint256 _amount) internal override {
+    function _stake(uint256 _amount) internal override {
         // if no amount is specified, stake all available tokens
         uint256 amount = _amount;
 
@@ -77,16 +77,8 @@ contract Matic is Tenderizer {
             // TODO: revert ?
         }
 
-        // if no _node is specified, return
-        if (_node == address(0)) {
-            return;
-        }
-
         // use default validator share contract if _node isn't specified
         IMatic matic_ = matic;
-        if (_node != address(0)) {
-            matic_ = IMatic(_node);
-        }
 
         // approve tokens
         steak.approve(maticStakeManager, amount);

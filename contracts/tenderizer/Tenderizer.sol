@@ -125,7 +125,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         // Swap tokens with address != steak to steak
         // Add steak from swap to pendingTokens
         _claimRewards();
-        _stake(node, steak.balanceOf(address(this)));
+        _stake(steak.balanceOf(address(this)));
     }
 
     /// @inheritdoc ITenderizer
@@ -134,11 +134,11 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     /// @inheritdoc ITenderizer
-    function stake(address _account, uint256 _amount) external override onlyGov {
+    function stake(uint256 _amount) external override onlyGov {
         // Execute state updates
-        // approve pendingTokens for staking
+        // approve pendingTokens for staßking
         // Stake tokens
-        _stake(_account, _amount);
+        _stake(_amount);
     }
 
     function setGov(address _gov) external virtual override onlyGov {
@@ -247,7 +247,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
 
     function _deposit(address _account, uint256 _amount) internal virtual;
 
-    function _stake(address _account, uint256 _amount) internal virtual;
+    function _stake(uint256 _amount) internal virtual;
 
     function _unstake(
         address _account,

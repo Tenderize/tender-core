@@ -57,7 +57,7 @@ contract Audius is Tenderizer {
         emit Deposit(_from, _amount);
     }
 
-    function _stake(address _node, uint256 _amount) internal override {
+    function _stake(uint256 _amount) internal override {
         // check that there are enough tokens to stake
         uint256 amount = _amount;
         uint256 pendingWithdrawals = withdrawPool.getAmount();
@@ -68,15 +68,11 @@ contract Audius is Tenderizer {
 
         amount -= pendingWithdrawals;
 
-        // if no _node is specified, return
-        if (_node == address(0)) {
-            return;
-        }
-
         // Approve amount to Audius protocol
         steak.approve(audiusStaking, amount);
 
         // stake tokens
+        address _node = node;
         audius.delegateStake(_node, amount);
 
         emit Stake(_node, amount);

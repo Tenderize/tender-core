@@ -61,7 +61,7 @@ contract Graph is Tenderizer {
         emit Deposit(_from, _amount);
     }
 
-    function _stake(address _node, uint256 _amount) internal override {
+    function _stake(uint256 _amount) internal override {
         // check that there are enough tokens to stake
         uint256 amount = _amount;
         uint256 pendingWithdrawals = withdrawPool.getAmount();
@@ -73,17 +73,13 @@ contract Graph is Tenderizer {
 
         amount -= pendingWithdrawals;
 
-        // if no _node is specified, return
-        if (_node == address(0)) {
-            return;
-        }
-
         // approve amount to Graph protocol
         steak.approve(address(graph), amount);
 
         // stake tokens
+        address _node = node;
         uint256 delegatedShares = graph.delegate(_node, amount);
-        assert(delegatedShares > 0, "DELEGATION_FAILED");
+        assert(delegatedShares > 0);
 
         emit Stake(_node, amount);
     }

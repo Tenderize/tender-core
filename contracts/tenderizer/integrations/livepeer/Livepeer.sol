@@ -62,7 +62,7 @@ contract Livepeer is Tenderizer {
         emit Deposit(_from, _amount);
     }
 
-    function _stake(address _node, uint256 _amount) internal override {
+    function _stake(uint256 _amount) internal override {
         // if no amount is specified, stake all available tokens
         uint256 amount = _amount;
 
@@ -71,15 +71,11 @@ contract Livepeer is Tenderizer {
             // TODO: revert ?
         }
 
-        // if no _node is specified, return
-        if (_node == address(0)) {
-            return;
-        }
-
         // approve amount to Livepeer protocol
         steak.approve(address(livepeer), amount);
 
         // stake tokens
+        address _node = node;
         livepeer.bond(amount, _node);
 
         emit Stake(_node, amount);
