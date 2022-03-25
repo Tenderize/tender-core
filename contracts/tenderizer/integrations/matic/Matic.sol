@@ -138,8 +138,8 @@ contract Matic is Tenderizer {
         uint256 balBefore = steak.balanceOf(address(this));
         matic.unstakeClaimTokens_new(_withdrawalID);
         uint256 balAfter = steak.balanceOf(address(this));
-        uint256 amount = balAfter >= balBefore ? balAfter - balBefore : 0;
-        require(amount > 0, "ZERO_AMOUNT");
+        require(balAfter >= balBefore, "ZERO_AMOUNT");
+        uint256 amount = balAfter - balBefore;
 
         // Transfer amount from unbondingLock to _account
         steak.transfer(_account, amount);
