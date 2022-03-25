@@ -136,10 +136,11 @@ contract Livepeer is Tenderizer {
             // Wrap ETH
             uint256 bal = address(this).balance;
             WETH.deposit{ value: bal }();
-            WETH.approve(address(uniswapRouter), bal);
+            require(WETH.approve(address(uniswapRouter), bal), "WETH_APPROVE_FAIL");
 
             // swap ETH fees for LPT
             if (address(uniswapRouter) != address(0)) {
+                uint256 amountOutMin = 0; // TODO: set slippage tolerance
                 ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
                     tokenIn: address(WETH),
                     tokenOut: address(steak),
@@ -147,12 +148,16 @@ contract Livepeer is Tenderizer {
                     recipient: address(this),
                     deadline: block.timestamp,
                     amountIn: bal,
-                    amountOutMinimum: 0, // TODO: Set5% max slippage
+                    amountOutMinimum: amountOutMin, // TODO: Set5% max slippage
                     sqrtPriceLimitX96: 0
                 });
                 try uniswapRouter.exactInputSingle(params) returns (
-                    uint256 /*_swappedLPT*/
-                ) {} catch {}
+                    uint256 _swappedLPT
+                ) {
+                    assert(_swappedLPT > amountOutMin);
+                } catch {
+                    // fail silently so claiming secondary rewards doesn't block compounding primary rewards
+                }
             }
         }
     }
