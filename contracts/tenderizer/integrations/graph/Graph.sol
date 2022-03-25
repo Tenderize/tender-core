@@ -66,6 +66,7 @@ contract Graph is Tenderizer {
         uint256 amount = _amount;
         uint256 pendingWithdrawals = withdrawPool.getAmount();
 
+        // This check also validates 'amount - pendingWithdrawals' > 0
         if (amount <= pendingWithdrawals) {
             return;
         }
@@ -81,7 +82,8 @@ contract Graph is Tenderizer {
         steak.approve(address(graph), amount);
 
         // stake tokens
-        graph.delegate(_node, amount);
+        uint256 delegatedShares = graph.delegate(_node, amount);
+        assert(delegatedShares > 0, "DELEGATION_FAILED");
 
         emit Stake(_node, amount);
     }
