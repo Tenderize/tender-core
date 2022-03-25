@@ -110,7 +110,7 @@ contract Livepeer is Tenderizer {
         livepeer.withdrawStake(_withdrawalID);
 
         // Transfer amount from unbondingLock to _account
-        steak.transfer(_account, amount);
+        require(steak.transfer(_account, amount), "TRANSFER_FAIL");
 
         emit Withdraw(_account, amount, _withdrawalID);
     }

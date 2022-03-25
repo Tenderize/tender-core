@@ -128,7 +128,7 @@ contract Graph is Tenderizer {
             // Account for roundoff errors in shares calculations
             uint256 steakBal = steak.balanceOf(address(this));
             if (amount > steakBal) {
-                steak.transfer(_account, steakBal);
+                require(steak.transfer(_account, steakBal), "TRANSFER_FAIL");
             }
         }
 

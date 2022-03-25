@@ -110,7 +110,7 @@ contract Audius is Tenderizer {
     function _withdraw(address _account, uint256 _withdrawalID) internal override {
         uint256 amount = withdrawPool.withdraw(_withdrawalID, _account);
         // Transfer amount from unbondingLock to _account
-        steak.transfer(_account, amount);
+        require(steak.transfer(_account, amount), "TRANSFER_FAIL");
 
         emit Withdraw(_account, amount, _withdrawalID);
     }

@@ -131,7 +131,7 @@ contract Matic is Tenderizer {
         uint256 amount = balAfter - balBefore;
 
         // Transfer undelegated amount to _account
-        steak.transfer(_account, amount);
+        require(steak.transfer(_account, amount), "TRANSFER_FAIL");
 
         emit Withdraw(_account, amount, _withdrawalID);
     }
