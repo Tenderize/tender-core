@@ -56,7 +56,7 @@ abstract contract SelfPermit is ISelfPermit {
         bytes32 _r,
         bytes32 _s
     ) public payable override {
-        _selfPermit(_token, _value, _deadline, _v, _r, _s);
+        IERC20Permit(_token).permit(msg.sender, address(this), _value, _deadline, _v, _r, _s);
     }
 
     /// @inheritdoc ISelfPermit
@@ -69,17 +69,6 @@ abstract contract SelfPermit is ISelfPermit {
         bytes32 _s
     ) external payable override {
         uint256 allowance = IERC20(_token).allowance(msg.sender, address(this));
-        if (allowance < _value) _selfPermit(_token, _value - allowance, _deadline, _v, _r, _s);
-    }
-
-    function _selfPermit(
-        address _token,
-        uint256 _value,
-        uint256 _deadline,
-        uint8 _v,
-        bytes32 _r,
-        bytes32 _s
-    ) internal {
-        IERC20Permit(_token).permit(msg.sender, address(this), _value, _deadline, _v, _r, _s);
+        if (allowance < _value) selfPermit(_token, _value - allowance, _deadline, _v, _r, _s);
     }
 }

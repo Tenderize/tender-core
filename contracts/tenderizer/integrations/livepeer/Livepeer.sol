@@ -42,7 +42,7 @@ contract Livepeer is Tenderizer {
         ITenderToken _tenderTokenTarget,
         TenderFarmFactory _tenderFarmFactory,
         ITenderSwapFactory _tenderSwapFactory
-    ) public {
+    ) external {
         Tenderizer._initialize(
             _steak,
             _symbol,
@@ -113,7 +113,7 @@ contract Livepeer is Tenderizer {
 
     function _withdraw(address _account, uint256 _withdrawalID) internal override {
         uint256 amount = withdrawLocks.withdraw(_account, _withdrawalID);
- 
+
         // Withdraw stake, transfers steak tokens to address(this)
         livepeer.withdrawStake(_withdrawalID);
 

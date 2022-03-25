@@ -69,7 +69,7 @@ contract TenderSwap is OwnableUpgradeable, ReentrancyGuardUpgradeable, ITenderSw
         uint256 _fee,
         uint256 _adminFee,
         LiquidityPoolToken lpTokenTargetAddress
-    ) public override initializer returns (bool) {
+    ) external override initializer returns (bool) {
         __Context_init_unchained();
         __Ownable_init_unchained();
         __ReentrancyGuard_init_unchained();

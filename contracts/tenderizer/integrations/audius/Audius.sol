@@ -36,7 +36,7 @@ contract Audius is Tenderizer {
         ITenderToken _tenderTokenTarget,
         TenderFarmFactory _tenderFarmFactory,
         ITenderSwapFactory _tenderSwapFactory
-    ) public {
+    ) external {
         Tenderizer._initialize(
             _steak,
             _symbol,
@@ -58,7 +58,7 @@ contract Audius is Tenderizer {
     }
 
     function _stake(address _node, uint256 _amount) internal override {
-       // check that there are enough tokens to stake
+        // check that there are enough tokens to stake
         uint256 amount = _amount;
         uint256 pendingWithdrawals = withdrawPool.getAmount();
 
@@ -92,7 +92,7 @@ contract Audius is Tenderizer {
         // Caller is a user, initialise unstake locally in Tenderizer
         require(amount > 0, "ZERO_AMOUNT");
 
-        unstakeLockID =  withdrawPool.unlock(_account, amount);
+        unstakeLockID = withdrawPool.unlock(_account, amount);
 
         currentPrincipal -= amount;
 
@@ -107,7 +107,7 @@ contract Audius is Tenderizer {
         if (node_ == address(0)) {
             node_ = node;
         }
-        
+
         // Undelegate from audius
         audius.requestUndelegateStake(node_, amount);
 
@@ -122,14 +122,16 @@ contract Audius is Tenderizer {
         emit Withdraw(_account, amount, _withdrawalID);
     }
 
-    function processWithdraw(address /* _node */) external onlyGov {
+    function processWithdraw(
+        address /* _node */
+    ) external onlyGov {
         uint256 balBefore = steak.balanceOf(address(this));
-        
+
         audius.undelegateStake();
-        
+
         uint256 balAfter = steak.balanceOf(address(this));
         uint256 amount = balAfter - balBefore;
-        
+
         withdrawPool.processWihdrawal(amount);
 
         emit ProcessWithdraws(msg.sender, amount);
@@ -145,7 +147,6 @@ contract Audius is Tenderizer {
         _processNewStake(stake);
     }
 
-
     function _processNewStake(uint256 _newStake) internal override {
         // TODO: all of the below could be a general internal function in Tenderizer.sol
         uint256 currentPrincipal_ = currentPrincipal;
@@ -156,9 +157,12 @@ contract Audius is Tenderizer {
         // calculate what the new currentPrinciple would be after the call
         // but excluding fees, pending unlocks and pending user withdrawals from rewards
         // which still need to be calculated if stake >= currentPrincipal
-        uint256 stake_ = _newStake + currentBal
-            - withdrawPool.amount - withdrawPool.pendingUnlock
-            - pendingFees - pendingLiquidityFees;
+        uint256 stake_ = _newStake +
+            currentBal -
+            withdrawPool.amount -
+            withdrawPool.pendingUnlock -
+            pendingFees -
+            pendingLiquidityFees;
 
         // Difference is negative, no rewards have been earnt
         // So no fees are charged
@@ -167,13 +171,13 @@ contract Audius is Tenderizer {
             uint256 diff = currentPrincipal_ - stake_;
 
             emit RewardsClaimed(-int256(diff), stake_, currentPrincipal_);
-            
+
             // calculate amount to subtract relative to current principal
             uint256 unstakePoolTokens = withdrawPool.totalTokens();
             uint256 totalTokens = unstakePoolTokens + currentPrincipal_;
             if (totalTokens == 0) return;
 
-            uint256 unstakePoolSlash = diff * unstakePoolTokens / totalTokens;
+            uint256 unstakePoolSlash = (diff * unstakePoolTokens) / totalTokens;
             withdrawPool.updateTotalTokens(unstakePoolTokens - unstakePoolSlash);
 
             return;

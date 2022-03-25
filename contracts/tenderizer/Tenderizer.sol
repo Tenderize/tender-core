@@ -81,7 +81,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     /// @inheritdoc ITenderizer
-    function deposit(uint256 _amount) public override {
+    function deposit(uint256 _amount) external override {
         _depositHook(msg.sender, _amount);
     }
 
@@ -93,7 +93,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         bytes32 _r,
         bytes32 _s
     ) external override {
-        _selfPermit(address(steak), _amount, _deadline, _v, _r, _s);
+        selfPermit(address(steak), _amount, _deadline, _v, _r, _s);
 
         _depositHook(msg.sender, _amount);
     }
@@ -119,7 +119,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     /// @inheritdoc ITenderizer
-    function claimRewards() public override {
+    function claimRewards() external override {
         // Claim rewards
         // If received staking rewards in steak don't automatically compound, add to pendingTokens
         // Swap tokens with address != steak to steak
@@ -199,7 +199,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     /// @inheritdoc ITenderizer
-    function calcDepositOut(uint256 _amountIn) public view override returns (uint256) {
+    function calcDepositOut(uint256 _amountIn) external view override returns (uint256) {
         return _calcDepositOut(_amountIn);
     }
 

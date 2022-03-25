@@ -27,7 +27,7 @@ contract Registry is Ownable {
      * @param config contract addresses of deployment
      * @dev This is not called from a contract/factory but directly from the deployment script.
      */
-    function addTenderizer(TenderizerConfig calldata config) public onlyOwner {
+    function addTenderizer(TenderizerConfig calldata config) external onlyOwner {
         emit TenderizerCreated(config);
     }
 }

@@ -16,7 +16,7 @@ interface IMulticall {
 /// @notice Enables calling multiple methods in a single call to the contract
 abstract contract Multicall is IMulticall {
     /// @inheritdoc IMulticall
-    function multicall(bytes[] calldata _data) public payable override returns (bytes[] memory results) {
+    function multicall(bytes[] calldata _data) external payable override returns (bytes[] memory results) {
         results = new bytes[](_data.length);
         for (uint256 i = 0; i < _data.length; i++) {
             (bool success, bytes memory result) = address(this).delegatecall(_data[i]);

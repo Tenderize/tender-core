@@ -19,7 +19,7 @@ contract Graph is Tenderizer {
     // Eventws for WithdrawalPool
     event ProcessUnstakes(address indexed from, address indexed node, uint256 amount);
     event ProcessWithdraws(address indexed from, uint256 amount);
-    
+
     // 100% in parts per million
     uint32 private constant MAX_PPM = 1000000;
 
@@ -37,7 +37,7 @@ contract Graph is Tenderizer {
         ITenderToken _tenderTokenTarget,
         TenderFarmFactory _tenderFarmFactory,
         ITenderSwapFactory _tenderSwapFactory
-    ) public {
+    ) external {
         Tenderizer._initialize(
             _steak,
             _symbol,
@@ -149,12 +149,12 @@ contract Graph is Tenderizer {
         }
 
         uint256 balBefore = steak.balanceOf(address(this));
-        
+
         graph.withdrawDelegated(node_, address(0));
-        
+
         uint256 balAfter = steak.balanceOf(address(this));
         uint256 amount = balAfter - balBefore;
-        
+
         withdrawPool.processWihdrawal(amount);
 
         emit ProcessWithdraws(msg.sender, amount);
@@ -185,8 +185,7 @@ contract Graph is Tenderizer {
         // calculate what the new currentPrinciple would be after the call
         // but excluding fees from rewards for this rebase
         // which still need to be calculated if stake >= currentPrincipal
-        uint256 stake_ = _newStake + toBeStaked - withdrawPool.pendingUnlock
-            - pendingFees - pendingLiquidityFees;
+        uint256 stake_ = _newStake + toBeStaked - withdrawPool.pendingUnlock - pendingFees - pendingLiquidityFees;
 
         // Difference is negative, no rewards have been earnt
         // So no fees are charged
@@ -198,9 +197,9 @@ contract Graph is Tenderizer {
             uint256 totalTokens = totalUnstakePoolTokens + currentPrincipal_;
             if (totalTokens == 0) return;
 
-            uint256 unstakePoolSlash = diff * totalUnstakePoolTokens / totalTokens;
+            uint256 unstakePoolSlash = (diff * totalUnstakePoolTokens) / totalTokens;
             withdrawPool.updateTotalTokens(totalUnstakePoolTokens - unstakePoolSlash);
-            
+
             emit RewardsClaimed(-int256(diff), stake_, currentPrincipal_);
 
             return;
