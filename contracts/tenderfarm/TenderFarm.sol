@@ -84,7 +84,7 @@ contract TenderFarm is Initializable, ITenderFarm, SelfPermit {
         bytes32 _r,
         bytes32 _s
     ) external override {
-        _selfPermit(address(token), _amount, _deadline, _v, _r, _s);
+        selfPermit(address(token), _amount, _deadline, _v, _r, _s);
         _farmFor(msg.sender, _amount);
     }
 

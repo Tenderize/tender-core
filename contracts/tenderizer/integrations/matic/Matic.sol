@@ -69,15 +69,13 @@ contract Matic is Tenderizer {
     }
 
     function _stake(uint256 _amount) internal override {
-        // if no amount is specified, stake all available tokens
         uint256 amount = _amount;
 
         if (amount == 0) {
             return;
-            // TODO: revert ?
         }
 
-        // use default validator share contract if _node isn't specified
+        // use validator share contract for matic
         IMatic matic_ = matic;
 
         // approve tokens
@@ -97,13 +95,12 @@ contract Matic is Tenderizer {
     ) internal override returns (uint256 withdrawalLockID) {
         uint256 amount = _amount;
 
-        // use default validator share contract if _node isn't specified
+        // use validator share contract for matic
         IMatic matic_ = IMatic(_node);
 
         uint256 exhangeRatePrecision = _getExchangeRatePrecision(matic_);
         uint256 fxRate = _getExchangeRate(matic_);
 
-        // Sanity check. Controller already checks user deposits and withdrawals > 0
         if (_account != gov) require(amount > 0, "ZERO_AMOUNT");
         if (amount == 0) {
             uint256 shares = matic_.balanceOf(address(this));
@@ -117,7 +114,7 @@ contract Matic is Tenderizer {
         uint256 max = ((amount * exhangeRatePrecision) / fxRate) + 1;
         matic_.sellVoucher_new(amount, max);
 
-        // Manage Livepeer unbonding locks
+        // Manage Matic unbonding locks
         withdrawalLockID = withdrawLocks.unlock(_account, amount);
 
         emit Unstake(_account, address(matic_), amount, withdrawalLockID);
@@ -133,7 +130,7 @@ contract Matic is Tenderizer {
         require(balAfter >= balBefore, "ZERO_AMOUNT");
         uint256 amount = balAfter - balBefore;
 
-        // Transfer amount from unbondingLock to _account
+        // Transfer undelegated amount to _account
         steak.transfer(_account, amount);
 
         emit Withdraw(_account, amount, _withdrawalID);

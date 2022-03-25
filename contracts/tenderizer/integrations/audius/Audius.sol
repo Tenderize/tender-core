@@ -58,7 +58,7 @@ contract Audius is Tenderizer {
     }
 
     function _stake(uint256 _amount) internal override {
-        // check that there are enough tokens to stake
+        // Only stake available tokens that are not pending withdrawal
         uint256 amount = _amount;
         uint256 pendingWithdrawals = withdrawPool.getAmount();
 
@@ -73,7 +73,8 @@ contract Audius is Tenderizer {
 
         // stake tokens
         address _node = node;
-        audius.delegateStake(_node, amount);
+        uint256 totalNewStake = audius.delegateStake(_node, amount);
+        assert(totalNewStake >= amount);
 
         emit Stake(_node, amount);
     }
@@ -95,14 +96,10 @@ contract Audius is Tenderizer {
         emit Unstake(_account, _node, amount, unstakeLockID);
     }
 
-    function processUnstake(address _node) external onlyGov {
+    function processUnstake() external onlyGov {
         uint256 amount = withdrawPool.processUnlocks();
 
-        // if no _node is specified, use default
-        address node_ = _node;
-        if (node_ == address(0)) {
-            node_ = node;
-        }
+        address node_ = node;
 
         // Undelegate from audius
         audius.requestUndelegateStake(node_, amount);
@@ -118,9 +115,7 @@ contract Audius is Tenderizer {
         emit Withdraw(_account, amount, _withdrawalID);
     }
 
-    function processWithdraw(
-        address /* _node */
-    ) external onlyGov {
+    function processWithdraw() external onlyGov {
         uint256 balBefore = steak.balanceOf(address(this));
 
         audius.undelegateStake();

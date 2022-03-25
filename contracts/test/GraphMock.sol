@@ -38,8 +38,9 @@ contract GraphMock is MockStaking {
 
     function delegate(address _indexer, uint256 _tokens) external reverted(this.delegate.selector) returns (uint256) {
         require(token.transferFrom(msg.sender, address(this), _tokens));
-
-        staked += _tokens - ((_tokens * this.delegationTaxPercentage()) / MAX_PPM);
+        uint256 add = _tokens - ((_tokens * this.delegationTaxPercentage()) / MAX_PPM);
+        staked += add;
+        return add;
     }
 
     function undelegate(address _indexer, uint256 _shares)

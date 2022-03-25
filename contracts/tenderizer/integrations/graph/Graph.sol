@@ -62,7 +62,7 @@ contract Graph is Tenderizer {
     }
 
     function _stake(uint256 _amount) internal override {
-        // check that there are enough tokens to stake
+        // Only stake available tokens that are not pending withdrawal
         uint256 amount = _amount;
         uint256 pendingWithdrawals = withdrawPool.getAmount();
 
@@ -100,14 +100,10 @@ contract Graph is Tenderizer {
         emit Unstake(_account, _node, amount, unstakeLockID);
     }
 
-    function processUnstake(address _node) external onlyGov {
+    function processUnstake() external onlyGov {
         uint256 amount = withdrawPool.processUnlocks();
 
-        // if no _node is specified, use default
-        address node_ = _node;
-        if (node_ == address(0)) {
-            node_ = node;
-        }
+        address node_ = node;
 
         // Calculate the amount of shares to undelegate
         IGraph.DelegationPool memory delPool = graph.delegationPools(node_);
@@ -139,16 +135,10 @@ contract Graph is Tenderizer {
         emit Withdraw(_account, amount, _withdrawalID);
     }
 
-    function processWithdraw(address _node) external onlyGov {
-        // if no _node is specified, use default
-        address node_ = _node;
-        if (node_ == address(0)) {
-            node_ = node;
-        }
-
+    function processWithdraw() external onlyGov {
         uint256 balBefore = steak.balanceOf(address(this));
 
-        graph.withdrawDelegated(node_, address(0));
+        graph.withdrawDelegated(node, address(0));
 
         uint256 balAfter = steak.balanceOf(address(this));
         uint256 amount = balAfter - balBefore;

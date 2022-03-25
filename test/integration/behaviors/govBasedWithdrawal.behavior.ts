@@ -30,14 +30,14 @@ export default function suite () {
   describe('gov withdrawal', async () => {
     beforeEach(async function () {
       // Gov Unstake
-      await ctx.Tenderizer.processUnstake(ethers.constants.AddressZero)
+      await ctx.Tenderizer.processUnstake()
       balBefore = await ctx.Steak.balanceOf(ctx.Tenderizer.address)
-      tx = await ctx.Tenderizer.processWithdraw(ethers.constants.AddressZero)
+      tx = await ctx.Tenderizer.processWithdraw()
     })
 
     it('reverts if undelegateStake() reverts', async () => {
       await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.withdrawStake), true)
-      await expect(ctx.Tenderizer.processWithdraw(ethers.constants.AddressZero)).to.be.reverted
+      await expect(ctx.Tenderizer.processWithdraw()).to.be.reverted
       await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.withdrawStake), false)
     })
 
@@ -57,8 +57,8 @@ export default function suite () {
 
     beforeEach(async function () {
       // Gov Unstake
-      await ctx.Tenderizer.processUnstake(ethers.constants.AddressZero)
-      await ctx.Tenderizer.processWithdraw(ethers.constants.AddressZero)
+      await ctx.Tenderizer.processUnstake()
+      await ctx.Tenderizer.processWithdraw()
       steakBalanceBefore = await ctx.Steak.balanceOf(ctx.signers[2].address)
       tx = await ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.unbondLockID)
     })
@@ -79,21 +79,21 @@ export default function suite () {
     })
   })
 
-  describe('negative rebase before gov processes unstakes', async function (){
+  describe('negative rebase before gov processes unstakes', async function () {
     let steakBalanceBefore : BigNumber
     let slashFromWithdrawal: BigNumber
 
-    beforeEach(async function (){
+    beforeEach(async function () {
       // reduce staked on mock
       const slashAmount = ethers.utils.parseEther('1')
-      let staked = await ctx.StakingContract.staked()
+      const staked = await ctx.StakingContract.staked()
       await ctx.StakingContract.setStaked(staked.sub(slashAmount))
       const cpBefore = await ctx.Tenderizer.totalStakedTokens()
       await ctx.Tenderizer.claimRewards()
-      
+
       // Gov Unstake
-      await ctx.Tenderizer.processUnstake(ethers.constants.AddressZero)
-      await ctx.Tenderizer.processWithdraw(ethers.constants.AddressZero)
+      await ctx.Tenderizer.processUnstake()
+      await ctx.Tenderizer.processWithdraw()
       slashFromWithdrawal = slashAmount.mul(ctx.withdrawAmount).div(cpBefore.add(ctx.withdrawAmount))
       steakBalanceBefore = await ctx.Steak.balanceOf(ctx.signers[2].address)
       await ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.unbondLockID)
@@ -105,20 +105,20 @@ export default function suite () {
     })
   })
 
-  describe('negative rebase after gov processes unstakes', async function (){
+  describe('negative rebase after gov processes unstakes', async function () {
     let steakBalanceBefore : BigNumber
     let slashFromWithdrawal: BigNumber
 
-    beforeEach(async function (){
+    beforeEach(async function () {
       // Gov Unstake
-      await ctx.Tenderizer.processUnstake(ethers.constants.AddressZero)
+      await ctx.Tenderizer.processUnstake()
       // reduce staked on mock
       const slashAmount = ethers.utils.parseEther('1')
-      let staked = await ctx.StakingContract.staked()
+      const staked = await ctx.StakingContract.staked()
       const cpBefore = await ctx.Tenderizer.totalStakedTokens()
       await ctx.StakingContract.setStaked(staked.sub(slashAmount))
 
-      await ctx.Tenderizer.processWithdraw(ethers.constants.AddressZero)
+      await ctx.Tenderizer.processWithdraw()
       await ctx.Tenderizer.claimRewards()
       slashFromWithdrawal = slashAmount.mul(ctx.withdrawAmount).div(cpBefore.add(ctx.withdrawAmount))
       steakBalanceBefore = await ctx.Steak.balanceOf(ctx.signers[2].address)
@@ -131,18 +131,18 @@ export default function suite () {
     })
   })
 
-  describe('negative rebase after gov processes withdraws', async function (){
+  describe('negative rebase after gov processes withdraws', async function () {
     let steakBalanceBefore : BigNumber
     let slashFromWithdrawal: BigNumber
 
-    beforeEach(async function (){
+    beforeEach(async function () {
       // TODO: Add usntakes from other accounts
       // Gov Unstake
-      await ctx.Tenderizer.processUnstake(ethers.constants.AddressZero)
-      await ctx.Tenderizer.processWithdraw(ethers.constants.AddressZero)
+      await ctx.Tenderizer.processUnstake()
+      await ctx.Tenderizer.processWithdraw()
       // reduce staked on mock
       const slashAmount = ethers.utils.parseEther('1')
-      let staked = await ctx.StakingContract.staked()
+      const staked = await ctx.StakingContract.staked()
       await ctx.StakingContract.setStaked(staked.sub(slashAmount))
       const cpBefore = await ctx.Tenderizer.totalStakedTokens()
       await ctx.Tenderizer.claimRewards()

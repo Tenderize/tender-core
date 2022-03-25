@@ -63,12 +63,10 @@ contract Livepeer is Tenderizer {
     }
 
     function _stake(uint256 _amount) internal override {
-        // if no amount is specified, stake all available tokens
         uint256 amount = _amount;
 
         if (amount == 0) {
             return;
-            // TODO: revert ?
         }
 
         // approve amount to Livepeer protocol
@@ -81,7 +79,6 @@ contract Livepeer is Tenderizer {
         emit Stake(_node, amount);
     }
 
-    // TODO: is unstaking when front running a negative rebase exploitable ?
     function _unstake(
         address _account,
         address _node,
@@ -89,7 +86,6 @@ contract Livepeer is Tenderizer {
     ) internal override returns (uint256 withdrawalLockID) {
         uint256 amount = _amount;
 
-        // Sanity check. Controller already checks user deposits and withdrawals > 0
         if (_account != gov) require(amount > 0, "ZERO_AMOUNT");
         if (amount == 0) {
             amount = livepeer.pendingStake(address(this), MAX_ROUND);
