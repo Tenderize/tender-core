@@ -264,10 +264,9 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
      * @dev Requirements:
      * - `_recipient` cannot be the zero address.
      */
-    function _mintShares(address _recipient, uint256 _shares) internal returns (uint256 newTotalShares) {
+    function _mintShares(address _recipient, uint256 _shares) internal {
         require(_recipient != address(0), "MINT_TO_THE_ZERO_ADDRESS");
 
-        newTotalShares = totalShares + _shares;
 
         shares[_recipient] += _shares;
 
@@ -277,7 +276,7 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
         // as the result. This is equivalent to performing a send from each other token holder's
         // address to `address`, but we cannot reflect this as it would require sending an unbounded
         // number of events.
-        totalShares = newTotalShares;
+        totalShares += _shares;
     }
 
     /**
