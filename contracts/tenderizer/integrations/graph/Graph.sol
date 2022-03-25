@@ -74,7 +74,7 @@ contract Graph is Tenderizer {
         amount -= pendingWithdrawals;
 
         // approve amount to Graph protocol
-        steak.approve(address(graph), amount);
+        require(steak.approve(address(graph), amount), "APPROVE_FAIL");
 
         // stake tokens
         address _node = node;

@@ -70,7 +70,7 @@ contract Livepeer is Tenderizer {
         }
 
         // approve amount to Livepeer protocol
-        steak.approve(address(livepeer), amount);
+        require(steak.approve(address(livepeer), amount), "APPROVE_FAIL");
 
         // stake tokens
         address _node = node;

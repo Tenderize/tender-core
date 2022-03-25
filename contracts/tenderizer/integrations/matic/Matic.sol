@@ -79,7 +79,7 @@ contract Matic is Tenderizer {
         IMatic matic_ = matic;
 
         // approve tokens
-        steak.approve(maticStakeManager, amount);
+        require(steak.approve(maticStakeManager, amount), "APPROVE_FAIL");
 
         // stake tokens
         uint256 min = ((amount * _getExchangeRatePrecision(matic_)) / _getExchangeRate(matic_)) - 1;

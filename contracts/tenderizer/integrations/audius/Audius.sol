@@ -69,7 +69,7 @@ contract Audius is Tenderizer {
         amount -= pendingWithdrawals;
 
         // Approve amount to Audius protocol
-        steak.approve(audiusStaking, amount);
+       require(steak.approve(audiusStaking, amount), "APPROVE_FAIL");
 
         // stake tokens
         address _node = node;
