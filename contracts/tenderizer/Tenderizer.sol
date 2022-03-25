@@ -82,18 +82,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
 
     /// @inheritdoc ITenderizer
     function deposit(uint256 _amount) public override {
-        require(_amount > 0, "ZERO_AMOUNT");
-
-        // Calculate tenderTokens to be minted
-        uint256 amountOut = _calcDepositOut(_amount);
-
-        // mint tenderTokens
-        require(tenderToken.mint(msg.sender, amountOut), "TENDER_MINT_FAILED");
-
-        // Transfer tokens to tenderizer
-        require(steak.transferFrom(msg.sender, address(this), _amount), "STEAK_TRANSFERFROM_FAILED");
-
-        _deposit(msg.sender, _amount);
+        _depositHook(msg.sender, _amount);
     }
 
     /// @inheritdoc ITenderizer
@@ -106,7 +95,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     ) external override {
         _selfPermit(address(steak), _amount, _deadline, _v, _r, _s);
 
-        deposit(_amount);
+        _depositHook(msg.sender, _amount);
     }
 
     /// @inheritdoc ITenderizer
@@ -236,6 +225,21 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     // Internal functions
+
+    function _depositHook(address _for, uint256 _amount) internal {
+        require(_amount > 0, "ZERO_AMOUNT");
+
+        // Calculate tenderTokens to be minted
+        uint256 amountOut = _calcDepositOut(_amount);
+
+        // mint tenderTokens
+        require(tenderToken.mint(_for, amountOut), "TENDER_MINT_FAILED");
+
+        // Transfer tokens to tenderizer
+        require(steak.transferFrom(_for, address(this), _amount), "STEAK_TRANSFERFROM_FAILED");
+
+        _deposit(_for, _amount);
+    }
 
     function _calcDepositOut(uint256 _amountIn) internal view virtual returns (uint256) {
         return _amountIn;
