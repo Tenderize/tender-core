@@ -5,6 +5,8 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 import "../../../libs/MathUtils.sol";
 
 import "../../Tenderizer.sol";
@@ -16,6 +18,7 @@ import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
 
 contract Matic is Tenderizer {
     using WithdrawalLocks for WithdrawalLocks.Locks;
+    using SafeERC20 for IERC20;
 
     // Matic exchange rate precision
     uint256 constant EXCHANGE_RATE_PRECISION = 100; // For Validator ID < 8
@@ -79,7 +82,7 @@ contract Matic is Tenderizer {
         IMatic matic_ = matic;
 
         // approve tokens
-        require(steak.approve(maticStakeManager, amount), "APPROVE_FAIL");
+        steak.safeApprove(maticStakeManager, amount);
 
         // stake tokens
         uint256 min = ((amount * _getExchangeRatePrecision(matic_)) / _getExchangeRate(matic_)) - 1;
@@ -131,7 +134,7 @@ contract Matic is Tenderizer {
         uint256 amount = balAfter - balBefore;
 
         // Transfer undelegated amount to _account
-        require(steak.transfer(_account, amount), "TRANSFER_FAIL");
+        steak.safeTransfer(_account, amount);
 
         emit Withdraw(_account, amount, _withdrawalID);
     }

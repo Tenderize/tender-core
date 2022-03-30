@@ -5,8 +5,8 @@ import { getSighash } from '../../util/helpers'
 import { Context } from 'mocha'
 
 export default function suite () {
-  let unstakeTx: any
-  let processUnstakeTx: any
+  let unstakeTx: Transaction
+  let processUnstakeTx: Transaction
   let ctx: Context
   const secondDeposit = ethers.utils.parseEther('10')
   const acceptableDelta = 2
@@ -51,7 +51,6 @@ export default function suite () {
     })
 
     it('should emit Unstake event from Tenderizer', async () => {
-      await unstakeTx.wait()
       expect(unstakeTx).to.emit(ctx.Tenderizer, 'Unstake')
         .withArgs(ctx.signers[2].address, ctx.NODE, ctx.withdrawAmount, ctx.unbondLockID)
     })

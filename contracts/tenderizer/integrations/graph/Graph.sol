@@ -5,6 +5,7 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../../../libs/MathUtils.sol";
 
 import "../../Tenderizer.sol";
@@ -15,6 +16,7 @@ import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
 
 contract Graph is Tenderizer {
     using WithdrawalPools for WithdrawalPools.Pool;
+    using SafeERC20 for IERC20;
 
     // Eventws for WithdrawalPool
     event ProcessUnstakes(address indexed from, address indexed node, uint256 amount);
@@ -74,7 +76,7 @@ contract Graph is Tenderizer {
         amount -= pendingWithdrawals;
 
         // approve amount to Graph protocol
-        require(steak.approve(address(graph), amount), "APPROVE_FAIL");
+        steak.safeApprove(address(graph), amount);
 
         // stake tokens
         address _node = node;
@@ -128,7 +130,7 @@ contract Graph is Tenderizer {
             // Account for roundoff errors in shares calculations
             uint256 steakBal = steak.balanceOf(address(this));
             if (amount > steakBal) {
-                require(steak.transfer(_account, steakBal), "TRANSFER_FAIL");
+                steak.safeTransfer(_account, steakBal);
             }
         }
 

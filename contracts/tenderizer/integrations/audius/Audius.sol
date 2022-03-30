@@ -5,8 +5,8 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../../../libs/MathUtils.sol";
-
 import "../../Tenderizer.sol";
 import "../../WithdrawalPools.sol";
 import "./IAudius.sol";
@@ -15,7 +15,7 @@ import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
 
 contract Audius is Tenderizer {
     using WithdrawalPools for WithdrawalPools.Pool;
-
+    using SafeERC20 for IERC20;
     // Eventws for WithdrawalPool
     event ProcessUnstakes(address indexed from, address indexed node, uint256 amount);
     event ProcessWithdraws(address indexed from, uint256 amount);
@@ -69,7 +69,7 @@ contract Audius is Tenderizer {
         amount -= pendingWithdrawals;
 
         // Approve amount to Audius protocol
-       require(steak.approve(audiusStaking, amount), "APPROVE_FAIL");
+       steak.safeApprove(audiusStaking, amount);
 
         // stake tokens
         address _node = node;
@@ -110,7 +110,7 @@ contract Audius is Tenderizer {
     function _withdraw(address _account, uint256 _withdrawalID) internal override {
         uint256 amount = withdrawPool.withdraw(_withdrawalID, _account);
         // Transfer amount from unbondingLock to _account
-        require(steak.transfer(_account, amount), "TRANSFER_FAIL");
+        steak.safeTransfer(_account, amount);
 
         emit Withdraw(_account, amount, _withdrawalID);
     }
@@ -139,7 +139,6 @@ contract Audius is Tenderizer {
     }
 
     function _processNewStake(uint256 _newStake) internal override {
-        // TODO: all of the below could be a general internal function in Tenderizer.sol
         uint256 currentPrincipal_ = currentPrincipal;
 
         // adjust current token balance for potential protocol specific taxes or staking fees

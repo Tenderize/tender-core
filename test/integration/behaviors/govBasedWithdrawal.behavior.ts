@@ -5,7 +5,6 @@ import { getSighash } from '../../util/helpers'
 import { Context } from 'mocha'
 
 export default function suite () {
-  let tx: Transaction
   let ctx: Context
   const secondDeposit = ethers.utils.parseEther('10')
   let balBefore: BigNumber
@@ -28,6 +27,7 @@ export default function suite () {
   })
 
   describe('gov withdrawal', async () => {
+    let tx: Transaction
     beforeEach(async function () {
       // Gov Unstake
       await ctx.Tenderizer.processUnstake()
@@ -54,6 +54,7 @@ export default function suite () {
 
   describe('user withdrawal', async () => {
     let steakBalanceBefore : BigNumber
+    let tx: Transaction
 
     beforeEach(async function () {
       // Gov Unstake
@@ -63,7 +64,7 @@ export default function suite () {
       tx = await ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.unbondLockID)
     })
 
-    it('reverts if account mismatch from unboondigLock', async () => {
+    it('reverts if account mismatch from unbondigLock', async () => {
       await expect(ctx.Tenderizer.connect(ctx.signers[1]).withdraw(ctx.unbondLockID))
         .to.be.revertedWith('ACCOUNT_MISTMATCH')
     })

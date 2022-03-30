@@ -5,6 +5,8 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 import "../../../libs/MathUtils.sol";
 
 import "../../Tenderizer.sol";
@@ -19,6 +21,8 @@ import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
 
 contract Livepeer is Tenderizer {
     using WithdrawalLocks for WithdrawalLocks.Locks;
+    using SafeERC20 for IERC20;
+    using SafeERC20 for IWETH;
 
     uint256 private constant MAX_ROUND = 2**256 - 1;
 
@@ -70,7 +74,7 @@ contract Livepeer is Tenderizer {
         }
 
         // approve amount to Livepeer protocol
-        require(steak.approve(address(livepeer), amount), "APPROVE_FAIL");
+        steak.safeApprove(address(livepeer), amount);
 
         // stake tokens
         address _node = node;
@@ -110,7 +114,7 @@ contract Livepeer is Tenderizer {
         livepeer.withdrawStake(_withdrawalID);
 
         // Transfer amount from unbondingLock to _account
-        require(steak.transfer(_account, amount), "TRANSFER_FAIL");
+        steak.safeTransfer(_account, amount);
 
         emit Withdraw(_account, amount, _withdrawalID);
     }
@@ -136,7 +140,7 @@ contract Livepeer is Tenderizer {
             // Wrap ETH
             uint256 bal = address(this).balance;
             WETH.deposit{ value: bal }();
-            require(WETH.approve(address(uniswapRouter), bal), "WETH_APPROVE_FAIL");
+            WETH.safeApprove(address(uniswapRouter), bal);
 
             // swap ETH fees for LPT
             if (address(uniswapRouter) != address(0)) {

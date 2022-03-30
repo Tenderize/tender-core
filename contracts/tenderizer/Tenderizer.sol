@@ -6,6 +6,7 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./ITenderizer.sol";
 import "../token/ITenderToken.sol";
@@ -21,6 +22,8 @@ import "../helpers/SelfPermit.sol";
  * @dev New implementations are required to inherit this contract and override any required internal functions.
  */
 abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
+    using SafeERC20 for IERC20;
+
     IERC20 public steak;
     ITenderToken public tenderToken;
     ITenderFarm public tenderFarm;
@@ -236,7 +239,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         require(tenderToken.mint(_for, amountOut), "TENDER_MINT_FAILED");
 
         // Transfer tokens to tenderizer
-        require(steak.transferFrom(_for, address(this), _amount), "STEAK_TRANSFERFROM_FAILED");
+        steak.safeTransferFrom(_for, address(this), _amount);
 
         _deposit(_for, _amount);
     }
