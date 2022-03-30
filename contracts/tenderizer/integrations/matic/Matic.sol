@@ -5,6 +5,8 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 import "../../../libs/MathUtils.sol";
 
 import "../../Tenderizer.sol";
@@ -16,6 +18,7 @@ import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
 
 contract Matic is Tenderizer {
     using WithdrawalLocks for WithdrawalLocks.Locks;
+    using SafeERC20 for IERC20;
 
     // Matic exchange rate precision
     uint256 constant EXCHANGE_RATE_PRECISION = 100; // For Validator ID < 8
@@ -39,7 +42,7 @@ contract Matic is Tenderizer {
         ITenderToken _tenderTokenTarget,
         TenderFarmFactory _tenderFarmFactory,
         ITenderSwapFactory _tenderSwapFactory
-    ) public {
+    ) external {
         Tenderizer._initialize(
             _steak,
             _symbol,
@@ -68,28 +71,18 @@ contract Matic is Tenderizer {
         emit Deposit(_from, _amount);
     }
 
-    function _stake(address _node, uint256 _amount) internal override {
-        // if no amount is specified, stake all available tokens
+    function _stake(uint256 _amount) internal override {
         uint256 amount = _amount;
 
         if (amount == 0) {
             return;
-            // TODO: revert ?
         }
 
-        // if no _node is specified, return
-        if (_node == address(0)) {
-            return;
-        }
-
-        // use default validator share contract if _node isn't specified
+        // use validator share contract for matic
         IMatic matic_ = matic;
-        if (_node != address(0)) {
-            matic_ = IMatic(_node);
-        }
 
         // approve tokens
-        steak.approve(maticStakeManager, amount);
+        steak.safeApprove(maticStakeManager, amount);
 
         // stake tokens
         uint256 min = ((amount * _getExchangeRatePrecision(matic_)) / _getExchangeRate(matic_)) - 1;
@@ -105,13 +98,12 @@ contract Matic is Tenderizer {
     ) internal override returns (uint256 withdrawalLockID) {
         uint256 amount = _amount;
 
-        // use default validator share contract if _node isn't specified
+        // use validator share contract for matic
         IMatic matic_ = IMatic(_node);
 
         uint256 exhangeRatePrecision = _getExchangeRatePrecision(matic_);
         uint256 fxRate = _getExchangeRate(matic_);
 
-        // Sanity check. Controller already checks user deposits and withdrawals > 0
         if (_account != gov) require(amount > 0, "ZERO_AMOUNT");
         if (amount == 0) {
             uint256 shares = matic_.balanceOf(address(this));
@@ -125,7 +117,7 @@ contract Matic is Tenderizer {
         uint256 max = ((amount * exhangeRatePrecision) / fxRate) + 1;
         matic_.sellVoucher_new(amount, max);
 
-        // Manage Livepeer unbonding locks
+        // Manage Matic unbonding locks
         withdrawalLockID = withdrawLocks.unlock(_account, amount);
 
         emit Unstake(_account, address(matic_), amount, withdrawalLockID);
@@ -138,11 +130,11 @@ contract Matic is Tenderizer {
         uint256 balBefore = steak.balanceOf(address(this));
         matic.unstakeClaimTokens_new(_withdrawalID);
         uint256 balAfter = steak.balanceOf(address(this));
-        uint256 amount = balAfter >= balBefore ? balAfter - balBefore : 0;
-        require(amount > 0, "ZERO_AMOUNT");
+        require(balAfter >= balBefore, "ZERO_AMOUNT");
+        uint256 amount = balAfter - balBefore;
 
-        // Transfer amount from unbondingLock to _account
-        steak.transfer(_account, amount);
+        // Transfer undelegated amount to _account
+        steak.safeTransfer(_account, amount);
 
         emit Withdraw(_account, amount, _withdrawalID);
     }

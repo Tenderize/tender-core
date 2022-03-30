@@ -71,12 +71,12 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
     }
 
     /// @inheritdoc ITenderToken
-    function getTotalPooledTokens() public view override returns (uint256) {
+    function getTotalPooledTokens() external view override returns (uint256) {
         return _getTotalPooledTokens();
     }
 
     /// @inheritdoc ITenderToken
-    function getTotalShares() public view override returns (uint256) {
+    function getTotalShares() external view override returns (uint256) {
         return _getTotalShares();
     }
 
@@ -86,7 +86,7 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
     }
 
     /// @inheritdoc ITenderToken
-    function sharesOf(address _account) public view override returns (uint256) {
+    function sharesOf(address _account) external view override returns (uint256) {
         return _sharesOf(_account);
     }
 
@@ -101,12 +101,12 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
     }
 
     /// @inheritdoc ITenderToken
-    function tokensToShares(uint256 _tokens) public view override returns (uint256) {
+    function tokensToShares(uint256 _tokens) external view override returns (uint256) {
         return _tokensToShares(_tokens);
     }
 
     /// @inheritdoc ITenderToken
-    function sharesToTokens(uint256 _shares) public view override returns (uint256) {
+    function sharesToTokens(uint256 _shares) external view override returns (uint256) {
         return _sharesToTokens(_shares);
     }
 
@@ -163,20 +163,20 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
     }
 
     /// @inheritdoc ITenderToken
-    function mint(address _recipient, uint256 _amount) public override onlyOwner returns (bool) {
+    function mint(address _recipient, uint256 _amount) external override onlyOwner returns (bool) {
         _mintShares(_recipient, _tokensToShares(_amount));
         return true;
     }
 
     /// @inheritdoc ITenderToken
-    function burn(address _account, uint256 _amount) public override onlyOwner returns (bool) {
+    function burn(address _account, uint256 _amount) external override onlyOwner returns (bool) {
         uint256 _sharesToburn = _tokensToShares(_amount);
         _burnShares(_account, _sharesToburn);
         return true;
     }
 
     /// @inheritdoc ITenderToken
-    function setTotalStakedReader(ITotalStakedReader _totalStakedReader) public override onlyOwner {
+    function setTotalStakedReader(ITotalStakedReader _totalStakedReader) external override onlyOwner {
         require(address(_totalStakedReader) != address(0));
         totalStakedReader = _totalStakedReader;
     }
@@ -264,10 +264,9 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
      * @dev Requirements:
      * - `_recipient` cannot be the zero address.
      */
-    function _mintShares(address _recipient, uint256 _shares) internal returns (uint256 newTotalShares) {
+    function _mintShares(address _recipient, uint256 _shares) internal {
         require(_recipient != address(0), "MINT_TO_THE_ZERO_ADDRESS");
 
-        newTotalShares = totalShares + _shares;
 
         shares[_recipient] += _shares;
 
@@ -277,7 +276,7 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
         // as the result. This is equivalent to performing a send from each other token holder's
         // address to `address`, but we cannot reflect this as it would require sending an unbounded
         // number of events.
-        totalShares = newTotalShares;
+        totalShares += _shares;
     }
 
     /**

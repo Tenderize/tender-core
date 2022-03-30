@@ -5,6 +5,7 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../../../libs/MathUtils.sol";
 
 import "../../Tenderizer.sol";
@@ -15,11 +16,12 @@ import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
 
 contract Graph is Tenderizer {
     using WithdrawalPools for WithdrawalPools.Pool;
+    using SafeERC20 for IERC20;
 
     // Eventws for WithdrawalPool
     event ProcessUnstakes(address indexed from, address indexed node, uint256 amount);
     event ProcessWithdraws(address indexed from, uint256 amount);
-    
+
     // 100% in parts per million
     uint32 private constant MAX_PPM = 1000000;
 
@@ -37,7 +39,7 @@ contract Graph is Tenderizer {
         ITenderToken _tenderTokenTarget,
         TenderFarmFactory _tenderFarmFactory,
         ITenderSwapFactory _tenderSwapFactory
-    ) public {
+    ) external {
         Tenderizer._initialize(
             _steak,
             _symbol,
@@ -61,27 +63,25 @@ contract Graph is Tenderizer {
         emit Deposit(_from, _amount);
     }
 
-    function _stake(address _node, uint256 _amount) internal override {
-        // check that there are enough tokens to stake
+    function _stake(uint256 _amount) internal override {
+        // Only stake available tokens that are not pending withdrawal
         uint256 amount = _amount;
         uint256 pendingWithdrawals = withdrawPool.getAmount();
 
+        // This check also validates 'amount - pendingWithdrawals' > 0
         if (amount <= pendingWithdrawals) {
             return;
         }
 
         amount -= pendingWithdrawals;
 
-        // if no _node is specified, return
-        if (_node == address(0)) {
-            return;
-        }
-
         // approve amount to Graph protocol
-        steak.approve(address(graph), amount);
+        steak.safeApprove(address(graph), amount);
 
         // stake tokens
-        graph.delegate(_node, amount);
+        address _node = node;
+        uint256 delegatedShares = graph.delegate(_node, amount);
+        assert(delegatedShares > 0);
 
         emit Stake(_node, amount);
     }
@@ -102,14 +102,10 @@ contract Graph is Tenderizer {
         emit Unstake(_account, _node, amount, unstakeLockID);
     }
 
-    function processUnstake(address _node) external onlyGov {
+    function processUnstake() external onlyGov {
         uint256 amount = withdrawPool.processUnlocks();
 
-        // if no _node is specified, use default
-        address node_ = _node;
-        if (node_ == address(0)) {
-            node_ = node;
-        }
+        address node_ = node;
 
         // Calculate the amount of shares to undelegate
         IGraph.DelegationPool memory delPool = graph.delegationPools(node_);
@@ -134,27 +130,21 @@ contract Graph is Tenderizer {
             // Account for roundoff errors in shares calculations
             uint256 steakBal = steak.balanceOf(address(this));
             if (amount > steakBal) {
-                steak.transfer(_account, steakBal);
+                steak.safeTransfer(_account, steakBal);
             }
         }
 
         emit Withdraw(_account, amount, _withdrawalID);
     }
 
-    function processWithdraw(address _node) external onlyGov {
-        // if no _node is specified, use default
-        address node_ = _node;
-        if (node_ == address(0)) {
-            node_ = node;
-        }
-
+    function processWithdraw() external onlyGov {
         uint256 balBefore = steak.balanceOf(address(this));
-        
-        graph.withdrawDelegated(node_, address(0));
-        
+
+        graph.withdrawDelegated(node, address(0));
+
         uint256 balAfter = steak.balanceOf(address(this));
         uint256 amount = balAfter - balBefore;
-        
+
         withdrawPool.processWihdrawal(amount);
 
         emit ProcessWithdraws(msg.sender, amount);
@@ -185,8 +175,7 @@ contract Graph is Tenderizer {
         // calculate what the new currentPrinciple would be after the call
         // but excluding fees from rewards for this rebase
         // which still need to be calculated if stake >= currentPrincipal
-        uint256 stake_ = _newStake + toBeStaked - withdrawPool.pendingUnlock
-            - pendingFees - pendingLiquidityFees;
+        uint256 stake_ = _newStake + toBeStaked - withdrawPool.pendingUnlock - pendingFees - pendingLiquidityFees;
 
         // Difference is negative, no rewards have been earnt
         // So no fees are charged
@@ -198,9 +187,9 @@ contract Graph is Tenderizer {
             uint256 totalTokens = totalUnstakePoolTokens + currentPrincipal_;
             if (totalTokens == 0) return;
 
-            uint256 unstakePoolSlash = diff * totalUnstakePoolTokens / totalTokens;
+            uint256 unstakePoolSlash = (diff * totalUnstakePoolTokens) / totalTokens;
             withdrawPool.updateTotalTokens(totalUnstakePoolTokens - unstakePoolSlash);
-            
+
             emit RewardsClaimed(-int256(diff), stake_, currentPrincipal_);
 
             return;

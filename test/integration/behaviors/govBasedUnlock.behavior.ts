@@ -5,7 +5,8 @@ import { getSighash } from '../../util/helpers'
 import { Context } from 'mocha'
 
 export default function suite () {
-  let tx: Transaction
+  let unstakeTx: Transaction
+  let processUnstakeTx: Transaction
   let ctx: Context
   const secondDeposit = ethers.utils.parseEther('10')
   const acceptableDelta = 2
@@ -26,7 +27,7 @@ export default function suite () {
 
     principleBefore = await ctx.Tenderizer.currentPrincipal()
     ctx.withdrawAmount = await ctx.TenderToken.balanceOf(ctx.signers[2].address)
-    tx = await ctx.Tenderizer.connect(ctx.signers[2]).unstake(ctx.withdrawAmount)
+    unstakeTx = await ctx.Tenderizer.connect(ctx.signers[2]).unstake(ctx.withdrawAmount)
   })
 
   describe('user unlock', async () => {
@@ -50,7 +51,7 @@ export default function suite () {
     })
 
     it('should emit Unstake event from Tenderizer', async () => {
-      expect(tx).to.emit(ctx.Tenderizer, 'Unstake')
+      expect(unstakeTx).to.emit(ctx.Tenderizer, 'Unstake')
         .withArgs(ctx.signers[2].address, ctx.NODE, ctx.withdrawAmount, ctx.unbondLockID)
     })
   })
@@ -58,21 +59,22 @@ export default function suite () {
   describe('gov unlock', async () => {
     it('reverts if unlock() reverts', async () => {
       await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.unstake), true)
-      await expect(ctx.Tenderizer.processUnstake(ethers.constants.AddressZero)).to.be.reverted
+      await expect(ctx.Tenderizer.processUnstake()).to.be.reverted
       await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.unstake), false)
     })
 
     it('unlock() suceeds', async () => {
       const stakeBefore = await ctx.Tenderizer.totalStakedTokens()
 
-      tx = await ctx.Tenderizer.processUnstake(ethers.constants.AddressZero)
+      processUnstakeTx = await ctx.Tenderizer.processUnstake()
+
       // staked tokens already updated by user unstaked, gov unstake just processes
       // user unstakes, so staked tokens stays the same
       expect(stakeBefore).to.eq(await ctx.Tenderizer.totalStakedTokens())
     })
 
-    it('should emit Unstake event from Tenderizer', async () => {
-      expect(tx).to.emit(ctx.Tenderizer, 'ProcessUnstakes')
+    it('should emit ProcessUnstakes event from Tenderizer', async () => {
+      expect(processUnstakeTx).to.emit(ctx.Tenderizer, 'ProcessUnstakes')
         .withArgs(ctx.deployer, ctx.NODE, ctx.withdrawAmount)
     })
   })

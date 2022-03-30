@@ -31,6 +31,7 @@ contract AudiusMock is MockStaking {
     {
         require(token.transferFrom(msg.sender, address(this), _amount));
         staked += _amount;
+        return staked;
     }
 
     /**

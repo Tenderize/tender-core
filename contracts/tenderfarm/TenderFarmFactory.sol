@@ -24,7 +24,7 @@ contract TenderFarmFactory {
         IERC20 _stakeToken,
         ITenderToken _rewardToken,
         ITenderizer _tenderizer
-    ) public returns (ITenderFarm farm) {
+    ) external returns (ITenderFarm farm) {
         farm = ITenderFarm(Clones.clone(address(farmTarget)));
 
         require(farm.initialize(_stakeToken, _rewardToken, _tenderizer), "FAIL_INIT_TENDERFARM");

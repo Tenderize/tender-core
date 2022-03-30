@@ -58,7 +58,7 @@ contract TenderFarm is Initializable, ITenderFarm, SelfPermit {
         IERC20 _stakeToken,
         ITenderToken _rewardToken,
         ITenderizer _tenderizer
-    ) public override initializer returns (bool) {
+    ) external override initializer returns (bool) {
         token = _stakeToken;
         rewardToken = _rewardToken;
         tenderizer = _tenderizer;
@@ -72,7 +72,7 @@ contract TenderFarm is Initializable, ITenderFarm, SelfPermit {
     }
 
     /// @inheritdoc ITenderFarm
-    function farm(uint256 _amount) public override {
+    function farm(uint256 _amount) external override {
         _farmFor(msg.sender, _amount);
     }
 
@@ -83,28 +83,28 @@ contract TenderFarm is Initializable, ITenderFarm, SelfPermit {
         uint8 _v,
         bytes32 _r,
         bytes32 _s
-    ) public override {
-        _selfPermit(address(token), _amount, _deadline, _v, _r, _s);
+    ) external override {
+        selfPermit(address(token), _amount, _deadline, _v, _r, _s);
         _farmFor(msg.sender, _amount);
     }
 
     /// @inheritdoc ITenderFarm
-    function farmFor(address _for, uint256 _amount) public override {
+    function farmFor(address _for, uint256 _amount) external override {
         _farmFor(_for, _amount);
     }
 
     /// @inheritdoc ITenderFarm
-    function unfarm(uint256 _amount) public override {
+    function unfarm(uint256 _amount) external override {
         _unfarm(msg.sender, _amount);
     }
 
     /// @inheritdoc ITenderFarm
-    function harvest() public override {
+    function harvest() external override {
         _harvest(msg.sender);
     }
 
     /// @inheritdoc ITenderFarm
-    function addRewards(uint256 _amount) public override onlyTenderizer {
+    function addRewards(uint256 _amount) external override onlyTenderizer {
         uint256 _nextStake = nextTotalStake;
         require(_nextStake > 0, "NO_STAKE");
         totalStake = _nextStake;
@@ -115,12 +115,12 @@ contract TenderFarm is Initializable, ITenderFarm, SelfPermit {
     }
 
     /// @inheritdoc ITenderFarm
-    function availableRewards(address _for) public view override returns (uint256) {
+    function availableRewards(address _for) external view override returns (uint256) {
         return rewardToken.sharesToTokens(_availableRewardShares(_for));
     }
 
     /// @inheritdoc ITenderFarm
-    function stakeOf(address _of) public view override returns (uint256) {
+    function stakeOf(address _of) external view override returns (uint256) {
         return _stakeOf(_of);
     }
 

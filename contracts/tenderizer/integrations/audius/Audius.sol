@@ -5,8 +5,8 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../../../libs/MathUtils.sol";
-
 import "../../Tenderizer.sol";
 import "../../WithdrawalPools.sol";
 import "./IAudius.sol";
@@ -15,7 +15,7 @@ import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
 
 contract Audius is Tenderizer {
     using WithdrawalPools for WithdrawalPools.Pool;
-
+    using SafeERC20 for IERC20;
     // Eventws for WithdrawalPool
     event ProcessUnstakes(address indexed from, address indexed node, uint256 amount);
     event ProcessWithdraws(address indexed from, uint256 amount);
@@ -36,7 +36,7 @@ contract Audius is Tenderizer {
         ITenderToken _tenderTokenTarget,
         TenderFarmFactory _tenderFarmFactory,
         ITenderSwapFactory _tenderSwapFactory
-    ) public {
+    ) external {
         Tenderizer._initialize(
             _steak,
             _symbol,
@@ -57,8 +57,8 @@ contract Audius is Tenderizer {
         emit Deposit(_from, _amount);
     }
 
-    function _stake(address _node, uint256 _amount) internal override {
-       // check that there are enough tokens to stake
+    function _stake(uint256 _amount) internal override {
+        // Only stake available tokens that are not pending withdrawal
         uint256 amount = _amount;
         uint256 pendingWithdrawals = withdrawPool.getAmount();
 
@@ -68,16 +68,13 @@ contract Audius is Tenderizer {
 
         amount -= pendingWithdrawals;
 
-        // if no _node is specified, return
-        if (_node == address(0)) {
-            return;
-        }
-
         // Approve amount to Audius protocol
-        steak.approve(audiusStaking, amount);
+       steak.safeApprove(audiusStaking, amount);
 
         // stake tokens
-        audius.delegateStake(_node, amount);
+        address _node = node;
+        uint256 totalNewStake = audius.delegateStake(_node, amount);
+        assert(totalNewStake >= amount);
 
         emit Stake(_node, amount);
     }
@@ -92,22 +89,18 @@ contract Audius is Tenderizer {
         // Caller is a user, initialise unstake locally in Tenderizer
         require(amount > 0, "ZERO_AMOUNT");
 
-        unstakeLockID =  withdrawPool.unlock(_account, amount);
+        unstakeLockID = withdrawPool.unlock(_account, amount);
 
         currentPrincipal -= amount;
 
         emit Unstake(_account, _node, amount, unstakeLockID);
     }
 
-    function processUnstake(address _node) external onlyGov {
+    function processUnstake() external onlyGov {
         uint256 amount = withdrawPool.processUnlocks();
 
-        // if no _node is specified, use default
-        address node_ = _node;
-        if (node_ == address(0)) {
-            node_ = node;
-        }
-        
+        address node_ = node;
+
         // Undelegate from audius
         audius.requestUndelegateStake(node_, amount);
 
@@ -117,19 +110,19 @@ contract Audius is Tenderizer {
     function _withdraw(address _account, uint256 _withdrawalID) internal override {
         uint256 amount = withdrawPool.withdraw(_withdrawalID, _account);
         // Transfer amount from unbondingLock to _account
-        steak.transfer(_account, amount);
+        steak.safeTransfer(_account, amount);
 
         emit Withdraw(_account, amount, _withdrawalID);
     }
 
-    function processWithdraw(address /* _node */) external onlyGov {
+    function processWithdraw() external onlyGov {
         uint256 balBefore = steak.balanceOf(address(this));
-        
+
         audius.undelegateStake();
-        
+
         uint256 balAfter = steak.balanceOf(address(this));
         uint256 amount = balAfter - balBefore;
-        
+
         withdrawPool.processWihdrawal(amount);
 
         emit ProcessWithdraws(msg.sender, amount);
@@ -145,9 +138,7 @@ contract Audius is Tenderizer {
         _processNewStake(stake);
     }
 
-
     function _processNewStake(uint256 _newStake) internal override {
-        // TODO: all of the below could be a general internal function in Tenderizer.sol
         uint256 currentPrincipal_ = currentPrincipal;
 
         // adjust current token balance for potential protocol specific taxes or staking fees
@@ -156,9 +147,12 @@ contract Audius is Tenderizer {
         // calculate what the new currentPrinciple would be after the call
         // but excluding fees, pending unlocks and pending user withdrawals from rewards
         // which still need to be calculated if stake >= currentPrincipal
-        uint256 stake_ = _newStake + currentBal
-            - withdrawPool.amount - withdrawPool.pendingUnlock
-            - pendingFees - pendingLiquidityFees;
+        uint256 stake_ = _newStake +
+            currentBal -
+            withdrawPool.amount -
+            withdrawPool.pendingUnlock -
+            pendingFees -
+            pendingLiquidityFees;
 
         // Difference is negative, no rewards have been earnt
         // So no fees are charged
@@ -167,13 +161,13 @@ contract Audius is Tenderizer {
             uint256 diff = currentPrincipal_ - stake_;
 
             emit RewardsClaimed(-int256(diff), stake_, currentPrincipal_);
-            
+
             // calculate amount to subtract relative to current principal
             uint256 unstakePoolTokens = withdrawPool.totalTokens();
             uint256 totalTokens = unstakePoolTokens + currentPrincipal_;
             if (totalTokens == 0) return;
 
-            uint256 unstakePoolSlash = diff * unstakePoolTokens / totalTokens;
+            uint256 unstakePoolSlash = (diff * unstakePoolTokens) / totalTokens;
             withdrawPool.updateTotalTokens(unstakePoolTokens - unstakePoolSlash);
 
             return;

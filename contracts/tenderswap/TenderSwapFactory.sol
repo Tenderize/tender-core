@@ -48,7 +48,7 @@ contract TenderSwapFactoryV1 is ITenderSwapFactory {
         adminFee = _adminFee;
     }
 
-    function deploy(Config calldata _config) external override(ITenderSwapFactory) returns (ITenderSwap tenderSwap) {
+    function deploy(Config calldata _config) external override returns (ITenderSwap tenderSwap) {
         tenderSwap = ITenderSwap(Clones.clone(address(tenderSwapTarget)));
 
         require(

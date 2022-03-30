@@ -106,14 +106,11 @@ interface ITenderizer {
     ) external;
 
     /**
-     * @notice Stake '_amount' of tokens to '_node'.
-     * @param _node account to stake to in the underlying protocol
+     * @notice Stake '_amount' of tokens.
      * @param _amount amount to stake
-     * @dev If '_node' is not specified, stake towards the default address.
-     * @dev If '_amount' is 0, stake the entire current token balance of the Tenderizer.
      * @dev Only callable by Gov.
      */
-    function stake(address _node, uint256 _amount) external;
+    function stake(uint256 _amount) external;
 
     /**
      * @notice Unstake '_amount' of tokens from '_account'.

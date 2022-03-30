@@ -6,6 +6,7 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./ITenderizer.sol";
 import "../token/ITenderToken.sol";
@@ -21,6 +22,8 @@ import "../helpers/SelfPermit.sol";
  * @dev New implementations are required to inherit this contract and override any required internal functions.
  */
 abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
+    using SafeERC20 for IERC20;
+
     IERC20 public steak;
     ITenderToken public tenderToken;
     ITenderFarm public tenderFarm;
@@ -81,19 +84,8 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     /// @inheritdoc ITenderizer
-    function deposit(uint256 _amount) public override {
-        require(_amount > 0, "ZERO_AMOUNT");
-
-        // Calculate tenderTokens to be minted
-        uint256 amountOut = _calcDepositOut(_amount);
-
-        // mint tenderTokens
-        require(tenderToken.mint(msg.sender, amountOut), "TENDER_MINT_FAILED");
-
-        // Transfer tokens to tenderizer
-        require(steak.transferFrom(msg.sender, address(this), _amount), "STEAK_TRANSFERFROM_FAILED");
-
-        _deposit(msg.sender, _amount);
+    function deposit(uint256 _amount) external override {
+        _depositHook(msg.sender, _amount);
     }
 
     /// @inheritdoc ITenderizer
@@ -104,9 +96,9 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         bytes32 _r,
         bytes32 _s
     ) external override {
-        _selfPermit(address(steak), _amount, _deadline, _v, _r, _s);
+        selfPermit(address(steak), _amount, _deadline, _v, _r, _s);
 
-        deposit(_amount);
+        _depositHook(msg.sender, _amount);
     }
 
     /// @inheritdoc ITenderizer
@@ -130,13 +122,13 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     /// @inheritdoc ITenderizer
-    function claimRewards() public override {
+    function claimRewards() external override {
         // Claim rewards
         // If received staking rewards in steak don't automatically compound, add to pendingTokens
         // Swap tokens with address != steak to steak
         // Add steak from swap to pendingTokens
         _claimRewards();
-        _stake(node, steak.balanceOf(address(this)));
+        _stake(steak.balanceOf(address(this)));
     }
 
     /// @inheritdoc ITenderizer
@@ -145,11 +137,11 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     /// @inheritdoc ITenderizer
-    function stake(address _account, uint256 _amount) external override onlyGov {
+    function stake(uint256 _amount) external override onlyGov {
         // Execute state updates
         // approve pendingTokens for staking
         // Stake tokens
-        _stake(_account, _amount);
+        _stake(_amount);
     }
 
     function setGov(address _gov) external virtual override onlyGov {
@@ -210,7 +202,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     /// @inheritdoc ITenderizer
-    function calcDepositOut(uint256 _amountIn) public view override returns (uint256) {
+    function calcDepositOut(uint256 _amountIn) external view override returns (uint256) {
         return _calcDepositOut(_amountIn);
     }
 
@@ -237,13 +229,28 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
 
     // Internal functions
 
+    function _depositHook(address _for, uint256 _amount) internal {
+        require(_amount > 0, "ZERO_AMOUNT");
+
+        // Calculate tenderTokens to be minted
+        uint256 amountOut = _calcDepositOut(_amount);
+
+        // mint tenderTokens
+        require(tenderToken.mint(_for, amountOut), "TENDER_MINT_FAILED");
+
+        // Transfer tokens to tenderizer
+        steak.safeTransferFrom(_for, address(this), _amount);
+
+        _deposit(_for, _amount);
+    }
+
     function _calcDepositOut(uint256 _amountIn) internal view virtual returns (uint256) {
         return _amountIn;
     }
 
     function _deposit(address _account, uint256 _amount) internal virtual;
 
-    function _stake(address _account, uint256 _amount) internal virtual;
+    function _stake(uint256 _amount) internal virtual;
 
     function _unstake(
         address _account,

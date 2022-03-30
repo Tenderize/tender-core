@@ -5,6 +5,8 @@
 pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 import "../../../libs/MathUtils.sol";
 
 import "../../Tenderizer.sol";
@@ -19,6 +21,8 @@ import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
 
 contract Livepeer is Tenderizer {
     using WithdrawalLocks for WithdrawalLocks.Locks;
+    using SafeERC20 for IERC20;
+    using SafeERC20 for IWETH;
 
     uint256 private constant MAX_ROUND = 2**256 - 1;
 
@@ -42,7 +46,7 @@ contract Livepeer is Tenderizer {
         ITenderToken _tenderTokenTarget,
         TenderFarmFactory _tenderFarmFactory,
         ITenderSwapFactory _tenderSwapFactory
-    ) public {
+    ) external {
         Tenderizer._initialize(
             _steak,
             _symbol,
@@ -62,30 +66,23 @@ contract Livepeer is Tenderizer {
         emit Deposit(_from, _amount);
     }
 
-    function _stake(address _node, uint256 _amount) internal override {
-        // if no amount is specified, stake all available tokens
+    function _stake(uint256 _amount) internal override {
         uint256 amount = _amount;
 
         if (amount == 0) {
             return;
-            // TODO: revert ?
-        }
-
-        // if no _node is specified, return
-        if (_node == address(0)) {
-            return;
         }
 
         // approve amount to Livepeer protocol
-        steak.approve(address(livepeer), amount);
+        steak.safeApprove(address(livepeer), amount);
 
         // stake tokens
+        address _node = node;
         livepeer.bond(amount, _node);
 
         emit Stake(_node, amount);
     }
 
-    // TODO: is unstaking when front running a negative rebase exploitable ?
     function _unstake(
         address _account,
         address _node,
@@ -93,7 +90,6 @@ contract Livepeer is Tenderizer {
     ) internal override returns (uint256 withdrawalLockID) {
         uint256 amount = _amount;
 
-        // Sanity check. Controller already checks user deposits and withdrawals > 0
         if (_account != gov) require(amount > 0, "ZERO_AMOUNT");
         if (amount == 0) {
             amount = livepeer.pendingStake(address(this), MAX_ROUND);
@@ -113,12 +109,12 @@ contract Livepeer is Tenderizer {
 
     function _withdraw(address _account, uint256 _withdrawalID) internal override {
         uint256 amount = withdrawLocks.withdraw(_account, _withdrawalID);
- 
+
         // Withdraw stake, transfers steak tokens to address(this)
         livepeer.withdrawStake(_withdrawalID);
 
         // Transfer amount from unbondingLock to _account
-        steak.transfer(_account, amount);
+        steak.safeTransfer(_account, amount);
 
         emit Withdraw(_account, amount, _withdrawalID);
     }
@@ -144,10 +140,11 @@ contract Livepeer is Tenderizer {
             // Wrap ETH
             uint256 bal = address(this).balance;
             WETH.deposit{ value: bal }();
-            WETH.approve(address(uniswapRouter), bal);
+            WETH.safeApprove(address(uniswapRouter), bal);
 
             // swap ETH fees for LPT
             if (address(uniswapRouter) != address(0)) {
+                uint256 amountOutMin = 0; // TODO: set slippage tolerance
                 ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
                     tokenIn: address(WETH),
                     tokenOut: address(steak),
@@ -155,12 +152,16 @@ contract Livepeer is Tenderizer {
                     recipient: address(this),
                     deadline: block.timestamp,
                     amountIn: bal,
-                    amountOutMinimum: 0, // TODO: Set5% max slippage
+                    amountOutMinimum: amountOutMin, // TODO: Set5% max slippage
                     sqrtPriceLimitX96: 0
                 });
                 try uniswapRouter.exactInputSingle(params) returns (
-                    uint256 /*_swappedLPT*/
-                ) {} catch {}
+                    uint256 _swappedLPT
+                ) {
+                    assert(_swappedLPT > amountOutMin);
+                } catch {
+                    // fail silently so claiming secondary rewards doesn't block compounding primary rewards
+                }
             }
         }
     }
