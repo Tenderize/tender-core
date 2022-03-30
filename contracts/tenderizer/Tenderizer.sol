@@ -139,7 +139,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     /// @inheritdoc ITenderizer
     function stake(uint256 _amount) external override onlyGov {
         // Execute state updates
-        // approve pendingTokens for staßking
+        // approve pendingTokens for staking
         // Stake tokens
         _stake(_amount);
     }
