@@ -193,33 +193,6 @@ interface ITenderizer {
      */
     function pendingLiquidityFees() external view returns (uint256 amount);
 
-    /**
-     * @notice Exectutes a transaction on behalf of the controller.
-     * @param _target target address for the contract call
-     * @param _value ether value to be transeffered with the transaction
-     * @param _data call data - check ethers.interface.encodeFunctionData()
-     * @dev only callable by owner(gov).
-     */
-    function execute(
-        address _target,
-        uint256 _value,
-        bytes calldata _data
-    ) external;
-
-    /**
-     * @notice Exectutes a batch of transaction on behalf of the controller.
-     * @param _targets array of target addresses for the contract call
-     * @param _values array of ether values to be transeffered with the transactions
-     * @param _datas array of call datas - check ethers.interface.encodeFunctionData()
-     * @dev Every target to its value, data via it's corresponding index.
-     * @dev only callable by owner(gov).
-     */
-    function batchExecute(
-        address[] calldata _targets,
-        uint256[] calldata _values,
-        bytes[] calldata _datas
-    ) external;
-
     // Governance setter funtions
 
     function setGov(address _gov) external;

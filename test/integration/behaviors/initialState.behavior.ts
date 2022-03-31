@@ -42,8 +42,8 @@ export default function suite () {
   })
 
   describe('TenderSwap', async function () {
-    it('Owner is Tenderizer', async function () {
-      expect(await ctx.TenderSwap.owner()).to.eq(ctx.Tenderizer.address)
+    it('Owner is Deployer', async function () {
+      expect(await ctx.TenderSwap.owner()).to.eq(ctx.deployer)
     })
 
     it('TenderToken is set', async function () {
@@ -67,6 +67,10 @@ export default function suite () {
   })
 
   describe('TenderToken', async function () {
+    it('Owner is Tenderizer', async function () {
+      expect(await ctx.TenderToken.owner()).to.eq(ctx.Tenderizer.address)
+    })
+
     it('Total staked reader (Tenderizer) is set', async function () {
       expect(await ctx.TenderToken.totalStakedReader()).to.eq(ctx.Tenderizer.address)
     })

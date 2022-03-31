@@ -56,7 +56,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     ) internal initializer {
         steak = _steak;
         node = _node;
-        protocolFee = _protocolFee; //25 * 1e15; 2.5%
+        protocolFee = _protocolFee;
         liquidityFee = _liquidityFee;
 
         gov = msg.sender;
@@ -75,6 +75,10 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
                 lpTokenSymbol: string(abi.encodePacked(tenderTokenSymbol, "-", _symbol, "-SWAP"))
             })
         );
+
+        // Transfer ownership from tenderizer to deployer so params an be changed directly
+        // and no additional functions are needed on the tenderizer
+        tenderSwap.transferOwnership(msg.sender);
 
         tenderFarm = _tenderFarmFactory.deploy(
             IERC20(address(tenderSwap.lpToken())),
@@ -216,27 +220,6 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         return _calcDepositOut(_amountIn);
     }
 
-    /// @inheritdoc ITenderizer
-    function execute(
-        address _target,
-        uint256 _value,
-        bytes calldata _data
-    ) external override onlyGov {
-        _execute(_target, _value, _data);
-    }
-
-    /// @inheritdoc ITenderizer
-    function batchExecute(
-        address[] calldata _targets,
-        uint256[] calldata _values,
-        bytes[] calldata _datas
-    ) external override onlyGov {
-        require(_targets.length == _values.length && _targets.length == _datas.length, "INVALID_ARGUMENTS");
-        for (uint256 i = 0; i < _targets.length; i++) {
-            _execute(_targets[i], _values[i], _datas[i]);
-        }
-    }
-
     // Internal functions
 
     function _depositHook(address _for, uint256 _amount) internal {
@@ -335,13 +318,4 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     function _setStakingContract(address _stakingContract) internal virtual;
-
-    function _execute(
-        address _target,
-        uint256 _value,
-        bytes calldata _data
-    ) internal {
-        (bool success, bytes memory returnData) = _target.call{ value: _value }(_data);
-        require(success, string(returnData));
-    }
 }
