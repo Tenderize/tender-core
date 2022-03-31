@@ -1,6 +1,6 @@
 import { ethers } from 'hardhat'
 import { expect } from 'chai'
-import { BigNumber, ContractTransaction } from 'ethers'
+import { BigNumber, ContractTransaction, Transaction } from 'ethers'
 import { getSighash } from '../../util/helpers'
 import { Context } from 'mocha'
 
@@ -77,79 +77,57 @@ export function userBasedUnlockByUser () {
 })
 }
 
-export function govUnbondRevertIfNoStake () {
+export function rescueFunctions() {
+  let tx: Transaction
   let ctx: Context
-  before(async function () {
-    ctx = this.test?.ctx!
-  })
-
-  it('Gov unbond() reverts if no pending stake', async () => {
-    await expect(ctx.Tenderizer.unstake(ethers.utils.parseEther('0'))).to.be.revertedWith('ZERO_STAKE')
-  })
-}
-
-// For protocols where unlocks are tracked per user
-export function userBasedUnlockByGov () {
-  let ctx: Context
-  let tx: any
-
-  describe('Gov partial(half) unbond', async () => {
-    let govWithdrawAmount: BigNumber
-    let poolBalBefore: BigNumber
-    let otherAccBalBefore: BigNumber
-    let stakedBefore: BigNumber
-    let cpBefore: BigNumber
-    beforeEach('perform partial unbond', async function () {
+  const lockID = 0
+  let principleBefore: BigNumber
+  
+  beforeEach(async function () {
       ctx = this.test?.ctx!
-
-      await ctx.Steak.transfer(ctx.signers[2].address, secondDeposit)
-      await ctx.Steak.connect(ctx.signers[2]).approve(ctx.Tenderizer.address, secondDeposit)
-      await ctx.Tenderizer.connect(ctx.signers[2]).deposit(secondDeposit)
       await ctx.Tenderizer.claimRewards()
-
-      poolBalBefore = await ctx.TenderToken.balanceOf(ctx.TenderSwap.address)
-      otherAccBalBefore = await ctx.TenderToken.balanceOf(ctx.signers[2].address)
-      cpBefore = await ctx.Tenderizer.totalStakedTokens()
-      govWithdrawAmount = cpBefore.div(2)
-
-      stakedBefore = await ctx.StakingContract.staked()
-      tx = await ctx.Tenderizer.unstake(govWithdrawAmount)
+    })
+    
+  describe('rescue unstake', async () => {
+    beforeEach(async function () {
+        principleBefore = await ctx.Tenderizer.currentPrincipal()
+        tx = await ctx.Tenderizer.rescueUnlock()
     })
 
-    it('Gov unbond() succeeds', async () => {
-      expect(stakedBefore.sub(govWithdrawAmount)).to.eq(await ctx.StakingContract.staked())
-      expect(cpBefore.sub(govWithdrawAmount)).to.eq(await ctx.Tenderizer.totalStakedTokens())
+    it('reverts if not called by gov', async () => {
+        await expect(ctx.Tenderizer.connect(ctx.signers[1]).rescueWithdraw(lockID)).to.be.reverted
+    })
+    
+    it('current principle stays the same', async () => {
+        expect(await ctx.Tenderizer.currentPrincipal()).to.eq(principleBefore)
     })
 
-    it('TenderToken balance of other account halves', async () => {
-      expect(await ctx.TenderToken.balanceOf(ctx.signers[2].address))
-        .to.eq(otherAccBalBefore.div(2))
-    })
-
-    it('TenderToken balance of TenderSwap account halves', async () => {
-      expect(await ctx.TenderToken.balanceOf(ctx.TenderSwap.address))
-        .to.eq(poolBalBefore.div(2))
+    it('should emit Unstake event from Tenderizer', async () => {
+        expect(tx).to.emit(ctx.Tenderizer, 'Unstake')
+        .withArgs(ctx.Tenderizer.address, ctx.NODE, principleBefore, 0)
     })
   })
 
-  describe('Gov full unbond', async () => {
-    let govWithdrawAmount: BigNumber
-    beforeEach('perform full unbond', async () => {
-      govWithdrawAmount = (await ctx.Tenderizer.totalStakedTokens())
-      tx = await ctx.Tenderizer.unstake(govWithdrawAmount)
+  describe('rescue withdraw', async () => {
+    let steakBalanceBefore: BigNumber
+    beforeEach(async function () {
+        principleBefore = await ctx.Tenderizer.currentPrincipal()
+        await ctx.Tenderizer.rescueUnlock()
+        tx = await ctx.Tenderizer.rescueWithdraw(lockID)
     })
-
-    it('Gov unbond() succeeds', async () => {
-      expect(ethers.constants.Zero).to.eq(await ctx.StakingContract.staked())
-      expect(ethers.constants.Zero).to.eq(await ctx.Tenderizer.totalStakedTokens())
+    
+    it('reverts if not called by gov', async () => {
+        await expect(ctx.Tenderizer.connect(ctx.signers[1]).rescueWithdraw(lockID)).to.be.reverted
     })
-
-    it('TenderToken balance of other account becomes 0', async () => {
-      expect(await ctx.TenderToken.balanceOf(ctx.signers[2].address)).to.eq(0)
+  
+    it('success - increases Steak balance', async () => {
+        expect(await ctx.Steak.balanceOf(ctx.Tenderizer.address))
+          .to.eq(principleBefore)
     })
-
-    it('TenderToken balance of TenderSwap account becomes 0', async () => {
-      expect(await ctx.TenderToken.balanceOf(ctx.TenderSwap.address)).to.eq(0)
-    })
+  
+    it('should emit Withdraw event from Tenderizer', async () => {
+        expect(tx).to.emit(ctx.Tenderizer, 'Withdraw')
+          .withArgs(ctx.Tenderizer.address, principleBefore, lockID)
+     })
   })
 }

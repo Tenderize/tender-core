@@ -26,8 +26,7 @@ import {
 import swapTests from './behaviors/swap.behavior'
 import {
   userBasedUnlockByUser,
-  govUnbondRevertIfNoStake,
-  userBasedUnlockByGov
+  rescueFunctions
 } from './behaviors/userBasedUnlock.behavior'
 import userBasedWithdrawalTests from './behaviors/userBasedWithdrawal.behavior'
 import upgradeTests from './behaviors/upgrade.behavior'
@@ -184,23 +183,8 @@ describe('Matic Integration Test', () => {
     describe('Unlock and Withdraw', async function () {
       describe('User unlock', userBasedUnlockByUser.bind(this))
       describe('Withdrawal', userBasedWithdrawalTests.bind(this))
-      describe('Gov unlock', async function () {
-        context('Zero stake', async function () {
-          beforeEach(async function () {
-            await this.StakingContract.setStaked(0)
-          })
-          describe('No pending stake', govUnbondRevertIfNoStake.bind(this))
-        })
-        context('>0 Stake', async function () {
-          beforeEach(async function () {
-            await this.StakingContract.setStaked(
-              await this.Tenderizer.totalStakedTokens()
-            )
-          })
-          describe('Gov unlocks', userBasedUnlockByGov.bind(this))
-        })
-      })
     })
+    describe('Rescue Functions', rescueFunctions.bind(this))
     describe('Upgrades', upgradeTests.bind(this))
     describe('Setting contract variables', setterTests.bind(this))
   })

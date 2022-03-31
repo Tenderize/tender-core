@@ -86,12 +86,7 @@ contract Audius is Tenderizer {
     ) internal override returns (uint256 unstakeLockID) {
         uint256 amount = _amount;
 
-        // Caller is a user, initialise unstake locally in Tenderizer
-        require(amount > 0, "ZERO_AMOUNT");
-
-        unstakeLockID = withdrawPool.unlock(_account, amount);
-
-        currentPrincipal -= amount;
+        unstakeLockID =  withdrawPool.unlock(_account, amount);
 
         emit Unstake(_account, _node, amount, unstakeLockID);
     }

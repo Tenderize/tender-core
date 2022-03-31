@@ -11,9 +11,6 @@ export default async function depositTenderizer (ctx: any) {
     await ctx.TenderToken.approve(ctx.TenderSwap.address, tokensAfterTax)
     const lpTokensOut = await ctx.TenderSwap.calculateTokenAmount([tokensAfterTax, tokensAfterTax], true)
     await ctx.TenderSwap.addLiquidity([tokensAfterTax, tokensAfterTax], lpTokensOut, (await getCurrentBlockTimestamp()) + 1000)
-    // console.log('added liquidity')
-    // console.log('calculated', lpTokensOut.toString(), 'actual', (await ctx.LpToken.balanceOf(ctx.deployer)).toString())
     await ctx.LpToken.approve(ctx.TenderFarm.address, lpTokensOut)
     await ctx.TenderFarm.farm(lpTokensOut)
-    // console.log('farmed LP tokens')
 }

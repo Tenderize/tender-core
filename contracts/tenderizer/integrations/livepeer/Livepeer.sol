@@ -90,14 +90,6 @@ contract Livepeer is Tenderizer {
     ) internal override returns (uint256 withdrawalLockID) {
         uint256 amount = _amount;
 
-        if (_account != gov) require(amount > 0, "ZERO_AMOUNT");
-        if (amount == 0) {
-            amount = livepeer.pendingStake(address(this), MAX_ROUND);
-            require(amount > 0, "ZERO_STAKE");
-        }
-
-        currentPrincipal -= amount;
-
         // Unbond tokens
         livepeer.unbond(amount);
 
