@@ -47,7 +47,6 @@ describe('Graph Mainnet Fork Test', () => {
 
   let tx: ContractTransaction
   const unbondLockID = 0
-  const govUnboundLockID = 1
 
   const protocolFeesPercent = ethers.utils.parseEther('0.025')
   const liquidityFeesPercent = ethers.utils.parseEther('0.025')
@@ -454,12 +453,6 @@ describe('Graph Mainnet Fork Test', () => {
         expect(await TenderToken.balanceOf(signers[1].address)).to.lte(acceptableDelta)
       })
 
-      it('should create unstakeLock', async () => {
-        const lock = await Tenderizer.unstakeLocks(unbondLockID)
-        expect(lock.account).to.eq(signers[1].address)
-        expect(lock.amount.sub(withdrawAmount).abs()).to.lte(acceptableDelta)
-      })
-
       it('should emit Unstake event from Tenderizer', async () => {
         expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(signers[1].address, NODE, withdrawAmount, unbondLockID)
       })
@@ -467,11 +460,11 @@ describe('Graph Mainnet Fork Test', () => {
 
     describe('gov unstake', async () => {
       before('undelegate() suceeds', async () => {
-        tx = await Tenderizer.unstake(ethers.utils.parseEther('0'))
+        tx = await Tenderizer.processUnstake()
       })
 
       it('should emit Unstake event from Tenderizer', async () => {
-        expect(tx).to.emit(Tenderizer, 'Unstake').withArgs(deployer, NODE, withdrawAmount, govUnboundLockID)
+        expect(tx).to.emit(Tenderizer, 'ProcessUnstakes').withArgs(deployer, NODE, withdrawAmount)
       })
     })
   })
@@ -479,22 +472,23 @@ describe('Graph Mainnet Fork Test', () => {
   describe('withdraw', () => {
     describe('gov withdrawal', async () => {
       it('user withdrawal reverts if gov withdrawal pending', async () => {
-        await expect(Tenderizer.connect(signers[1]).withdraw(unbondLockID)).to.be.revertedWith('GOV_WITHDRAW_PENDING')
+        await expect(Tenderizer.connect(signers[1]).withdraw(unbondLockID)).to.be.revertedWith('ONGOING_UNLOCK')
       })
 
       it('reverts if withdrawDelegated() fails - withdraw period pending', async () => {
-        await expect(Tenderizer.withdraw(govUnboundLockID)).to.be.reverted
+        await expect(Tenderizer.processWithdraw()).to.be.reverted
       })
 
       it('withdrawDelegated() succeeds', async () => {
         for (let j = 0; j < 30; j++) {
           await hre.ethers.provider.send('evm_mine', [])
         }
-        tx = await Tenderizer.withdraw(govUnboundLockID)
+        tx = await Tenderizer.processWithdraw()
+        await tx.wait()
       }).timeout(testTimeout * 10)
 
       it('should emit Withdraw event from Tenderizer', async () => {
-        expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(deployer, withdrawAmount, govUnboundLockID)
+        expect(tx).to.emit(Tenderizer, 'ProcessWithdraws')
       })
     })
 
@@ -512,14 +506,8 @@ describe('Graph Mainnet Fork Test', () => {
           .to.lte(acceptableDelta)
       })
 
-      it('should delete unstakeLock', async () => {
-        const lock = await Tenderizer.unstakeLocks(unbondLockID)
-        expect(lock.account).to.eq(ethers.constants.AddressZero)
-        expect(lock.amount).to.eq(0)
-      })
-
       it('should emit Withdraw event from Tenderizer', async () => {
-        expect(tx).to.emit(Tenderizer, 'Withdraw').withArgs(signers[1].address, withdrawAmount, unbondLockID)
+        expect(tx).to.emit(Tenderizer, 'Withdraw')
       })
     })
   })
