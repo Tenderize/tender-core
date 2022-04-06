@@ -16,6 +16,7 @@ declare module 'mocha' {
           }
         NAME: string
         SYMBOL: string
+        NODE: string
         initialStake: BigNumber
         deposit: BigNumber
         DELEGATION_TAX: BigNumber
