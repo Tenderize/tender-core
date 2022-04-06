@@ -1,4 +1,4 @@
-import { ContractTransaction } from 'ethers/lib/ethers'
+import { BigNumber, Contract, ContractTransaction } from 'ethers/lib/ethers'
 import { expect } from 'chai'
 import { smockit } from '@eth-optimism/smock'
 import { ethers } from 'hardhat'
@@ -7,31 +7,19 @@ import { Context } from 'mocha'
 export default function suite () {
   let tx: ContractTransaction
   let ctx: Context
-  before(async function () {
+  beforeEach(async function () {
     ctx = this.test?.ctx!
   })
   describe('setting staking contract', () => {
-    it('sets staking contract', async () => {
-      const newStakingContract = await smockit(ctx.StakingContract)
-
-      // // TODO: Anti-pattern, refactor!
-      // if (ctx.NAME === 'Audius') {
-      //   const dummyStakingAddress = '0xfA668FB97697200FA56ce98E246db61Cc7E14Bd5'
-      //   newStakingContract.smocked.getStakingAddress.will.return.with(dummyStakingAddress)
-      // }
-
+    let newStakingContract: Contract
+    beforeEach(async () => {
+      newStakingContract = await smockit(ctx.StakingContract)
       tx = await ctx.Tenderizer.setStakingContract(newStakingContract.address)
-
-      // assert that bond() call is made to new staking contract on gulp()
-      // Except for matic, TODO: Anti-pattern, Improve this?
-      // if (ctx.NAME !== 'Matic') {
-      //   await ctx.Tenderizer.claimRewards()
-      //   expect(newStakingContract.smocked[ctx.stakeMock.functionName].calls.length).to.eq(1)
-      // }
     })
 
     it('should emit GovernanceUpdate event', async () => {
-      expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('STAKING_CONTRACT')
+      expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate')
+        .withArgs('STAKING_CONTRACT', ctx.StakingContract.address.toLowerCase(), newStakingContract.address.toLowerCase())
     })
   })
 
@@ -40,50 +28,71 @@ export default function suite () {
       await expect(ctx.Tenderizer.connect(ctx.signers[1]).setNode(ethers.constants.AddressZero)).to.be.reverted
     })
 
-    it('sets node successfully', async () => {
-      const newNodeAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
-      tx = await ctx.Tenderizer.setNode(newNodeAddress)
-      expect(await ctx.Tenderizer.node()).to.equal(newNodeAddress)
-    })
+    describe('sets node successfully', async function(){
+      const newNodeAddress = '0xf4e8Ef0763BCB2B1aF693F5970a00050a6aC7E1B'
+      beforeEach(async function(){
+        tx = await ctx.Tenderizer.setNode(newNodeAddress)
+      })
 
-    it('should emit GovernanceUpdate event', async () => {
-      expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('NODE')
+      it('sets correctly', async () => {
+        expect((await ctx.Tenderizer.node())).to.equal(newNodeAddress)
+      })
+      
+      it('should emit GovernanceUpdate event', async () => {
+        expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('NODE', ctx.NODE.toLowerCase(), newNodeAddress.toLowerCase())
+      })
     })
   })
 
   describe('setting steak', async () => {
-    it('sets steak successfully', async () => {
-      const newSteakAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
+    const newSteakAddress = '0xd944a0f8c64d292a94c34e85d9038395e3762751'
+
+    beforeEach(async function() {
       tx = await ctx.Tenderizer.setSteak(newSteakAddress)
-      expect(await ctx.Tenderizer.steak()).to.equal(newSteakAddress)
+    })
+
+    it('sets steak successfully', async () => {
+      expect((await ctx.Tenderizer.steak()).toLowerCase()).to.equal(newSteakAddress)
     })
 
     it('should emit GovernanceUpdate event', async () => {
-      expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('STEAK')
+      expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('STEAK', ctx.Steak.address.toLowerCase(), newSteakAddress)
     })
   })
 
   describe('setting protocol fee', async () => {
-    it('sets protocol fee', async () => {
-      const newFee = ethers.utils.parseEther('0.05') // 5%
+    let oldFee: BigNumber
+    const newFee = ethers.utils.parseEther('0.05')
+
+    beforeEach(async function () {
+      oldFee = await ctx.Tenderizer.liquidityFee()
       tx = await ctx.Tenderizer.setProtocolFee(newFee)
+    })
+
+    it('sets protocol fee', async () => {
       expect(await ctx.Tenderizer.protocolFee()).to.equal(newFee)
     })
 
     it('should emit GovernanceUpdate event', async () => {
-      expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('PROTOCOL_FEE')
+      expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('PROTOCOL_FEE', oldFee, newFee)
     })
   })
 
   describe('setting liquidity fee', async () => {
-    it('sets liquidity fee', async () => {
-      const newFee = ethers.utils.parseEther('0.05') // 5%
+    let oldFee: BigNumber
+    const newFee = ethers.utils.parseEther('0.05')
+    
+    beforeEach(async function () {
+      oldFee = await ctx.Tenderizer.liquidityFee()
       tx = await ctx.Tenderizer.setLiquidityFee(newFee)
+    })
+
+    it('sets liquidity fee', async () => {
       expect(await ctx.Tenderizer.liquidityFee()).to.equal(newFee)
     })
 
     it('should emit GovernanceUpdate event', async () => {
-      expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('LIQUIDITY_FEE')
+      expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('LIQUIDITY_FEE', oldFee, newFee)
     })
   })
 
@@ -92,14 +101,19 @@ export default function suite () {
       await expect(ctx.Tenderizer.connect(ctx.signers[1]).setGov(ethers.constants.AddressZero)).to.be.reverted
     })
 
-    it('sets gov successfully', async () => {
+    describe('sets gov successfully', async () => {
       const newGovAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
-      tx = await ctx.Tenderizer.setGov(newGovAddress)
-      expect(await ctx.Tenderizer.gov()).to.equal(newGovAddress)
-    })
+      beforeEach(async function() {
+        tx = await ctx.Tenderizer.setGov(newGovAddress)
+      })
 
-    it('should emit GovernanceUpdate event', async () => {
-      expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('GOV')
+      it('sets correctly', async () => {
+        expect(await ctx.Tenderizer.gov()).to.equal(newGovAddress)
+      })
+
+      it('should emit GovernanceUpdate event', async () => {
+        expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('GOV', ctx.deployer.toLowerCase(), newGovAddress.toLowerCase())
+      })
     })
   })
 }

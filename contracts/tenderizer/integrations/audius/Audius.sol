@@ -186,9 +186,12 @@ contract Audius is Tenderizer {
     }
 
     function _setStakingContract(address _stakingContract) internal override {
+        emit GovernanceUpdate(
+            "STAKING_CONTRACT",
+            abi.encodePacked(address(audius)),
+            abi.encodePacked(_stakingContract)
+        );
         audius = IAudius(_stakingContract);
         audiusStaking = audius.getStakingAddress();
-
-        emit GovernanceUpdate("STAKING_CONTRACT");
     }
 }

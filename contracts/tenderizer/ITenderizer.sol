@@ -74,8 +74,10 @@ interface ITenderizer {
     /**
      * @notice GovernanceUpdate gets emitted when a parameter on the Tenderizer gets updated.
      * @param param the parameter that got updated
+     * @param oldValue oldValue of the parameter
+      @param newValue newValue of the parameter
      */
-    event GovernanceUpdate(string param);
+    event GovernanceUpdate(string param, bytes oldValue, bytes newValue);
 
     /**
      * @notice Deposit tokens in Tenderizer.

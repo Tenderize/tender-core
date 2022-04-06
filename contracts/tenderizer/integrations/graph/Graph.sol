@@ -209,7 +209,11 @@ contract Graph is Tenderizer {
     }
 
     function _setStakingContract(address _stakingContract) internal override {
+        emit GovernanceUpdate(
+            "STAKING_CONTRACT",
+            abi.encodePacked(address(graph)),
+            abi.encodePacked(_stakingContract)
+        );
         graph = IGraph(_stakingContract);
-        emit GovernanceUpdate("STAKING_CONTRACT");
     }
 }

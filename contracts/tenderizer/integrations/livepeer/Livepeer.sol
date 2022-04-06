@@ -168,9 +168,12 @@ contract Livepeer is Tenderizer {
     }
 
     function _setStakingContract(address _stakingContract) internal override {
+        emit GovernanceUpdate(
+            "STAKING_CONTRACT",
+            abi.encodePacked(address(livepeer)),
+            abi.encodePacked(_stakingContract)
+        );
         livepeer = ILivepeer(_stakingContract);
-
-        emit GovernanceUpdate("STAKING_CONTRACT");
     }
 
     function setUniswapRouter(address _uniswapRouter) external onlyGov {
