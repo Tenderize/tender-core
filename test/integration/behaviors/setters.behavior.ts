@@ -19,7 +19,9 @@ export default function suite () {
 
     it('should emit GovernanceUpdate event', async () => {
       expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate')
-        .withArgs('STAKING_CONTRACT', ctx.StakingContract.address.toLowerCase(), newStakingContract.address.toLowerCase())
+        .withArgs('STAKING_CONTRACT',
+        ethers.utils.hexZeroPad(ctx.StakingContract.address.toLowerCase(), 32),
+        ethers.utils.hexZeroPad(newStakingContract.address.toLowerCase(), 32))
     })
   })
 
@@ -39,7 +41,9 @@ export default function suite () {
       })
       
       it('should emit GovernanceUpdate event', async () => {
-        expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('NODE', ctx.NODE.toLowerCase(), newNodeAddress.toLowerCase())
+        expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('NODE',
+        ethers.utils.hexZeroPad(ctx.NODE.toLowerCase(), 32),
+        ethers.utils.hexZeroPad(newNodeAddress.toLowerCase(), 32))
       })
     })
   })
@@ -56,7 +60,9 @@ export default function suite () {
     })
 
     it('should emit GovernanceUpdate event', async () => {
-      expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('STEAK', ctx.Steak.address.toLowerCase(), newSteakAddress)
+      expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('STEAK',
+      ethers.utils.hexZeroPad(ctx.Steak.address.toLowerCase(), 32),
+      ethers.utils.hexZeroPad(newSteakAddress, 32))
     })
   })
 
@@ -112,7 +118,9 @@ export default function suite () {
       })
 
       it('should emit GovernanceUpdate event', async () => {
-        expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('GOV', ctx.deployer.toLowerCase(), newGovAddress.toLowerCase())
+        expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('GOV', 
+          ethers.utils.hexZeroPad(ctx.deployer.toLowerCase(), 32), 
+          ethers.utils.hexZeroPad(newGovAddress.toLowerCase(), 32))
       })
     })
   })

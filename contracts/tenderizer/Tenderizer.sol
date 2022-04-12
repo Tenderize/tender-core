@@ -155,27 +155,27 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     function setGov(address _gov) external virtual override onlyGov {
-        emit GovernanceUpdate("GOV", abi.encodePacked(gov), abi.encodePacked(_gov));
+        emit GovernanceUpdate("GOV", abi.encode(gov), abi.encode(_gov));
         gov = _gov;
     }
 
     function setNode(address _node) external virtual override onlyGov {
-        emit GovernanceUpdate("NODE", abi.encodePacked(node), abi.encodePacked(_node));
+        emit GovernanceUpdate("NODE", abi.encode(node), abi.encode(_node));
         node = _node;
     }
 
     function setSteak(IERC20 _steak) external virtual override onlyGov {
-        emit GovernanceUpdate("STEAK", abi.encodePacked(steak), abi.encodePacked(_steak));
+        emit GovernanceUpdate("STEAK", abi.encode(steak), abi.encode(_steak));
         steak = _steak;
     }
 
     function setProtocolFee(uint256 _protocolFee) external virtual override onlyGov {
-        emit GovernanceUpdate("PROTOCOL_FEE", abi.encodePacked(protocolFee), abi.encodePacked(_protocolFee));
+        emit GovernanceUpdate("PROTOCOL_FEE", abi.encode(protocolFee), abi.encode(_protocolFee));
         protocolFee = _protocolFee;
     }
 
     function setLiquidityFee(uint256 _liquidityFee) external virtual override onlyGov {
-        emit GovernanceUpdate("LIQUIDITY_FEE", abi.encodePacked(liquidityFee), abi.encodePacked(_liquidityFee));
+        emit GovernanceUpdate("LIQUIDITY_FEE", abi.encode(liquidityFee), abi.encode(_liquidityFee));
         liquidityFee = _liquidityFee;
     }
 
@@ -184,7 +184,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     function setTenderFarm(ITenderFarm _tenderFarm) external override onlyGov {
-        emit GovernanceUpdate("TENDERFARM", abi.encodePacked(tenderFarm), abi.encodePacked(_tenderFarm));
+        emit GovernanceUpdate("TENDERFARM", abi.encode(tenderFarm), abi.encode(_tenderFarm));
         tenderFarm = _tenderFarm;
     }
 

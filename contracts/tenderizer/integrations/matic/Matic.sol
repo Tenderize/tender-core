@@ -59,7 +59,7 @@ contract Matic is Tenderizer {
 
     function setNode(address _node) external override onlyGov {
         require(_node != address(0), "ZERO_ADDRESS");
-        emit GovernanceUpdate("NODE", abi.encodePacked(node), abi.encodePacked(_node));
+        emit GovernanceUpdate("NODE", abi.encode(node), abi.encode(_node));
         node = _node;
         matic = IMatic(_node);
     }
@@ -142,8 +142,8 @@ contract Matic is Tenderizer {
     function _setStakingContract(address _stakingContract) internal override {
         emit GovernanceUpdate(
             "STAKING_CONTRACT",
-            abi.encodePacked(address(maticStakeManager)),
-            abi.encodePacked(_stakingContract)
+            abi.encode(address(maticStakeManager)),
+            abi.encode(_stakingContract)
         );
         maticStakeManager = _stakingContract;
     }
