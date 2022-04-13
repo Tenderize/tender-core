@@ -170,7 +170,7 @@ contract Livepeer is Tenderizer {
     function _setStakingContract(address _stakingContract) internal override {
         emit GovernanceUpdate(
             "STAKING_CONTRACT",
-            abi.encode(address(livepeer)),
+            abi.encode(livepeer),
             abi.encode(_stakingContract)
         );
         livepeer = ILivepeer(_stakingContract);

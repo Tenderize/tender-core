@@ -188,7 +188,7 @@ contract Audius is Tenderizer {
     function _setStakingContract(address _stakingContract) internal override {
         emit GovernanceUpdate(
             "STAKING_CONTRACT",
-            abi.encode(address(audius)),
+            abi.encode(audius),
             abi.encode(_stakingContract)
         );
         audius = IAudius(_stakingContract);

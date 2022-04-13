@@ -142,7 +142,7 @@ contract Matic is Tenderizer {
     function _setStakingContract(address _stakingContract) internal override {
         emit GovernanceUpdate(
             "STAKING_CONTRACT",
-            abi.encode(address(maticStakeManager)),
+            abi.encode(maticStakeManager),
             abi.encode(_stakingContract)
         );
         maticStakeManager = _stakingContract;
