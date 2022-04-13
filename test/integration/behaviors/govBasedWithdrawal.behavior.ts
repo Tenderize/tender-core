@@ -27,12 +27,13 @@ export default function suite () {
   })
 
   describe('gov withdrawal', async () => {
-    let tx: Transaction
+    let tx: any
     beforeEach(async function () {
       // Gov Unstake
       await ctx.Tenderizer.processUnstake()
       balBefore = await ctx.Steak.balanceOf(ctx.Tenderizer.address)
       tx = await ctx.Tenderizer.processWithdraw()
+      await tx.wait()
     })
 
     it('reverts if undelegateStake() reverts', async () => {
