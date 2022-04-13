@@ -102,4 +102,29 @@ export default function suite () {
       expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('GOV')
     })
   })
+
+  describe('setting staked reader on tenderToken', async () => {
+    it('reverts if not called by gov', async () => {
+      await expect(ctx.Tenderizer.connect(ctx.signers[1]).setGov(ethers.constants.AddressZero)).to.be.reverted
+    })
+
+    describe('sets succesfully', async () => {
+      const newTenderizerAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
+      beforeEach(async () => {  
+        tx = await ctx.Tenderizer.migrateTenderizer(newTenderizerAddress)
+      })
+
+      it('sets stakedReader', async () => {
+        expect(await ctx.TenderToken.totalStakedReader()).to.equal(newTenderizerAddress)
+      })
+
+      it('sets owner successfully', async () => {
+        expect(await ctx.TenderToken.owner()).to.equal(newTenderizerAddress)
+      })
+
+      it('should emit GovernanceUpdate event', async () => {
+        expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('STAKED_READER')
+      })
+    })
+  })
 }

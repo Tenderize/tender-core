@@ -203,4 +203,10 @@ interface ITenderToken {
      * @dev Used to determine TenderToken total supply.
      */
     function setTotalStakedReader(ITotalStakedReader _stakedReader) external;
+
+    /**
+     * @notice Changes the owner of the contract
+     * @param _newOwner address of the new owner
+     */
+    function transferOwnership(address _newOwner) external;
 }

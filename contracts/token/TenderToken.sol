@@ -181,6 +181,11 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
         totalStakedReader = _totalStakedReader;
     }
 
+    /// @inheritdoc ITenderToken
+    function transferOwnership(address _newOwnner) public override(OwnableUpgradeable, ITenderToken) onlyOwner {
+        OwnableUpgradeable.transferOwnership(_newOwnner);
+    }
+
     // INTERNAL FUNCTIONS
 
     /**

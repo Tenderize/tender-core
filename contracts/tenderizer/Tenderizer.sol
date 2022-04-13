@@ -237,6 +237,13 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         }
     }
 
+    /// @inheritdoc ITenderizer
+    function migrateTenderizer(ITotalStakedReader _newTenderizer) external override onlyGov {
+        tenderToken.setTotalStakedReader(_newTenderizer);
+        tenderToken.transferOwnership(address(_newTenderizer));
+        emit GovernanceUpdate("STAKED_READER");
+    }
+
     // Internal functions
 
     function _depositHook(address _for, uint256 _amount) internal {

@@ -6,6 +6,7 @@ pragma solidity 0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../tenderfarm/ITenderFarm.sol";
+import "./ITotalStakedReader.sol";
 
 /**
  * @title Tenderizer is the base contract to be implemented.
@@ -235,4 +236,11 @@ interface ITenderizer {
     function setStakingContract(address _stakingContract) external;
 
     function setTenderFarm(ITenderFarm _tenderFarm) external;
+
+    /**
+     * @notice MigrateTenderizer sets the staked reader on TenderToken 
+     * and transfers its owndership to the new Tenderizer
+     * @param _newtenderizer the address of the new Tenderizer
+     */
+    function migrateTenderizer(ITotalStakedReader _newtenderizer) external;
 }
