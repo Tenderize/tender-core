@@ -1,4 +1,5 @@
-import { BigNumber, Transaction } from 'ethers/lib/ethers'
+import { BigNumber } from '@ethersproject/bignumber'
+import { ContractTransaction } from '@ethersproject/contracts'
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
 import { getSighash } from '../../util/helpers'
@@ -7,7 +8,6 @@ import { Context } from 'mocha'
 export default function suite () {
   let ctx: Context
   const secondDeposit = ethers.utils.parseEther('10')
-  let balBefore: BigNumber
   const acceptableDelta = 2
 
   beforeEach(async function () {
@@ -27,12 +27,14 @@ export default function suite () {
   })
 
   describe('gov withdrawal', async () => {
-    let tx: Transaction
+    let balBefore: BigNumber
+    let tx: ContractTransaction
     beforeEach(async function () {
       // Gov Unstake
       await ctx.Tenderizer.processUnstake()
       balBefore = await ctx.Steak.balanceOf(ctx.Tenderizer.address)
       tx = await ctx.Tenderizer.processWithdraw()
+      await tx.wait()
     })
 
     it('reverts if undelegateStake() reverts', async () => {
@@ -47,14 +49,14 @@ export default function suite () {
     })
 
     it('should emit Withdraw event from Tenderizer', async () => {
-      expect(tx).to.emit(ctx.Tenderizer, 'ProcessWithdraws')
+      await expect(tx).to.emit(ctx.Tenderizer, 'ProcessWithdraws')
         .withArgs(ctx.deployer, ctx.withdrawAmount)
     })
   })
 
   describe('user withdrawal', async () => {
     let steakBalanceBefore : BigNumber
-    let tx: Transaction
+    let tx: ContractTransaction
 
     beforeEach(async function () {
       // Gov Unstake
@@ -112,7 +114,8 @@ export default function suite () {
 
     beforeEach(async function () {
       // Gov Unstake
-      await ctx.Tenderizer.processUnstake()
+      const tx = await ctx.Tenderizer.processUnstake()
+      await tx.wait()
       // reduce staked on mock
       const slashAmount = ethers.utils.parseEther('1')
       const staked = await ctx.StakingContract.staked()
@@ -140,7 +143,8 @@ export default function suite () {
       // TODO: Add usntakes from other accounts
       // Gov Unstake
       await ctx.Tenderizer.processUnstake()
-      await ctx.Tenderizer.processWithdraw()
+      let tx = await ctx.Tenderizer.processWithdraw()
+      await tx.wait()
       // reduce staked on mock
       const slashAmount = ethers.utils.parseEther('1')
       const staked = await ctx.StakingContract.staked()
@@ -149,7 +153,8 @@ export default function suite () {
       await ctx.Tenderizer.claimRewards()
       slashFromWithdrawal = slashAmount.mul(ctx.withdrawAmount).div(cpBefore.add(ctx.withdrawAmount))
       steakBalanceBefore = await ctx.Steak.balanceOf(ctx.signers[2].address)
-      await ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.unbondLockID)
+      tx = await ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.unbondLockID)
+      await tx.wait()
     })
 
     it('reduces the unstaked amount', async () => {

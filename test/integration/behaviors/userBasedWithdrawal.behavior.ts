@@ -1,5 +1,6 @@
 import { ethers } from 'hardhat'
-import { BigNumber, Transaction } from 'ethers/lib/ethers'
+import { BigNumber } from '@ethersproject/bignumber'
+import { ContractTransaction } from '@ethersproject/contracts'
 import { expect } from 'chai'
 import { getSighash } from '../../util/helpers'
 import { Context } from 'mocha'
@@ -7,9 +8,8 @@ import { Context } from 'mocha'
 const secondDeposit = ethers.utils.parseEther('10')
 
 export default function suite () {
-  let tx: Transaction
+  let tx: ContractTransaction
   let ctx: Context
-  let withdrawAmount : BigNumber
 
   let balBefore: BigNumber
   let balAfter: BigNumber

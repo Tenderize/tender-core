@@ -1,12 +1,13 @@
-import { BigNumber, Transaction } from 'ethers/lib/ethers'
+import { BigNumber } from '@ethersproject/bignumber'
+import { ContractTransaction } from '@ethersproject/contracts'
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
 import { getSighash } from '../../util/helpers'
 import { Context } from 'mocha'
 
 export function govBasedUnlock () {
-  let unstakeTx: Transaction
-  let processUnstakeTx: Transaction
+  let unstakeTx: ContractTransaction
+  let processUnstakeTx: ContractTransaction
   let ctx: Context
   const secondDeposit = ethers.utils.parseEther('10')
   const acceptableDelta = 2
@@ -28,6 +29,7 @@ export function govBasedUnlock () {
     principleBefore = await ctx.Tenderizer.currentPrincipal()
     ctx.withdrawAmount = await ctx.TenderToken.balanceOf(ctx.signers[2].address)
     unstakeTx = await ctx.Tenderizer.connect(ctx.signers[2]).unstake(ctx.withdrawAmount)
+    await unstakeTx.wait()
   })
 
   describe('user unlock', async () => {
@@ -67,6 +69,7 @@ export function govBasedUnlock () {
       const stakeBefore = await ctx.Tenderizer.totalStakedTokens()
 
       processUnstakeTx = await ctx.Tenderizer.processUnstake()
+      await processUnstakeTx.wait()
 
       // staked tokens already updated by user unstaked, gov unstake just processes
       // user unstakes, so staked tokens stays the same
@@ -80,59 +83,58 @@ export function govBasedUnlock () {
   })
 }
 
-export function rescueFunctions() {
-  let tx: Transaction
+export function rescueFunctions () {
+  let tx: ContractTransaction
   let ctx: Context
   const lockID = 0
   let principleBefore: BigNumber
-  
+
   beforeEach(async function () {
-      ctx = this.test?.ctx!
-      await ctx.Tenderizer.claimRewards()
-    })
-    
+    ctx = this.test?.ctx!
+    await ctx.Tenderizer.claimRewards()
+  })
+
   describe('rescue unstake', async () => {
     beforeEach(async function () {
-        principleBefore = await ctx.Tenderizer.currentPrincipal()
-        tx = await ctx.Tenderizer.rescueUnlock()
+      principleBefore = await ctx.Tenderizer.currentPrincipal()
+      tx = await ctx.Tenderizer.rescueUnlock()
     })
 
     it('reverts if not called by gov', async () => {
-        await expect(ctx.Tenderizer.connect(ctx.signers[1]).rescueWithdraw(lockID)).to.be.reverted
+      await expect(ctx.Tenderizer.connect(ctx.signers[1]).rescueWithdraw(lockID)).to.be.reverted
     })
-    
+
     it('current principle stays the same', async () => {
-        expect(await ctx.Tenderizer.currentPrincipal()).to.eq(principleBefore)
+      expect(await ctx.Tenderizer.currentPrincipal()).to.eq(principleBefore)
     })
 
     it('should emit Unstake event from Tenderizer', async () => {
-        expect(tx).to.emit(ctx.Tenderizer, 'Unstake')
+      expect(tx).to.emit(ctx.Tenderizer, 'Unstake')
         .withArgs(ctx.Tenderizer.address, ctx.NODE, principleBefore, 0)
     })
   })
 
   describe('rescue withdraw', async () => {
     beforeEach(async function () {
-        principleBefore = await ctx.Tenderizer.currentPrincipal()
-        await ctx.Tenderizer.rescueUnlock()
-        await ctx.Tenderizer.processUnstake()
-        await ctx.Tenderizer.processWithdraw()
-        tx = await ctx.Tenderizer.rescueWithdraw(lockID)
+      principleBefore = await ctx.Tenderizer.currentPrincipal()
+      await ctx.Tenderizer.rescueUnlock()
+      await ctx.Tenderizer.processUnstake()
+      await ctx.Tenderizer.processWithdraw()
+      tx = await ctx.Tenderizer.rescueWithdraw(lockID)
     })
-    
+
     it('reverts if not called by gov', async () => {
-        await expect(ctx.Tenderizer.connect(ctx.signers[1]).rescueWithdraw(lockID)).to.be.reverted
+      await expect(ctx.Tenderizer.connect(ctx.signers[1]).rescueWithdraw(lockID)).to.be.reverted
     })
-  
+
     it('success - increases Steak balance', async () => {
-        expect(await ctx.Steak.balanceOf(ctx.Tenderizer.address))
-          .to.eq(principleBefore)
+      expect(await ctx.Steak.balanceOf(ctx.Tenderizer.address))
+        .to.eq(principleBefore)
     })
-  
+
     it('should emit Withdraw event from Tenderizer', async () => {
-        expect(tx).to.emit(ctx.Tenderizer, 'Withdraw')
-          .withArgs(ctx.Tenderizer.address, principleBefore, lockID)
-     })
+      expect(tx).to.emit(ctx.Tenderizer, 'Withdraw')
+        .withArgs(ctx.Tenderizer.address, principleBefore, lockID)
+    })
   })
 }
-
