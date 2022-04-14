@@ -30,6 +30,7 @@ export default function suite () {
     let tx: any
     beforeEach(async function () {
       // Gov Unstake
+      await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.withdrawStake), false)
       await ctx.Tenderizer.processUnstake()
       balBefore = await ctx.Steak.balanceOf(ctx.Tenderizer.address)
       tx = await ctx.Tenderizer.processWithdraw()
@@ -39,12 +40,11 @@ export default function suite () {
     it('reverts if undelegateStake() reverts', async () => {
       await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.withdrawStake), true)
       await expect(ctx.Tenderizer.processWithdraw()).to.be.reverted
-      await ctx.StakingContract.setReverts(getSighash(ctx.StakingContract.interface, ctx.methods.withdrawStake), false)
     })
 
     it('undelegateStake() succeeds', async () => {
       const balAfter = await ctx.Steak.balanceOf(ctx.Tenderizer.address)
-      // expect(balBefore.add(ctx.withdrawAmount)).to.eq(balAfter)
+      expect(balBefore.add(ctx.withdrawAmount)).to.eq(balAfter)
     })
 
     it('should emit Withdraw event from Tenderizer', async () => {
