@@ -1,4 +1,4 @@
-import { BigNumber, Transaction } from 'ethers/lib/ethers'
+import { BigNumber, ContractTransaction, Transaction } from 'ethers/lib/ethers'
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
 import { getSighash } from '../../util/helpers'
@@ -55,7 +55,7 @@ export default function suite () {
 
   describe('user withdrawal', async () => {
     let steakBalanceBefore : BigNumber
-    let tx: Transaction
+    let tx: ContractTransaction
 
     beforeEach(async function () {
       // Gov Unstake
@@ -63,6 +63,7 @@ export default function suite () {
       await ctx.Tenderizer.processWithdraw()
       steakBalanceBefore = await ctx.Steak.balanceOf(ctx.signers[2].address)
       tx = await ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.unbondLockID)
+      tx.wait()
     })
 
     it('reverts if account mismatch from unbondigLock', async () => {
