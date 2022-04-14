@@ -1,10 +1,11 @@
-import { BigNumber, Transaction } from 'ethers/lib/ethers'
+import { BigNumber } from '@ethersproject/bignumber'
+import { ContractTransaction } from '@ethersproject/contracts'
 import { expect } from 'chai'
 import { signERC2612Permit } from 'eth-permit'
 import { Context } from 'mocha'
 
 export default function suite () {
-  let tx: Transaction
+  let tx: ContractTransaction
   let ctx: Context
   before(async function () {
     ctx = this.test?.ctx!
