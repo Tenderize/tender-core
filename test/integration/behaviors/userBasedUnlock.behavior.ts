@@ -45,6 +45,7 @@ export function userBasedUnlockByUser () {
     cpBefore = await ctx.Tenderizer.totalStakedTokens()
     withdrawAmount = await ctx.TenderToken.balanceOf(ctx.signers[2].address)
     tx = await ctx.Tenderizer.connect(ctx.signers[2]).unstake(withdrawAmount)
+    await tx.wait()
   })
 
   it('reverts if requested amount exceeds balance', async () => {
@@ -78,7 +79,7 @@ export function userBasedUnlockByUser () {
 }
 
 export function rescueFunctions() {
-  let tx: Transaction
+  let tx: ContractTransaction
   let ctx: Context
   const lockID = 0
   let principleBefore: BigNumber
@@ -92,6 +93,7 @@ export function rescueFunctions() {
     beforeEach(async function () {
         principleBefore = await ctx.Tenderizer.currentPrincipal()
         tx = await ctx.Tenderizer.rescueUnlock()
+        await tx.wait()
     })
 
     it('reverts if not called by gov', async () => {

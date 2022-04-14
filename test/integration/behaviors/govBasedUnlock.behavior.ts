@@ -1,12 +1,12 @@
-import { BigNumber, Transaction } from 'ethers/lib/ethers'
+import { BigNumber, ContractTransaction, Transaction } from 'ethers/lib/ethers'
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
 import { getSighash } from '../../util/helpers'
 import { Context } from 'mocha'
 
 export function govBasedUnlock () {
-  let unstakeTx: Transaction
-  let processUnstakeTx: Transaction
+  let unstakeTx: ContractTransaction
+  let processUnstakeTx: ContractTransaction
   let ctx: Context
   const secondDeposit = ethers.utils.parseEther('10')
   const acceptableDelta = 2
@@ -28,6 +28,7 @@ export function govBasedUnlock () {
     principleBefore = await ctx.Tenderizer.currentPrincipal()
     ctx.withdrawAmount = await ctx.TenderToken.balanceOf(ctx.signers[2].address)
     unstakeTx = await ctx.Tenderizer.connect(ctx.signers[2]).unstake(ctx.withdrawAmount)
+    await unstakeTx.wait()
   })
 
   describe('user unlock', async () => {
@@ -81,7 +82,7 @@ export function govBasedUnlock () {
 }
 
 export function rescueFunctions() {
-  let tx: Transaction
+  let tx: ContractTransaction
   let ctx: Context
   const lockID = 0
   let principleBefore: BigNumber
@@ -95,6 +96,7 @@ export function rescueFunctions() {
     beforeEach(async function () {
         principleBefore = await ctx.Tenderizer.currentPrincipal()
         tx = await ctx.Tenderizer.rescueUnlock()
+        await tx.wait()
     })
 
     it('reverts if not called by gov', async () => {
