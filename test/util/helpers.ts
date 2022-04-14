@@ -1,5 +1,9 @@
 import { ethers, BigNumber } from 'ethers'
+import { ConsoleLogger } from 'ts-generator/dist/logger'
 import { PERC_DIVISOR } from './constants'
+const ethUtils = require('ethereumjs-util')
+const Buffer = require('safe-buffer').Buffer
+const BN = ethUtils.BN
 
 export function sharesToTokens (shares: BigNumber, totalShares: BigNumber, totalTokens: BigNumber): BigNumber {
   if (totalShares.eq(0)) {

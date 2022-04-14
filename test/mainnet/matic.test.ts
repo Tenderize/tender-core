@@ -1,7 +1,8 @@
 import hre, { ethers } from 'hardhat'
 import {
-  Controller, ElasticSupplyPool, TenderToken, IMatic, BPool, EIP173Proxy, Matic, ERC20
+  TenderToken, IMatic, TenderFarm, EIP173Proxy, Matic, ERC20, TenderSwap, Audius, LiquidityPoolToken
 } from '../../typechain'
+import { getCurrentBlockTimestamp } from '../util/evm'
 
 import rootChainAbi from './abis/matic/RootChain.json'
 
@@ -15,7 +16,8 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { Contract, ContractTransaction } from '@ethersproject/contracts'
 
 import { Signer } from '@ethersproject/abstract-signer'
-import { percOf2, sharesToTokens, buildsubmitCheckpointPaylod, getBlockHeader } from '../util/helpers'
+import { percOf2, sharesToTokens } from '../util/helpers'
+import { buildsubmitCheckpointPaylod, getBlockHeader } from '../util/matic_mainnet_helpers'
 const MerkleTree = require('../util/merkle-tree')
 const ethUtils = require('ethereumjs-util')
 
@@ -27,11 +29,11 @@ const {
 describe('Matic Mainnet Fork Test', () => {
   let MaticStaking: IMatic
   let MaticToken: ERC20
-  let Controller: Controller
   let Tenderizer: Matic
   let TenderToken: TenderToken
-  let Esp: ElasticSupplyPool
-  let BPool: BPool
+  let TenderSwap: TenderSwap
+  let LpToken: LiquidityPoolToken
+  let TenderFarm: TenderFarm
 
   let Matic: {[name: string]: Deployment}
 
@@ -214,17 +216,26 @@ describe('Matic Mainnet Fork Test', () => {
     Matic = await hre.deployments.fixture(['Matic'], {
       keepExistingDeployments: false
     })
-    Controller = (await ethers.getContractAt('Controller', Matic.Controller.address)) as Controller
-    Tenderizer = (await ethers.getContractAt('Matic', Matic.Matic.address)) as Matic
-    TenderToken = (await ethers.getContractAt('TenderToken', Matic.TenderToken.address)) as TenderToken
-    Esp = (await ethers.getContractAt('ElasticSupplyPool', Matic.ElasticSupplyPool.address)) as ElasticSupplyPool
-    BPool = (await ethers.getContractAt('BPool', await Esp.bPool())) as BPool
-    await Controller.batchExecute(
-      [Tenderizer.address, Tenderizer.address],
-      [0, 0],
-      [Tenderizer.interface.encodeFunctionData('setProtocolFee', [protocolFeesPercent]),
-        Tenderizer.interface.encodeFunctionData('setLiquidityFee', [liquidityFeesPercent])]
-    )
+
+    Tenderizer = (await ethers.getContractAt('Audius', Matic.Matic.address)) as Matic
+    TenderToken = (await ethers.getContractAt('TenderToken', await Tenderizer.tenderToken())) as TenderToken
+    TenderSwap = (await ethers.getContractAt('TenderSwap', await Tenderizer.tenderSwap())) as TenderSwap
+    TenderFarm = (await ethers.getContractAt('TenderFarm', await Tenderizer.tenderFarm())) as TenderFarm
+    LpToken = (await ethers.getContractAt('LiquidityPoolToken', await TenderSwap.lpToken())) as LiquidityPoolToken
+    await Tenderizer.setProtocolFee(protocolFeesPercent)
+    await Tenderizer.setLiquidityFee(liquidityFeesPercent)
+
+
+    // Deposit initial stake
+    await MaticToken.approve(Tenderizer.address, initialStake)
+    await Tenderizer.deposit(initialStake, { gasLimit: 500000 })
+    // Add initial liquidity
+    await MaticToken.approve(TenderSwap.address, initialStake)
+    await TenderToken.approve(TenderSwap.address, initialStake)
+    const lpTokensOut = await TenderSwap.calculateTokenAmount([initialStake, initialStake], true)
+    await TenderSwap.addLiquidity([initialStake, initialStake], lpTokensOut, (await getCurrentBlockTimestamp()) + 1000)
+    await LpToken.approve(TenderFarm.address, lpTokensOut)
+    await TenderFarm.farm(lpTokensOut)
   })
 
   const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
@@ -233,13 +244,13 @@ describe('Matic Mainnet Fork Test', () => {
 
   describe('deposit', () => {
     it('reverts because transfer amount exceeds allowance', async () => {
-      await expect(Controller.deposit(deposit)).to.be.reverted
+      await expect(Tenderizer.deposit(deposit)).to.be.reverted
     })
 
     describe('deposits funds succesfully', async () => {
       before(async () => {
-        await MaticToken.approve(Controller.address, deposit)
-        tx = await Controller.deposit(deposit)
+        await MaticToken.approve(Tenderizer.address, deposit)
+        tx = await Tenderizer.deposit(deposit)
       })
 
       it('increases TenderToken supply', async () => {
@@ -265,15 +276,15 @@ describe('Matic Mainnet Fork Test', () => {
     before(async () => {
       // Exchange rate would be 1 at this point, so can simply comapre the shares
       stakeBefore = await MaticStaking.balanceOf(Tenderizer.address)
-      tx = await Controller.gulp()
+      tx = await Tenderizer.claimRewards()
     })
 
     it('bond succeeds', async () => {
-      expect(await MaticStaking.balanceOf(Tenderizer.address)).to.eq(stakeBefore.add(deposit))
+      expect(await MaticStaking.balanceOf(Tenderizer.address)).to.eq(initialStake.add(deposit))
     })
 
     it('emits Stake event from tenderizer', async () => {
-      expect(tx).to.emit(Tenderizer, 'Stake').withArgs(NODE, deposit)
+      expect(tx).to.emit(Tenderizer, 'Stake').withArgs(NODE, initialStake.add(deposit))
     })
   })
 
@@ -353,7 +364,7 @@ describe('Matic Mainnet Fork Test', () => {
         const protocolFees = percOf2(increase.add(swappedLPTRewards), protocolFeesPercent)
         newStake = deposit.add(initialStake).add(increase)
         newStakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
-        tx = await Controller.rebase()
+        tx = await Tenderizer.claimRewards()
       })
 
       it('updates currentPrincipal', async () => {
