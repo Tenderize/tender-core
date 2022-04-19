@@ -19,14 +19,6 @@ export default function suite () {
     await expect(ctx.Tenderizer.claimRewards()).to.be.not.reverted
   })
 
-  it('collectFees() does not revert', async function () {
-    await expect(ctx.Tenderizer.collectFees()).to.be.not.reverted
-  })
-
-  it('collectLiquidityFees() does not revert', async function () {
-    await expect(ctx.Tenderizer.collectLiquidityFees()).to.be.not.reverted
-  })
-
   it('TenderToken supply is 0', async function () {
     expect(await ctx.TenderToken.totalSupply()).to.be.eq(0)
   })

@@ -192,29 +192,6 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         tenderFarm = _tenderFarm;
     }
 
-    // Fee collection
-    /// @inheritdoc ITenderizer
-    function collectFees() external override onlyGov returns (uint256) {
-        // mint tenderToken to fee distributor (governance)
-        tenderToken.mint(gov, pendingFees);
-
-        return _collectFees();
-    }
-
-    /// @inheritdoc ITenderizer
-    function collectLiquidityFees() external override onlyGov returns (uint256 amount) {
-        if (tenderFarm.nextTotalStake() == 0) return 0;
-
-        // mint tenderToken and transfer to tenderFarm
-        amount = pendingLiquidityFees;
-        tenderToken.mint(address(this), amount);
-        _collectLiquidityFees();
-
-        // TODO: Move this approval to infinite approval in initialize()?
-        tenderToken.approve(address(tenderFarm), amount);
-        tenderFarm.addRewards(amount);
-    }
-
     /// @inheritdoc ITenderizer
     function calcDepositOut(uint256 _amountIn) external view override returns (uint256) {
         return _calcDepositOut(_amountIn);
@@ -265,7 +242,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         // calculate what the new currentPrinciple would be after the call
         // but excluding fees from rewards for this rebase
         // which still need to be calculated if stake >= currentPrincipal
-        uint256 stake = _newStake + currentBal - pendingFees - pendingLiquidityFees;
+        uint256 stake = _newStake + currentBal;
 
         // Difference is negative, no rewards have been earnt
         // So no fees are charged
@@ -276,41 +253,34 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
             return;
         }
 
+        currentPrincipal = stake;
+
         // Difference is positive, calculate the rewards
         uint256 totalRewards = stake - currentPrincipal_;
 
-        // calculate the protocol fees
-        uint256 fees = MathUtils.percOf(totalRewards, protocolFee);
-        pendingFees += fees;
+        _collectFees(totalRewards);
 
-        // calculate the liquidity provider fees
-        uint256 liquidityFees = MathUtils.percOf(totalRewards, liquidityFee);
-        pendingLiquidityFees += liquidityFees;
-
-        stake = stake - fees - liquidityFees;
-        currentPrincipal = stake;
+        // TODO: Oh is this an issue? As if there's no 
+        // nextTotalStake, no liq fees will be transferred will be minted
+        if (tenderFarm.nextTotalStake() > 0)
+            _collectLiquidityFees(totalRewards);
 
         emit RewardsClaimed(int256(stake - currentPrincipal_), stake, currentPrincipal_);
     }
 
-    function _collectFees() internal virtual returns (uint256) {
-        // set pendingFees to 0
-        // Controller will mint tenderToken and distribute it
-        uint256 before = pendingFees;
-        pendingFees = 0;
-        currentPrincipal += before;
-        emit ProtocolFeeCollected(before);
-        return before;
+    function _collectFees(uint256 _totalRewards) internal virtual {
+        uint256 fees = MathUtils.percOf(_totalRewards, protocolFee);
+        tenderToken.mint(gov, fees);
     }
 
-    function _collectLiquidityFees() internal virtual returns (uint256) {
-        // set pendingFees to 0
-        // Controller will mint tenderToken and distribute it
-        uint256 before = pendingLiquidityFees;
-        pendingLiquidityFees = 0;
-        currentPrincipal += before;
-        emit LiquidityFeeCollected(before);
-        return before;
+    function _collectLiquidityFees(uint256 _totalRewards) internal virtual {
+        uint256 fees = MathUtils.percOf(_totalRewards, liquidityFee);
+        tenderToken.mint(address(this), fees);
+        // minting sometimes generates a little less, due to share calculation
+        // hence using the balance to transfer here
+        uint256 tenderBal = tenderToken.balanceOf(address(this));
+        tenderToken.approve(address(tenderFarm), tenderBal);
+        tenderFarm.addRewards(tenderBal);
     }
 
     function _totalStakedTokens() internal view virtual returns (uint256) {

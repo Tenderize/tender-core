@@ -12,17 +12,20 @@ export function stakeIncreaseTests () {
   let totalShares: BigNumber
   let dyBefore: BigNumber
   let swapStakeBalBefore: BigNumber
+  let farmBalanceBefore: BigNumber
+  let ownerBalBefore: BigNumber
 
   beforeEach(async function () {
     ctx = this.test?.ctx!
-
+    ownerBalBefore = await ctx.TenderToken.balanceOf(ctx.deployer)
+    farmBalanceBefore = await ctx.TenderToken.balanceOf(ctx.TenderFarm.address)
     dyBefore = await ctx.TenderSwap.calculateSwap(ctx.TenderToken.address, ONE)
     swapStakeBalBefore = await ctx.Steak.balanceOf(ctx.TenderSwap.address)
     tx = await ctx.Tenderizer.claimRewards()
   })
 
   it('updates currentPrincipal', async () => {
-    expect(await ctx.Tenderizer.currentPrincipal()).to.eq(ctx.newStakeMinusFees)
+    expect(await ctx.Tenderizer.currentPrincipal()).to.eq(ctx.newStake)
   })
 
   it('increases tendertoken balances when rewards are added', async () => {
@@ -45,11 +48,21 @@ export function stakeIncreaseTests () {
     expect(await ctx.TenderSwap.calculateSwap(ctx.TenderToken.address, ONE)).to.be.lt(dyBefore)
   })
 
+  it('should increase tenderToken balance of owner', async () => {
+    expect((await ctx.TenderToken.balanceOf(ctx.deployer)).sub(ownerBalBefore.add(ctx.protocolFees)).abs())
+      .to.lte(ethers.utils.parseEther('0.000001')) // TODO: Delta dues to share calculation precision ???
+  })
+
+  it('should increase tenderToken balance of tenderFarm', async () => {
+    expect((await ctx.TenderToken.balanceOf(ctx.TenderFarm.address)).sub(farmBalanceBefore.add(ctx.liquidityFees)).abs())
+    .to.lte(ethers.utils.parseEther('0.000001')) // TODO: Delta dues to share calculation precision ???
+  })
+
   it('should emit RewardsClaimed event from Tenderizer', async () => {
     const oldPrinciple = ctx.initialStake
       .sub(ctx.initialStake.mul(ctx.DELEGATION_TAX).div(ctx.MAX_PPM))
     expect(tx).to.emit(ctx.Tenderizer, 'RewardsClaimed')
-      .withArgs(ctx.increase, ctx.newStakeMinusFees, oldPrinciple)
+      .withArgs(ctx.increase, ctx.newStake, oldPrinciple)
   })
 }
 

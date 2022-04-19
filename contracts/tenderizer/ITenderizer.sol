@@ -154,22 +154,6 @@ interface ITenderizer {
     function claimRewards() external;
 
     /**
-     * @notice Collect fees pulls any pending governance fees from the Tenderizer to the governance treasury.
-     * @return amount Amount of protocol fees collected
-     * @dev Resets pendingFees.
-     * @dev Fees claimed are added to total staked.
-     */
-    function collectFees() external returns (uint256 amount);
-
-    /**
-     * @notice Collect Liquidity fees pulls any pending LP fees from the Tenderizer to TenderFarm.
-     * @return amount Amount of liquidity fees collected
-     * @dev Resets pendingFees.
-     * @dev Fees claimed are added to total staked.
-     */
-    function collectLiquidityFees() external returns (uint256 amount);
-
-    /**
      * @notice Total Staked Tokens returns the total amount of underlying tokens staked by this Tenderizer.
      * @return totalStaked total amount staked by this Tenderizer
      */
