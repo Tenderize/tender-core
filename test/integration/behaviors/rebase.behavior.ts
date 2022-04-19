@@ -12,17 +12,20 @@ export function stakeIncreaseTests () {
   let totalShares: BigNumber
   let dyBefore: BigNumber
   let swapStakeBalBefore: BigNumber
+  let farmBalanceBefore: BigNumber
+  let ownerBalBefore: BigNumber
 
   beforeEach(async function () {
     ctx = this.test?.ctx!
-
+    ownerBalBefore = await ctx.TenderToken.balanceOf(ctx.deployer)
+    farmBalanceBefore = await ctx.TenderToken.balanceOf(ctx.TenderFarm.address)
     dyBefore = await ctx.TenderSwap.calculateSwap(ctx.TenderToken.address, ONE)
     swapStakeBalBefore = await ctx.Steak.balanceOf(ctx.TenderSwap.address)
     tx = await ctx.Tenderizer.claimRewards()
   })
 
   it('updates currentPrincipal', async () => {
-    expect(await ctx.Tenderizer.currentPrincipal()).to.eq(ctx.newStakeMinusFees)
+    expect(await ctx.Tenderizer.currentPrincipal()).to.eq(ctx.newStake)
   })
 
   it('increases tendertoken balances when rewards are added', async () => {
@@ -45,21 +48,46 @@ export function stakeIncreaseTests () {
     expect(await ctx.TenderSwap.calculateSwap(ctx.TenderToken.address, ONE)).to.be.lt(dyBefore)
   })
 
+  it('collected protocol fees', () => {
+    it('should increase tenderToken balance of owner', async () => {
+      expect((await ctx.TenderToken.balanceOf(ctx.deployer)).sub(ownerBalBefore.add(ctx.protocolFees)).abs())
+        .to.lte(ethers.utils.parseEther('0.000001')) // TODO: Delta dues to share calculation precision ???
+    })
+
+    it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
+      await expect(tx).to.emit(ctx.Tenderizer, 'ProtocolFeeCollected').withArgs(ctx.protocolFees)
+    })
+  })
+
+  it('collected liquidity provider fees', () => {
+    it('should increase tenderToken balance of tenderFarm', async () => {
+      expect((await ctx.TenderToken.balanceOf(ctx.TenderFarm.address)).sub(farmBalanceBefore.add(ctx.liquidityFees)).abs())
+        .to.lte(ethers.utils.parseEther('0.000001')) // TODO: Delta dues to share calculation precision ???
+    })
+
+    it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
+      await expect(tx).to.emit(ctx.Tenderizer, 'LiquidityFeeCollected').withArgs(ctx.liquidityFees)
+    })
+  })
+
   it('should emit RewardsClaimed event from Tenderizer', async () => {
     const oldPrinciple = ctx.initialStake
       .sub(ctx.initialStake.mul(ctx.DELEGATION_TAX).div(ctx.MAX_PPM))
     expect(tx).to.emit(ctx.Tenderizer, 'RewardsClaimed')
-      .withArgs(ctx.increase, ctx.newStakeMinusFees, oldPrinciple)
+      .withArgs(ctx.increase, ctx.newStake, oldPrinciple)
   })
 }
 
 export function stakeStaysSameTests () {
   let ctx: Context
-  let feesBefore: BigNumber
+  let ownerBalBefore: BigNumber
+  let farmBalBefore: BigNumber
 
   beforeEach(async function () {
     ctx = this.test?.ctx!
-    feesBefore = await ctx.Tenderizer.pendingFees()
+    ownerBalBefore = await ctx.TenderToken.balanceOf(ctx.deployer)
+    farmBalBefore = await ctx.TenderToken.balanceOf(ctx.TenderFarm.address)
+
     await ctx.Tenderizer.claimRewards()
   })
 
@@ -67,26 +95,29 @@ export function stakeStaysSameTests () {
     expect(await ctx.Tenderizer.currentPrincipal()).to.eq(ctx.expectedCP)
   })
 
-  it('pending fees stay the same', async () => {
-    expect(await ctx.Tenderizer.pendingFees()).to.eq(feesBefore)
+  it('no fees are charged', async () => {
+    expect(await ctx.TenderToken.balanceOf(ctx.deployer)).to.eq(ownerBalBefore)
+    expect(await ctx.TenderToken.balanceOf(ctx.TenderFarm.address)).to.eq(farmBalBefore)
   })
 }
 
 export function stakeDecreaseTests () {
   let ctx: Context
-  let feesBefore: BigNumber
+  let ownerBalBefore: BigNumber
   let oldPrinciple: BigNumber
   let tx: ContractTransaction
   let totalShares: BigNumber
   let dyBefore: BigNumber
   let swapStakeBalBefore: BigNumber
+  let farmBalBefore: BigNumber
 
   beforeEach(async function () {
     ctx = this.test?.ctx!
-    feesBefore = await ctx.Tenderizer.pendingFees()
+    ownerBalBefore = await ctx.TenderToken.balanceOf(ctx.deployer)
     oldPrinciple = await ctx.Tenderizer.currentPrincipal()
     dyBefore = await ctx.TenderSwap.calculateSwap(ctx.TenderToken.address, ONE)
     swapStakeBalBefore = await ctx.Steak.balanceOf(ctx.TenderSwap.address)
+    farmBalBefore = await ctx.TenderToken.balanceOf(ctx.TenderFarm.address)
     tx = await ctx.Tenderizer.claimRewards()
   })
 
@@ -102,8 +133,9 @@ export function stakeDecreaseTests () {
       .to.eq(sharesToTokens(shares, totalShares, await ctx.TenderToken.totalSupply()))
   })
 
-  it("doesn't increase pending fees", async () => {
-    expect(await ctx.Tenderizer.pendingFees()).to.eq(feesBefore)
+  it('no fees are charged', async () => {
+    expect(await ctx.TenderToken.balanceOf(ctx.deployer)).to.eq(ownerBalBefore)
+    expect(await ctx.TenderToken.balanceOf(ctx.TenderFarm.address)).to.eq(farmBalBefore)
   })
 
   it('decreases the tenderToken balance of the AMM', async () => {
@@ -118,7 +150,7 @@ export function stakeDecreaseTests () {
   it('price of the TenderTokens increases vs the underlying', async () => {
     expect(await ctx.TenderSwap.calculateSwap(ctx.TenderToken.address, ONE)).to.be.gt(dyBefore)
   })
-  
+
   it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
     await expect(tx).to.emit(ctx.Tenderizer, 'RewardsClaimed').withArgs(ethers.constants.Zero.sub(ctx.decrease), ctx.expectedCP, oldPrinciple)
   })

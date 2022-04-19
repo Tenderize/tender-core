@@ -126,11 +126,8 @@ describe('Livepeer Mainnet Fork Test', () => {
     await TenderToken.approve(TenderSwap.address, initialStake)
     const lpTokensOut = await TenderSwap.calculateTokenAmount([initialStake, initialStake], true)
     await TenderSwap.addLiquidity([initialStake, initialStake], lpTokensOut, (await getCurrentBlockTimestamp()) + 1000)
-    console.log('added liquidity')
-    console.log('calculated', lpTokensOut.toString(), 'actual', (await LpToken.balanceOf(deployer)).toString())
     await LpToken.approve(TenderFarm.address, lpTokensOut)
     await TenderFarm.farm(lpTokensOut)
-    console.log('farmed LP tokens')
   })
 
   const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')

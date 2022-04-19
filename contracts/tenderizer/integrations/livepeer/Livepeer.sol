@@ -77,10 +77,9 @@ contract Livepeer is Tenderizer {
         steak.safeApprove(address(livepeer), amount);
 
         // stake tokens
-        address _node = node;
-        livepeer.bond(amount, _node);
+        livepeer.bond(amount, node);
 
-        emit Stake(_node, amount);
+        emit Stake(node, amount);
     }
 
     function _unstake(
@@ -111,6 +110,23 @@ contract Livepeer is Tenderizer {
         emit Withdraw(_account, amount, _withdrawalID);
     }
 
+    function _processNewStake() internal override returns (int256 rewards) {
+        
+        uint256 stake = livepeer.pendingStake(address(this), MAX_ROUND);
+        uint256 currentPrincipal_ = currentPrincipal;
+        // adjust current token balance for potential protocol specific taxes or staking fees
+        uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)));
+
+        // calculate the new total stake
+        stake += currentBal;
+
+        rewards = int256(stake) - int256(currentPrincipal_); 
+
+        currentPrincipal = stake;
+
+        emit RewardsClaimed(rewards, stake, currentPrincipal_);
+    }
+
     /**
      * @notice claims secondary rewards
      * these are rewards that are not from staking
@@ -122,7 +138,7 @@ contract Livepeer is Tenderizer {
      * added to the balance of this contract
      * @dev this is implementation specific
      */
-    function _claimSecondaryRewards() internal {
+    function _claimSecondaryRewards() internal override {
         uint256 ethFees = livepeer.pendingFees(address(this), MAX_ROUND);
         // First claim any fees that are not underlying tokens
         // withdraw fees
@@ -156,15 +172,6 @@ contract Livepeer is Tenderizer {
                 }
             }
         }
-    }
-
-    function _claimRewards() internal override {
-        _claimSecondaryRewards();
-
-        // Account for LPT rewards
-        uint256 stake = livepeer.pendingStake(address(this), MAX_ROUND);
-
-        Tenderizer._processNewStake(stake);
     }
 
     function _setStakingContract(address _stakingContract) internal override {

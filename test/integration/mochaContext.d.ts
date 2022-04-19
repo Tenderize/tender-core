@@ -29,8 +29,10 @@ declare module 'mocha' {
         TenderSwap: TenderSwap
         LpToken: LiquidityPoolToken
         increase: BigNumber
+        liquidityFees: BigNumber
+        protocolFees: BigNumber
         decrease: BigNumber
-        newStakeMinusFees: BigNumber
+        newStake: BigNumber
         expectedCP: BigNumber
         withdrawAmount: BigNumber
     }

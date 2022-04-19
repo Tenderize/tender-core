@@ -10,21 +10,8 @@ export default function suite () {
     expect(await ctx.Tenderizer.totalStakedTokens()).to.be.eq(0)
   })
 
-  it('pending fees are 0', async function () {
-    expect(await ctx.Tenderizer.pendingFees()).to.be.eq(0)
-    expect(await ctx.Tenderizer.pendingLiquidityFees()).to.be.eq(0)
-  })
-
   it('claimRewards() does not revert', async function () {
     await expect(ctx.Tenderizer.claimRewards()).to.be.not.reverted
-  })
-
-  it('collectFees() does not revert', async function () {
-    await expect(ctx.Tenderizer.collectFees()).to.be.not.reverted
-  })
-
-  it('collectLiquidityFees() does not revert', async function () {
-    await expect(ctx.Tenderizer.collectLiquidityFees()).to.be.not.reverted
   })
 
   it('TenderToken supply is 0', async function () {

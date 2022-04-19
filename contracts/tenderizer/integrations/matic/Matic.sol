@@ -77,17 +77,14 @@ contract Matic is Tenderizer {
             return;
         }
 
-        // use validator share contract for matic
-        IMatic matic_ = matic;
-
         // approve tokens
         steak.safeApprove(maticStakeManager, amount);
 
         // stake tokens
-        uint256 min = ((amount * _getExchangeRatePrecision(matic_)) / _getExchangeRate(matic_)) - 1;
-        matic_.buyVoucher(amount, min);
+        uint256 min = ((amount * _getExchangeRatePrecision(matic)) / _getExchangeRate(matic)) - 1;
+        matic.buyVoucher(amount, min);
 
-        emit Stake(address(matic_), amount);
+        emit Stake(address(matic), amount);
     }
 
     function _unstake(
@@ -133,10 +130,28 @@ contract Matic is Tenderizer {
         // restake to compound rewards
         try matic.restake() {} catch {}
 
+        Tenderizer._claimRewards();
+    }
+
+    function _claimSecondaryRewards() internal override {}
+
+    function _processNewStake() internal override returns (int256 rewards) {
+        
         uint256 shares = matic.balanceOf(address(this));
         uint256 stake = (shares * _getExchangeRate(matic)) / _getExchangeRatePrecision(matic);
 
-        Tenderizer._processNewStake(stake);
+        uint256 currentPrincipal_ = currentPrincipal;
+        // adjust current token balance for potential protocol specific taxes or staking fees
+        uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)));
+
+        // calculate the new total stake
+        stake += currentBal;
+
+        rewards = int256(stake) - int256(currentPrincipal_); 
+
+        currentPrincipal = stake;
+
+        emit RewardsClaimed(rewards, stake, currentPrincipal_);
     }
 
     function _setStakingContract(address _stakingContract) internal override {
