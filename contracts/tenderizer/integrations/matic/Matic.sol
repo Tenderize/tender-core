@@ -132,13 +132,13 @@ contract Matic is Tenderizer {
     function _claimRewards() internal override {
         // restake to compound rewards
         try matic.restake() {} catch {}
-
-        uint256 shares = matic.balanceOf(address(this));
-        uint256 stake = (shares * _getExchangeRate(matic)) / _getExchangeRatePrecision(matic);
-
-        Tenderizer._processNewStake(stake);
     }
 
+    function _readStake() internal override returns (uint256 stake) {
+        uint256 shares = matic.balanceOf(address(this));
+        stake = (shares * _getExchangeRate(matic)) / _getExchangeRatePrecision(matic);
+    }
+    
     function _setStakingContract(address _stakingContract) internal override {
         emit GovernanceUpdate(
             "STAKING_CONTRACT",

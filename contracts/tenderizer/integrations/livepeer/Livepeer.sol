@@ -160,17 +160,16 @@ contract Livepeer is Tenderizer {
 
     function _claimRewards() internal override {
         _claimSecondaryRewards();
+    }
 
-        // Account for LPT rewards
-        uint256 stake = livepeer.pendingStake(address(this), MAX_ROUND);
-
-        Tenderizer._processNewStake(stake);
+    function _readStake() internal override returns (uint256 stake) {
+        stake = livepeer.pendingStake(address(this), MAX_ROUND);
     }
 
     function _setStakingContract(address _stakingContract) internal override {
         emit GovernanceUpdate(
             "STAKING_CONTRACT",
-            abi.encode(livepeer),
+            abi.encode(address(livepeer)),
             abi.encode(_stakingContract)
         );
         livepeer = ILivepeer(_stakingContract);

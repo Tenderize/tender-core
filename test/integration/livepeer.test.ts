@@ -161,7 +161,7 @@ describe('Livepeer Integration Test', () => {
 
     const swappedLPTRewards = ethers.utils.parseEther('10')
     describe('Rebases', async function () {
-      context('Positive Rebase', async function () {
+      context.only('Positive Rebase', async function () {
         beforeEach(async function () {
           this.increase = ethers.utils.parseEther('90')
           this.liquidityFees = percOf2(this.increase.add(swappedLPTRewards), liquidityFeesPercent)

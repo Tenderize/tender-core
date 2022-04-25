@@ -19,10 +19,6 @@ import {
   stakeStaysSameTests,
   stakeDecreaseTests
 } from './behaviors/rebase.behavior'
-import {
-  protocolFeeTests,
-  liquidityFeeTests
-} from './behaviors/fees.behavior'
 import swapTests from './behaviors/swap.behavior'
 import {
   govBasedUnlock,
@@ -131,25 +127,16 @@ describe('Audius Integration Test', () => {
     describe('Initial State', initialStateTests.bind(this))
     describe('Deposit', depositTests.bind(this))
     describe('Stake', stakeTests.bind(this))
-
-    let liquidityFees: BigNumber
-    let protocolFees: BigNumber
-    let newStake: BigNumber
     describe('Rebases', async function () {
       context('Positive Rebase', async function () {
         beforeEach(async function () {
           this.increase = ethers.utils.parseEther('10')
-          liquidityFees = percOf2(this.increase, liquidityFeesPercent)
-          protocolFees = percOf2(this.increase, protocolFeesPercent)
-          newStake = this.initialStake.add(this.increase)
-          this.newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
+          this.liquidityFees = percOf2(this.increase, liquidityFeesPercent)
+          this.protocolFees = percOf2(this.increase, protocolFeesPercent)
+          this.newStake = this.initialStake.add(this.increase)
 
           // set increase on mock
           await this.StakingContract.setStaked(this.increase.add(await this.StakingContract.staked()))
-
-          // With mock values set correctly, adjust increase with fees
-          // for assertions
-          this.increase = this.increase.sub(protocolFees.add(liquidityFees))
         })
         describe('Stake increases', stakeIncreaseTests.bind(this))
       })
@@ -174,8 +161,6 @@ describe('Audius Integration Test', () => {
       })
     })
 
-    describe('Collect fees', protocolFeeTests.bind(this))
-    describe('Collect Liquidity fees', liquidityFeeTests.bind(this))
     describe('Swap', swapTests.bind(this))
 
     describe('Unlock and Withdraw', async function () {

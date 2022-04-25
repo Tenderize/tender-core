@@ -126,63 +126,12 @@ contract Audius is Tenderizer {
     function _claimRewards() internal override {
         // Process the rewards for the nodes that we have staked to
         try audius.claimRewards(node) {} catch {}
-
-        // Get the new total delegator stake
-        uint256 stake = audius.getTotalDelegatorStake(address(this));
-
-        _processNewStake(stake);
     }
 
-    function _processNewStake(uint256 _newStake) internal override {
-        uint256 currentPrincipal_ = currentPrincipal;
-
-        // adjust current token balance for potential protocol specific taxes or staking fees
-        uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)));
-
-        // calculate what the new currentPrinciple would be after the call
-        // but excluding fees, pending unlocks and pending user withdrawals from rewards
-        // which still need to be calculated if stake >= currentPrincipal
-        uint256 stake_ = _newStake +
-            currentBal -
+    function _readStake() internal override view returns (uint256 stake) {
+        stake = audius.getTotalDelegatorStake(address(this)) -
             withdrawPool.amount -
-            withdrawPool.pendingUnlock -
-            pendingFees -
-            pendingLiquidityFees;
-
-        // Difference is negative, no rewards have been earnt
-        // So no fees are charged
-        if (stake_ <= currentPrincipal_) {
-            currentPrincipal = stake_;
-            uint256 diff = currentPrincipal_ - stake_;
-
-            emit RewardsClaimed(-int256(diff), stake_, currentPrincipal_);
-
-            // calculate amount to subtract relative to current principal
-            uint256 unstakePoolTokens = withdrawPool.totalTokens();
-            uint256 totalTokens = unstakePoolTokens + currentPrincipal_;
-            if (totalTokens == 0) return;
-
-            uint256 unstakePoolSlash = (diff * unstakePoolTokens) / totalTokens;
-            withdrawPool.updateTotalTokens(unstakePoolTokens - unstakePoolSlash);
-
-            return;
-        }
-
-        // Difference is positive, calculate the rewards
-        uint256 totalRewards = stake_ - currentPrincipal_;
-
-        // calculate the protocol fees
-        uint256 fees = MathUtils.percOf(totalRewards, protocolFee);
-        pendingFees += fees;
-
-        // calculate the liquidity provider fees
-        uint256 liquidityFees = MathUtils.percOf(totalRewards, liquidityFee);
-        pendingLiquidityFees += liquidityFees;
-
-        stake_ = stake_ - fees - liquidityFees;
-        currentPrincipal = stake_;
-
-        emit RewardsClaimed(int256(stake_ - currentPrincipal_), stake_, currentPrincipal_);
+            withdrawPool.pendingUnlock;
     }
 
     function _setStakingContract(address _stakingContract) internal override {

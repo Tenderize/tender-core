@@ -142,7 +142,8 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         // Swap tokens with address != steak to steak
         // Add steak from swap to pendingTokens
         _claimRewards();
-        _stake(steak.balanceOf(address(this)));
+        uint256 steakBalance = _processNewStake();
+        _stake(steakBalance);
     }
 
     /// @inheritdoc ITenderizer
@@ -232,17 +233,19 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
 
     function _claimRewards() internal virtual;
 
-    function _processNewStake(uint256 _newStake) internal virtual {
+    function _readStake() internal virtual returns (uint256);
+
+    function _processNewStake() internal virtual returns (uint256 stakeBalance){
         // TODO: all of the below could be a general internal function in Tenderizer.sol
         uint256 currentPrincipal_ = currentPrincipal;
 
-        // adjust current token balance for potential protocol specific taxes or staking fees
-        uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)));
+        stakeBalance = steak.balanceOf(address(this));
 
         // calculate what the new currentPrinciple would be after the call
         // but excluding fees from rewards for this rebase
         // which still need to be calculated if stake >= currentPrincipal
-        uint256 stake = _newStake + currentBal;
+        // also adjust current token balance for potential protocol specific taxes or staking fees
+        uint256 stake = _readStake() + _calcDepositOut(stakeBalance);
 
         // Difference is negative, no rewards have been earnt
         // So no fees are charged
@@ -250,7 +253,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
             currentPrincipal = stake;
             emit RewardsClaimed(-int256(currentPrincipal_ - stake), stake, currentPrincipal_);
 
-            return;
+            return stakeBalance;
         }
 
         currentPrincipal = stake;
@@ -259,11 +262,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         uint256 totalRewards = stake - currentPrincipal_;
 
         _collectFees(totalRewards);
-
-        // TODO: Oh is this an issue? As if there's no 
-        // nextTotalStake, no liq fees will be transferred will be minted
-        if (tenderFarm.nextTotalStake() > 0)
-            _collectLiquidityFees(totalRewards);
+        _collectLiquidityFees(totalRewards);
 
         emit RewardsClaimed(int256(stake - currentPrincipal_), stake, currentPrincipal_);
     }
@@ -271,16 +270,20 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     function _collectFees(uint256 _totalRewards) internal virtual {
         uint256 fees = MathUtils.percOf(_totalRewards, protocolFee);
         tenderToken.mint(gov, fees);
+
+        emit ProtocolFeeCollected(fees);
     }
 
     function _collectLiquidityFees(uint256 _totalRewards) internal virtual {
+        if (tenderFarm.nextTotalStake() > 0) {
+            return;
+        }
         uint256 fees = MathUtils.percOf(_totalRewards, liquidityFee);
         tenderToken.mint(address(this), fees);
-        // minting sometimes generates a little less, due to share calculation
-        // hence using the balance to transfer here
-        uint256 tenderBal = tenderToken.balanceOf(address(this));
-        tenderToken.approve(address(tenderFarm), tenderBal);
-        tenderFarm.addRewards(tenderBal);
+        tenderToken.approve(address(tenderFarm), fees);
+        tenderFarm.addRewards(fees);
+
+        emit LiquidityFeeCollected(fees);
     }
 
     function _totalStakedTokens() internal view virtual returns (uint256) {
