@@ -1,4 +1,5 @@
 import hre, { ethers } from 'hardhat'
+
 import {
   TenderToken, IMatic, TenderFarm, EIP173Proxy, Matic, ERC20, TenderSwap, Audius, LiquidityPoolToken
 } from '../../typechain'
@@ -17,7 +18,8 @@ import { Contract, ContractTransaction } from '@ethersproject/contracts'
 
 import { Signer } from '@ethersproject/abstract-signer'
 import { percOf2, sharesToTokens } from '../util/helpers'
-import { buildsubmitCheckpointPaylod, getBlockHeader } from '../util/matic_mainnet_helpers'
+import { getBlockHeader, getVoteSignature, encodeCheckpointData } from '../util/matic_mainnet_helpers'
+import { sign } from 'crypto'
 const MerkleTree = require('../util/merkle-tree')
 const ethUtils = require('ethereumjs-util')
 
@@ -59,7 +61,7 @@ describe('Matic Mainnet Fork Test', () => {
   })
 
   const STEAK_AMOUNT = '10000000'
-  const NODE = '0xaC1D6c20cE7F1fBF1915eFc0898D188b9C6A5CeD' // Validator share address
+  const NODE = '0xb929B89153fC2eEd442e81E5A1add4e2fa39028f' // Validator share address (Figment)
   const stakeManagerAddr = '0x5e3ef299fddf15eaa0432e6e66473ace8c13d908'
   const rootChainAddr = '0x86E4Dc95c7FBdBf52e33D563BbDB00823894C287'
   const childChainURL = 'https://matic-mainnet.chainstacklabs.com'
@@ -169,14 +171,14 @@ describe('Matic Mainnet Fork Test', () => {
 
   const testTimeout = 120000
 
-  before('deploy Livepeer Tenderizer', async function () {
+  before('deploy Matic Tenderizer', async function () {
     this.timeout(testTimeout)
     // Fork from mainnet
     await hre.network.provider.request({
       method: 'hardhat_reset',
       params: [{
         forking: {
-          blockNumber: 13222135,
+          // blockNumber: 13222135,
           jsonRpcUrl: process.env.ALCHEMY_URL || 'https://eth-mainnet.alchemyapi.io/v2/s93KFT7TnttkCPdNS2Fg_HAoCpP6dEda'
         }
       }]
@@ -187,25 +189,32 @@ describe('Matic Mainnet Fork Test', () => {
     process.env.CONTRACT = stakeManagerAddr
     process.env.TOKEN = '0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0'
     process.env.VALIDATOR = NODE
-    process.env.BFACTORY = '0x9424B1412450D0f8Fc2255FAf6046b98213B76Bd'
-    process.env.B_SAFEMATH = '0xCfE28868F6E0A24b7333D22D8943279e76aC2cdc'
-    process.env.B_RIGHTS_MANAGER = '0xCfE28868F6E0A24b7333D22D8943279e76aC2cdc'
-    process.env.B_SMART_POOL_MANAGER = '0xA3F9145CB0B50D907930840BB2dcfF4146df8Ab4'
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
 
     await hre.network.provider.request({
       method: 'hardhat_impersonateAccount',
       params: [maticHolder]
     })
-    maticHolderSinger = await ethers.provider.getSigner(maticHolder)
+    maticHolderSinger = await ethers.getSigner(maticHolder)
+    // await hre.network.provider.request({
+    //   method: 'hardhat_stopImpersonatingAccount',
+    //   params: [maticHolder]
+    // })
 
     // Transfer some ETH to matic Holder
     const ETHHolder = '0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8'
+
     await hre.network.provider.request({
       method: 'hardhat_impersonateAccount',
       params: [ETHHolder]
     })
+
     await hre.web3.eth.sendTransaction({ from: ETHHolder, to: maticHolder, value: ethers.utils.parseEther('10').toString() })
+
+    // await hre.network.provider.request({
+    //   method: 'hardhat_stopImpersonatingAccount',
+    //   params: [ETHHolder]
+    // })
 
     // Transfer some MATIC
     MaticToken = (await ethers.getContractAt('ERC20', process.env.TOKEN)) as ERC20
@@ -217,14 +226,13 @@ describe('Matic Mainnet Fork Test', () => {
       keepExistingDeployments: false
     })
 
-    Tenderizer = (await ethers.getContractAt('Audius', Matic.Matic.address)) as Matic
+    Tenderizer = (await ethers.getContractAt('Matic', Matic.Matic.address)) as Matic
     TenderToken = (await ethers.getContractAt('TenderToken', await Tenderizer.tenderToken())) as TenderToken
     TenderSwap = (await ethers.getContractAt('TenderSwap', await Tenderizer.tenderSwap())) as TenderSwap
     TenderFarm = (await ethers.getContractAt('TenderFarm', await Tenderizer.tenderFarm())) as TenderFarm
     LpToken = (await ethers.getContractAt('LiquidityPoolToken', await TenderSwap.lpToken())) as LiquidityPoolToken
     await Tenderizer.setProtocolFee(protocolFeesPercent)
     await Tenderizer.setLiquidityFee(liquidityFeesPercent)
-
 
     // Deposit initial stake
     await MaticToken.approve(Tenderizer.address, initialStake)
@@ -304,23 +312,6 @@ describe('Matic Mainnet Fork Test', () => {
         const stakeBefore = sharesBefore.mul(exRate).div(EXCHAGE_RATE_PERCEISON)
 
         const rootChain = new ethers.Contract(rootChainAddr, rootChainAbi, ethers.provider)
-        // Impersonate ownner
-        const signers = []
-        await hre.network.provider.request({
-          method: 'hardhat_impersonateAccount',
-          params: [nodeSignerAddr]
-        })
-        const nodeOwner = await ethers.provider.getSigner(nodeSignerAddr)
-        signers.push(nodeOwner)
-
-        // Impersonate other signers
-        for (let i = 0; i < otherSignersAddr.length; i++) {
-          await hre.network.provider.request({
-            method: 'hardhat_impersonateAccount',
-            params: [otherSignersAddr[i]]
-          })
-          signers.push(await ethers.provider.getSigner(otherSignersAddr[i]))
-        }
 
         // Get block data from root chain
         const childWeb3 = new ethers.providers.JsonRpcProvider(childChainURL)
@@ -337,23 +328,62 @@ describe('Matic Mainnet Fork Test', () => {
 
         const tree = new MerkleTree(headers)
         const root = ethUtils.bufferToHex(tree.getRoot())
-        // Build data
-        const { data, sigs } = await buildsubmitCheckpointPaylod(
-          nodeSignerAddr,
-          start,
-          end,
-          root,
-          signers,
-          {
-            getSigs: true,
-            allValidators: true,
-            rewardsRootHash: ethers.constants.HashZero, // Changed from ''
-            totalStake: 1,
-            sigPrefix: ''
-          }
-        )
+
+        const dataToSign = await encodeCheckpointData(nodeSignerAddr, start, end, root, ethers.constants.HashZero)
+
+        // Impersonate ownner
+        const signers = []
+        const signatures = []
+
+        await hre.network.provider.request({
+          method: 'hardhat_impersonateAccount',
+          params: [nodeSignerAddr]
+        })
+        const nodeOwner = await ethers.provider.getSigner(nodeSignerAddr)
+        signatures.push(await getVoteSignature(nodeOwner, dataToSign, true))
+        signers.push(nodeOwner)
+
+        await hre.network.provider.request({
+          method: 'hardhat_stopImpersonatingAccount',
+          params: [nodeSignerAddr]
+        })
+
+        console.log(signatures)
+
+        // Impersonate other signers
+        for (let i = 0; i < otherSignersAddr.length; i++) {
+          await hre.network.provider.request({
+            method: 'hardhat_impersonateAccount',
+            params: [otherSignersAddr[i]]
+          })
+          const signer = await ethers.provider.getSigner(otherSignersAddr[i])
+          signatures.push(await getVoteSignature(signer, dataToSign, true))
+          await hre.network.provider.request({
+            method: 'hardhat_stopImpersonatingAccount',
+            params: [otherSignersAddr[i]]
+          })
+        }
+
+        console.log(signatures)
+
+        // // Build data
+        // const { data, sigs } = await buildsubmitCheckpointPaylod(
+        //   nodeSignerAddr,
+        //   start,
+        //   end,
+        //   root,
+        //   signers,
+        //   {
+        //     getSigs: true,
+        //     allValidators: true,
+        //     rewardsRootHash: ethers.constants.HashZero, // Changed from ''
+        //     totalStake: 1,
+        //     sigPrefix: ''
+        //   }
+        // )
+
         // Submit block data
-        await rootChain.connect(nodeOwner).submitCheckpoint(data, sigs)
+        await rootChain.connect(nodeOwner).submitCheckpoint(dataToSign, signatures)
 
         const sharesAfter = await MaticStaking.balanceOf(Tenderizer.address)
         exRate = await MaticStaking.exchangeRate()
