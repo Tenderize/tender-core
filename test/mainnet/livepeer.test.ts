@@ -6,7 +6,7 @@ import {
 
 import bondingManagerAbi from './abis/livepeer/BondingManager.json'
 import adjustableRoundsManagerAbi from './abis/livepeer/AdjustableRoundsManager.json'
-import uniswapV3PairAbi from './abis/livepeer/UniswapV3Pair.json'
+import uniswapV3QuoterAbi from './abis/livepeer/UniswapV3Quoter.json'
 
 import chai from 'chai'
 import {
@@ -39,6 +39,7 @@ describe('Livepeer Mainnet Fork Test', () => {
 
   let signers: SignerWithAddress[]
   let deployer: string
+  let ownerBalanceBefore: BigNumber
 
   let tx: ContractTransaction
   const lockID = 0
@@ -66,13 +67,14 @@ describe('Livepeer Mainnet Fork Test', () => {
 
   const LPTDeployer = '0x505f8c2ee81f1c6fa0d88e918ef0491222e05818'
   let multisigSigner: Signer
-  const uniswapEthLptPairAddr = '0x2519042aa735edb4688a8376d69d4bb69431206c'
+  const uniswapQuoter = '0xb27308f9f90d607463bb33ea1bebb41c27ce5ab6'
+  const WETHAddress = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
 
   const testTimeout = 1200000
 
   const ONE = ethers.utils.parseEther('1')
 
-  const ALCHEMY_URL = process.env.ALCHEMY_ARBITRUM
+  const ALCHEMY_URL = process.env.ALCHEMY_MAINNET
 
   before('deploy Livepeer Tenderizer', async function () {
     this.timeout(testTimeout)
@@ -81,7 +83,8 @@ describe('Livepeer Mainnet Fork Test', () => {
       method: 'hardhat_reset',
       params: [{
         forking: {
-          jsonRpcUrl: ALCHEMY_URL
+          jsonRpcUrl: ALCHEMY_URL,
+          blockNumber: 14003805
         }
       }]
     })
@@ -99,16 +102,15 @@ describe('Livepeer Mainnet Fork Test', () => {
       params: [LPTDeployer]
     })
     multisigSigner = await ethers.provider.getSigner(LPTDeployer)
-
-    // Transfer some LPT
     LivepeerToken = (await ethers.getContractAt('ERC20', process.env.TOKEN)) as ERC20
-    await LivepeerToken.connect(multisigSigner).transfer(deployer, ethers.utils.parseEther(process.env.STEAK_AMOUNT).mul(2))
+    await LivepeerToken.connect(multisigSigner).transfer(deployer, ethers.utils.parseEther(process.env.STEAK_AMOUNT).mul(5))
 
     LivepeerStaking = (await ethers.getContractAt('ILivepeer', process.env.CONTRACT)) as ILivepeer
 
     Livepeer = await hre.deployments.fixture(['Livepeer'], {
       keepExistingDeployments: false
     })
+
     Tenderizer = (await ethers.getContractAt('Livepeer', Livepeer.Livepeer.address)) as Livepeer
     TenderToken = (await ethers.getContractAt('TenderToken', await Tenderizer.tenderToken())) as TenderToken
     TenderSwap = (await ethers.getContractAt('TenderSwap', await Tenderizer.tenderSwap())) as TenderSwap
@@ -182,10 +184,13 @@ describe('Livepeer Mainnet Fork Test', () => {
   describe('rebase', () => {
     describe('stake increased', () => {
       let increase: BigNumber
-      let newStakeMinusFees: BigNumber
       let newStake: BigNumber
       let totalShares: BigNumber = ONE
       let dyBefore: BigNumber
+      let farmBalanceBefore: BigNumber
+      let protocolFees: BigNumber
+      let liquidityFees: BigNumber
+      let swappedLPTRewards: BigNumber
 
       before(async function () {
         dyBefore = await TenderSwap.calculateSwap(TenderToken.address, ONE)
@@ -226,30 +231,40 @@ describe('Livepeer Mainnet Fork Test', () => {
         const ticketBrokerSigner = await ethers.provider.getSigner(ticketBrokerAddr)
         await hre.network.provider.send('hardhat_setBalance', [
           ticketBrokerAddr,
-          `0x${ethers.utils.parseEther('100').toString()}`
+          `0x${ethers.utils.parseEther('10').toString()}`
         ])
-        await bondingManager.connect(ticketBrokerSigner).updateTranscoderWithFees(NODE, ethers.utils.parseEther('100'), currentRound)
+        await bondingManager.connect(ticketBrokerSigner).updateTranscoderWithFees(NODE, ethers.utils.parseEther('0.10'), currentRound)
 
         // Get penging ETH FEES
         const pendingEthFees = await bondingManager.pendingFees(Tenderizer.address, MAX_ROUND)
 
         // Get current price of ETH -> LPT
-        const uniPair = new ethers.Contract(uniswapEthLptPairAddr, uniswapV3PairAbi, ethers.provider)
-        const sqrtPrice = (await uniPair.slot0()).sqrtPriceX96
-        const swappedLPTRewards = BigNumber.from(2).pow(192).mul(pendingEthFees).div(sqrtPrice.pow(2))
-
+        const uniQuoter = new ethers.Contract(uniswapQuoter, uniswapV3QuoterAbi, ethers.provider)
+        swappedLPTRewards = await uniQuoter.callStatic.quoteExactInputSingle(
+          WETHAddress,
+          LivepeerToken.address,
+          10000, // 1%
+          pendingEthFees,
+          0
+        )
         increase = stakeAfter.sub(stakeBefore)
-        const liquidityFees = percOf2(increase.add(swappedLPTRewards), liquidityFeesPercent)
-        const protocolFees = percOf2(increase.add(swappedLPTRewards), protocolFeesPercent)
-        newStake = deposit.add(initialStake).add(increase)
-        newStakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
+        liquidityFees = percOf2(increase.add(swappedLPTRewards), liquidityFeesPercent)
+        protocolFees = percOf2(increase.add(swappedLPTRewards), protocolFeesPercent)
+        newStake = deposit.add(initialStake).add(increase).add(swappedLPTRewards)
+        farmBalanceBefore = await TenderToken.balanceOf(TenderFarm.address)
+
+        // Transfer balance out before
+        ownerBalanceBefore = await TenderToken.balanceOf(deployer)
+        await TenderToken.connect(signers[0]).transfer(signers[3].address,
+          ownerBalanceBefore)
+
         tx = await Tenderizer.claimRewards()
       })
 
       it('updates currentPrincipal', async () => {
         // Account for any slippage in the swap
-        expect((await Tenderizer.currentPrincipal()).sub(newStakeMinusFees).abs())
-          .to.lt(ethers.utils.parseEther(acceptableDelta.toString()))
+        expect((await Tenderizer.currentPrincipal()).sub(newStake).abs())
+          .to.lte(acceptableDelta)
       })
 
       it('increases tendertoken balances when rewards are added', async () => {
@@ -276,6 +291,16 @@ describe('Livepeer Mainnet Fork Test', () => {
         expect(await LivepeerToken.balanceOf(Tenderizer.address)).to.eq(0)
       })
 
+      it('should increase tenderToken balance of owner', async () => {
+        expect((await TenderToken.balanceOf(deployer)).sub(protocolFees).abs())
+          .to.lte(ethers.utils.parseEther('0.0000000001'))
+      })
+
+      it('should increase tenderToken balance of tenderFarm', async () => {
+        expect((await TenderToken.balanceOf(TenderFarm.address)).sub(farmBalanceBefore.add(liquidityFees)).abs())
+          .to.lte(ethers.utils.parseEther('0.0000000001'))
+      })
+
       it('should emit RewardsClaimed event from Tenderizer', async () => {
         // Not testing the values as there is some variable slippage depending on the block
         // TODO: Test with some acceptable delta
@@ -284,72 +309,11 @@ describe('Livepeer Mainnet Fork Test', () => {
     })
   })
 
-  describe('collect fees', () => {
-    let fees: BigNumber
-    let ownerBalBefore: BigNumber
-    let otherAcc: SignerWithAddress
-    let otherAccBalBefore: BigNumber
-
-    before(async () => {
-      otherAcc = signers[3]
-      fees = await Tenderizer.pendingFees()
-      ownerBalBefore = await TenderToken.balanceOf(deployer)
-      tx = await Tenderizer.collectFees()
-      otherAccBalBefore = await TenderToken.balanceOf(otherAcc.address)
-      await tx.wait()
-    })
-
-    it('should reset pendingFees', async () => {
-      expect(await Tenderizer.pendingFees()).to.eq(ethers.constants.Zero)
-    })
-
-    it('should increase tenderToken balance of owner', async () => {
-      expect((await TenderToken.balanceOf(deployer)).sub(ownerBalBefore.add(fees)).abs()).to.lte(acceptableDelta)
-    })
-
-    it('should retain the balance for any other account', async () => {
-      expect((await TenderToken.balanceOf(otherAcc.address))).to.eq(otherAccBalBefore)
-    })
-
-    it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
-      expect(tx).to.emit(Tenderizer, 'ProtocolFeeCollected').withArgs(fees)
-    })
-  })
-
-  describe('collect liquidity fees', () => {
-    let fees: BigNumber
-    let farmBalanceBefore: BigNumber
-    let otherAcc: SignerWithAddress
-    let otherAccBalBefore: BigNumber
-
-    before(async () => {
-      otherAcc = signers[3]
-      fees = await Tenderizer.pendingLiquidityFees()
-      farmBalanceBefore = await TenderToken.balanceOf(TenderFarm.address)
-      tx = await Tenderizer.collectLiquidityFees()
-      otherAccBalBefore = await TenderToken.balanceOf(otherAcc.address)
-      await tx.wait()
-    })
-
-    it('should reset pendingFees', async () => {
-      expect(await Tenderizer.pendingLiquidityFees()).to.eq(ethers.constants.Zero)
-    })
-
-    it('should increase tenderToken balance of tenderFarm', async () => {
-      expect((await TenderToken.balanceOf(TenderFarm.address)).sub(farmBalanceBefore.add(fees)).abs()).to.lte(acceptableDelta)
-    })
-
-    it('should retain the balance for any other account', async () => {
-      expect((await TenderToken.balanceOf(otherAcc.address))).to.eq(otherAccBalBefore)
-    })
-
-    it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
-      expect(tx).to.emit(Tenderizer, 'LiquidityFeeCollected').withArgs(fees)
-    })
-  })
-
   describe('swap against TenderSwap', () => {
     it('swaps tenderToken for Token', async () => {
+      // Trasnfer balance back
+      await TenderToken.connect(signers[3]).transfer(deployer, ownerBalanceBefore)
+
       const amount = deposit.div(2)
       const lptBalBefore = await LivepeerToken.balanceOf(deployer)
 
@@ -390,12 +354,6 @@ describe('Livepeer Mainnet Fork Test', () => {
       expect(await TenderToken.balanceOf(signers[2].address)).to.lte(acceptableDelta)
     })
 
-    it('should create unstakeLock on Tenderizer', async () => {
-      const lock = await Tenderizer.unstakeLocks(lockID)
-      expect(lock.account).to.eq(signers[2].address)
-      expect(lock.amount).to.eq(withdrawAmount)
-    })
-
     it('should create unstakeLock on Livepeer', async () => {
       const lock = await bondingManager.getDelegatorUnbondingLock(Tenderizer.address, lockID)
       expect(lock.amount).to.eq(withdrawAmount)
@@ -419,15 +377,7 @@ describe('Livepeer Mainnet Fork Test', () => {
       }
       await roundsManager.connect(multisigSigner).initializeRound()
       tx = await Tenderizer.connect(signers[2]).withdraw(lockID)
-      const lock = await Tenderizer.unstakeLocks(lockID)
-      expect(lock.account).to.eq(ethers.constants.AddressZero)
-      expect(lock.amount).to.eq(0)
     }).timeout(testTimeout) // Set high timeout for test, to mine 7 rounds
-
-    it('should delete unstakeLock on Livepeer', async () => {
-      const lock = await bondingManager.getDelegatorUnbondingLock(Tenderizer.address, lockID)
-      expect(lock.amount).to.eq(0)
-    })
 
     it('increases LPT balance', async () => {
       expect(await LivepeerToken.balanceOf(signers[2].address)).to.eq(withdrawAmount)

@@ -120,7 +120,7 @@ contract Livepeer is Tenderizer {
         // calculate the new total stake
         stake += currentBal;
 
-        rewards = int256(stake) - int256(currentPrincipal_); 
+        rewards = int256(stake) - int256(currentPrincipal_);
 
         currentPrincipal = stake;
 
