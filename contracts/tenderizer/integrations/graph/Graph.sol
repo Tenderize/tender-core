@@ -78,7 +78,7 @@ contract Graph is Tenderizer {
         amount -= pendingWithdrawals;
 
         // approve amount to Graph protocol
-        steak.safeApprove(address(graph), amount);
+        steak.safeIncreaseAllowance(address(graph), amount);
 
         // stake tokens
         uint256 delegatedShares = graph.delegate(node, amount);

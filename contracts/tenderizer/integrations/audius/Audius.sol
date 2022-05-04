@@ -69,7 +69,7 @@ contract Audius is Tenderizer {
         amount -= pendingWithdrawals;
 
         // Approve amount to Audius protocol
-       steak.safeApprove(audiusStaking, amount);
+       steak.safeIncreaseAllowance(audiusStaking, amount);
 
         // stake tokens
         uint256 totalNewStake = audius.delegateStake(node, amount);

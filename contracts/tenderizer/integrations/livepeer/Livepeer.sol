@@ -74,7 +74,7 @@ contract Livepeer is Tenderizer {
         }
 
         // approve amount to Livepeer protocol
-        steak.safeApprove(address(livepeer), amount);
+        steak.safeIncreaseAllowance(address(livepeer), amount);
 
         // stake tokens
         livepeer.bond(amount, node);
@@ -148,7 +148,7 @@ contract Livepeer is Tenderizer {
             // Wrap ETH
             uint256 bal = address(this).balance;
             WETH.deposit{ value: bal }();
-            WETH.safeApprove(address(uniswapRouter), bal);
+            WETH.safeIncreaseAllowance(address(uniswapRouter), bal);
 
             // swap ETH fees for LPT
             if (address(uniswapRouter) != address(0)) {
