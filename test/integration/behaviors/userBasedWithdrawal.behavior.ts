@@ -40,6 +40,7 @@ export default function suite () {
       balBefore = await ctx.Steak.balanceOf(ctx.signers[2].address)
       tx = await ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.lockID)
       balAfter = await ctx.Steak.balanceOf(ctx.signers[2].address)
+      await tx.wait()
     })
 
     it('reverts if requested from the wrong account', async () => {
@@ -69,7 +70,8 @@ export default function suite () {
       ctx.StakingContract.changePendingUndelegation(1, deposit.div(2))
 
       const balBefore = await ctx.Steak.balanceOf(ctx.signers[4].address)
-      await Tenderizer_.withdraw(1)
+      const tx = await Tenderizer_.withdraw(1)
+      await tx.wait()
       const balAfter = await ctx.Steak.balanceOf(ctx.signers[4].address)
       expect(balAfter.sub(balBefore)).to.eq(deposit.div(2))
     })
