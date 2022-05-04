@@ -64,6 +64,7 @@ export default function suite () {
       await ctx.Tenderizer.processWithdraw()
       steakBalanceBefore = await ctx.Steak.balanceOf(ctx.signers[2].address)
       tx = await ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.unbondLockID)
+      await tx.wait()
     })
 
     it('reverts if account mismatch from unbondigLock', async () => {
@@ -77,7 +78,7 @@ export default function suite () {
     })
 
     it('should emit Withdraw event from Tenderizer', async () => {
-      expect(tx).to.emit(ctx.Tenderizer, 'Withdraw')
+      await expect(tx).to.emit(ctx.Tenderizer, 'Withdraw')
         .withArgs(ctx.signers[2].address, ctx.withdrawAmount, ctx.unbondLockID)
     })
   })

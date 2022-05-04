@@ -86,6 +86,9 @@ describe('Audius Mainnet Fork Test', () => {
     process.env.TOKEN = '0x18aaa7115705e8be94bffebde57af9bfc265b998'
     process.env.VALIDATOR = NODE
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
+    process.env.ADMIN_FEE = '0'
+    process.env.SWAP_FEE = '5000000'
+    process.env.AMPLIFIER = '85'
 
     await hre.network.provider.send('hardhat_setBalance', [
       AUDIOHolder,

@@ -94,6 +94,9 @@ describe('Livepeer Mainnet Fork Test', () => {
     process.env.TOKEN = '0x58b6A8A3302369DAEc383334672404Ee733aB239'
     process.env.VALIDATOR = NODE
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
+    process.env.ADMIN_FEE = '0'
+    process.env.SWAP_FEE = '5000000'
+    process.env.AMPLIFIER = '85'
 
     const uniswapRouter = '0xE592427A0AEce92De3Edee1F18E0157C05861564'
 
