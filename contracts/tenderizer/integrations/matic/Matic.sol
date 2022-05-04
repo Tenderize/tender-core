@@ -78,7 +78,7 @@ contract Matic is Tenderizer {
         }
 
         // approve tokens
-        steak.safeApprove(maticStakeManager, amount);
+        steak.safeIncreaseAllowance(maticStakeManager, amount);
 
         // stake tokens
         uint256 min = ((amount * _getExchangeRatePrecision(matic)) / _getExchangeRate(matic)) - 1;

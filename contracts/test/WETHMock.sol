@@ -2,10 +2,12 @@
 
 // SPDX-License-Identifier: MIT
 
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
 pragma solidity 0.8.4;
 
-contract WETHMock {
-    function deposit() external payable {}
+contract WETHMock is ERC20{
+    constructor() ERC20("WrappedETH", "WETH") {}
 
-    function approve(address guy, uint256 wad) public returns (bool) {}
+    function deposit() external payable {}
 }
