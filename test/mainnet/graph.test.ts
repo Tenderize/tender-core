@@ -118,6 +118,9 @@ describe('Graph Mainnet Fork Test', () => {
     process.env.B_RIGHTS_MANAGER = '0xCfE28868F6E0A24b7333D22D8943279e76aC2cdc'
     process.env.B_SMART_POOL_MANAGER = '0xA3F9145CB0B50D907930840BB2dcfF4146df8Ab4'
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
+    process.env.ADMIN_FEE = '0'
+    process.env.SWAP_FEE = '5000000'
+    process.env.AMPLIFIER = '85'
 
     await hre.network.provider.request({
       method: 'hardhat_impersonateAccount',

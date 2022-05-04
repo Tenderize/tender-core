@@ -7,7 +7,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   await deploy('Registry', {
     from: deployer,
-    log: true
+    log: true,
+    skipIfAlreadyDeployed: true
   })
 }
 

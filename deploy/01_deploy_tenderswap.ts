@@ -22,12 +22,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     log: true,
     libraries: {
       SwapUtils: SwapUtils.address
-    }
+    },
+    skipIfAlreadyDeployed: true
   })
 
-  const ADMIN_FEE = 0
-  const FEE = 5e6
-  const AMP = 85
+  const ADMIN_FEE = process.env.ADMIN_FEE
+  const FEE = process.env.SWAP_FEE
+  const AMP = process.env.AMPLIFIER
 
   await deploy('TenderSwapFactoryV1', {
     from: deployer,

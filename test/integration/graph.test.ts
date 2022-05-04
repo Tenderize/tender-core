@@ -87,6 +87,9 @@ describe('Graph Integration Test', () => {
     process.env.TOKEN = this.Steak.address
     process.env.VALIDATOR = this.NODE
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
+    process.env.ADMIN_FEE = '0'
+    process.env.SWAP_FEE = '5000000'
+    process.env.AMPLIFIER = '85'
 
     this.methods = {
       stake: 'delegate',
