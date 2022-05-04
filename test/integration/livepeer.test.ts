@@ -23,10 +23,6 @@ import {
   stakeStaysSameTests,
   stakeDecreaseTests
 } from './behaviors/rebase.behavior'
-import {
-  protocolFeeTests,
-  liquidityFeeTests
-} from './behaviors/fees.behavior'
 import swapTests from './behaviors/swap.behavior'
 import {
   userBasedUnlockByUser,
@@ -117,6 +113,9 @@ describe('Livepeer Integration Test', () => {
     process.env.TOKEN = this.Steak.address
     process.env.VALIDATOR = this.NODE
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
+    process.env.ADMIN_FEE = '0'
+    process.env.SWAP_FEE = '5000000'
+    process.env.AMPLIFIER = '85'
 
     this.methods = {
       stake: 'bond',
@@ -164,24 +163,20 @@ describe('Livepeer Integration Test', () => {
     describe('Stake', stakeTests.bind(this))
 
     const swappedLPTRewards = ethers.utils.parseEther('10')
-    let liquidityFees: BigNumber
-    let protocolFees: BigNumber
-    let newStake: BigNumber
     describe('Rebases', async function () {
       context('Positive Rebase', async function () {
         beforeEach(async function () {
           this.increase = ethers.utils.parseEther('90')
-          liquidityFees = percOf2(this.increase.add(swappedLPTRewards), liquidityFeesPercent)
-          protocolFees = percOf2(this.increase.add(swappedLPTRewards), protocolFeesPercent)
-          newStake = this.initialStake.add(this.increase)
-          this.newStakeMinusFees = newStake.add(swappedLPTRewards).sub(liquidityFees.add(protocolFees))
+          this.liquidityFees = percOf2(this.increase.add(swappedLPTRewards), liquidityFeesPercent)
+          this.protocolFees = percOf2(this.increase.add(swappedLPTRewards), protocolFeesPercent)
+          this.newStake = this.initialStake.add(this.increase).add(swappedLPTRewards)
 
           // set increase on mock
           await this.StakingContract.setStaked(this.increase.add(await this.StakingContract.staked()))
 
           // With mock values set correctly, adjust increase with fees
           // for assertions
-          this.increase = this.increase.add(swappedLPTRewards).sub(protocolFees.add(liquidityFees))
+          this.increase = this.increase.add(swappedLPTRewards)
 
           // Set secondary rewards
           await this.StakingContract.setSecondaryRewards(swappedLPTRewards)
@@ -213,8 +208,6 @@ describe('Livepeer Integration Test', () => {
       })
     })
 
-    describe('Collect fees', protocolFeeTests.bind(this))
-    describe('Collect Liquidity fees', liquidityFeeTests.bind(this))
     describe('Swap', swapTests.bind(this))
 
     describe('Unlock and Withdrawal', async function () {

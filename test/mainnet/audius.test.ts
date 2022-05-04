@@ -86,6 +86,9 @@ describe('Audius Mainnet Fork Test', () => {
     process.env.TOKEN = '0x18aaa7115705e8be94bffebde57af9bfc265b998'
     process.env.VALIDATOR = NODE
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
+    process.env.ADMIN_FEE = '0'
+    process.env.SWAP_FEE = '5000000'
+    process.env.AMPLIFIER = '85'
 
     await hre.network.provider.send('hardhat_setBalance', [
       AUDIOHolder,
@@ -129,10 +132,8 @@ describe('Audius Mainnet Fork Test', () => {
     await TenderToken.approve(TenderSwap.address, initialStake)
     const lpTokensOut = await TenderSwap.calculateTokenAmount([initialStake, initialStake], true)
     await TenderSwap.addLiquidity([initialStake, initialStake], lpTokensOut, (await getCurrentBlockTimestamp()) + 1000)
-    console.log('added liquidity')
     await LpToken.approve(TenderFarm.address, lpTokensOut)
     await TenderFarm.farm(lpTokensOut)
-    console.log('farmed LP tokens')
   })
 
   const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
@@ -187,13 +188,21 @@ describe('Audius Mainnet Fork Test', () => {
     let liquidityFees: BigNumber
     let protocolFees: BigNumber
     let dyBefore: BigNumber
+    let ownerBalBefore: BigNumber
+    let otherAcc: SignerWithAddress
+    let otherAccBalBefore: BigNumber
+    let farmBalanceBefore: BigNumber
 
     describe('stake increased', () => {
-      let newStakeMinusFees: BigNumber
       let newStake: BigNumber
       let totalShares: BigNumber = ethers.utils.parseEther('1')
 
       before(async function () {
+        otherAcc = signers[3]
+        ownerBalBefore = await TenderToken.balanceOf(deployer)
+        otherAccBalBefore = await TenderToken.balanceOf(otherAcc.address)
+        farmBalanceBefore = await TenderToken.balanceOf(TenderFarm.address)
+
         dyBefore = await TenderSwap.calculateSwap(TenderToken.address, ONE)
         this.timeout(testTimeout * 10)
         const claimsManager = new ethers.Contract(claimsManagerAddr, claimsManagerAbi, ethers.provider)
@@ -222,11 +231,10 @@ describe('Audius Mainnet Fork Test', () => {
         protocolFees = percOf2(increase, protocolFeesPercent)
 
         newStake = deposit.add(initialStake).add(increase)
-        newStakeMinusFees = newStake.sub(liquidityFees.add(protocolFees))
       })
 
       it('updates currentPrincipal', async () => {
-        expect(await Tenderizer.currentPrincipal()).to.eq(newStakeMinusFees)
+        expect(await Tenderizer.currentPrincipal()).to.eq(newStake)
       })
 
       it('increases tendertoken balances when rewards are added', async () => {
@@ -251,7 +259,37 @@ describe('Audius Mainnet Fork Test', () => {
 
       it('should emit RewardsClaimed event from Tenderizer', async () => {
         expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
-          .withArgs(increase.sub(liquidityFees.add(protocolFees)), newStakeMinusFees, deposit.add(initialStake))
+          .withArgs(increase, newStake, deposit.add(initialStake))
+      })
+
+      it('collects fees', async () => {
+        it('should increase tenderToken balance of owner', async () => {
+          expect((await TenderToken.balanceOf(deployer)).sub(ownerBalBefore.add(protocolFees)).abs())
+            .to.lte(acceptableDelta)
+        })
+
+        it('should retain the balance for any other account', async () => {
+          expect((await TenderToken.balanceOf(otherAcc.address))).to.eq(otherAccBalBefore)
+        })
+
+        it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
+          expect(tx).to.emit(Tenderizer, 'ProtocolFeeCollected').withArgs(protocolFees)
+        })
+      })
+
+      it('collects liquidity provider fees', async () => {
+        it('should increase tenderToken balance of tenderFarm', async () => {
+          expect((await TenderToken.balanceOf(TenderFarm.address)).sub(farmBalanceBefore.add(liquidityFees)).abs())
+            .to.lte(acceptableDelta)
+        })
+
+        it('should retain the balance for any other account', async () => {
+          expect((await TenderToken.balanceOf(otherAcc.address))).to.eq(otherAccBalBefore)
+        })
+
+        it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
+          expect(tx).to.emit(Tenderizer, 'LiquidityFeeCollected').withArgs(liquidityFees)
+        })
       })
     })
 
@@ -260,7 +298,6 @@ describe('Audius Mainnet Fork Test', () => {
       let totalShares: BigNumber
       let oldPrinciple: BigNumber
 
-      let feesBefore: BigNumber = ethers.constants.Zero
       let tx: ContractTransaction
 
       let dyBefore: BigNumber
@@ -270,8 +307,7 @@ describe('Audius Mainnet Fork Test', () => {
       before(async function () {
         dyBefore = await TenderSwap.calculateSwap(TenderToken.address, ONE)
         this.timeout(testTimeout)
-        feesBefore = (await Tenderizer.pendingFees()).add(await Tenderizer.pendingLiquidityFees())
-        oldPrinciple = (await AudiusStaking.getTotalDelegatorStake(Tenderizer.address)).sub(feesBefore)
+        oldPrinciple = (await AudiusStaking.getTotalDelegatorStake(Tenderizer.address))
 
         // Impersonate guardian and slash NODE
         await hre.network.provider.request({
@@ -291,7 +327,6 @@ describe('Audius Mainnet Fork Test', () => {
 
         newStake = await AudiusStaking.getTotalDelegatorStake(Tenderizer.address)
         // Subtract protocol fees from last +ve rebase
-        newStake = newStake.sub(liquidityFees.add(protocolFees))
         tx = await Tenderizer.claimRewards()
       })
 
@@ -304,10 +339,6 @@ describe('Audius Mainnet Fork Test', () => {
         const shares = await TenderToken.sharesOf(deployer)
         totalShares = await TenderToken.getTotalShares()
         expect(await TenderToken.balanceOf(deployer)).to.eq(sharesToTokens(shares, totalShares, await TenderToken.totalSupply()))
-      })
-
-      it("doesn't increase pending fees", async () => {
-        expect((await Tenderizer.pendingFees()).add(await Tenderizer.pendingLiquidityFees())).to.eq(feesBefore)
       })
 
       it('decreases the tenderToken balance of the AMM', async () => {
@@ -326,70 +357,6 @@ describe('Audius Mainnet Fork Test', () => {
       it('should emit RewardsClaimed event from Tenderizer with 0 rewards and currentPrinciple', async () => {
         expect(tx).to.emit(Tenderizer, 'RewardsClaimed').withArgs(newStake.sub(oldPrinciple), newStake, oldPrinciple)
       })
-    })
-  })
-
-  describe('collect fees', () => {
-    let fees: BigNumber
-    let ownerBalBefore: BigNumber
-    let otherAcc: SignerWithAddress
-    let otherAccBalBefore: BigNumber
-
-    before(async () => {
-      otherAcc = signers[3]
-      fees = await Tenderizer.pendingFees()
-      ownerBalBefore = await TenderToken.balanceOf(deployer)
-      otherAccBalBefore = await TenderToken.balanceOf(otherAcc.address)
-      tx = await Tenderizer.collectFees()
-    })
-
-    it('should reset pendingFees', async () => {
-      expect(await Tenderizer.pendingFees()).to.eq(ethers.constants.Zero)
-    })
-
-    it('should increase tenderToken balance of owner', async () => {
-      expect((await TenderToken.balanceOf(deployer)).sub(ownerBalBefore.add(fees)).abs())
-        .to.lte(acceptableDelta)
-    })
-
-    it('should retain the balance for any other account', async () => {
-      expect((await TenderToken.balanceOf(otherAcc.address))).to.eq(otherAccBalBefore)
-    })
-
-    it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
-      expect(tx).to.emit(Tenderizer, 'ProtocolFeeCollected').withArgs(fees)
-    })
-  })
-
-  describe('collect liquidity fees', () => {
-    let fees: BigNumber
-    let farmBalanceBefore: BigNumber
-    let otherAcc: SignerWithAddress
-    let otherAccBalBefore: BigNumber
-
-    before(async () => {
-      otherAcc = signers[3]
-      fees = await Tenderizer.pendingLiquidityFees()
-      farmBalanceBefore = await TenderToken.balanceOf(TenderFarm.address)
-      otherAccBalBefore = await TenderToken.balanceOf(otherAcc.address)
-      tx = await Tenderizer.collectLiquidityFees()
-    })
-
-    it('should reset pendingFees', async () => {
-      expect(await Tenderizer.pendingLiquidityFees()).to.eq(ethers.constants.Zero)
-    })
-
-    it('should increase tenderToken balance of tenderFarm', async () => {
-      expect((await TenderToken.balanceOf(TenderFarm.address)).sub(farmBalanceBefore.add(fees)).abs())
-        .to.lte(acceptableDelta)
-    })
-
-    it('should retain the balance for any other account', async () => {
-      expect((await TenderToken.balanceOf(otherAcc.address))).to.eq(otherAccBalBefore)
-    })
-
-    it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
-      expect(tx).to.emit(Tenderizer, 'LiquidityFeeCollected').withArgs(fees)
     })
   })
 

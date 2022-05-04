@@ -154,22 +154,6 @@ interface ITenderizer {
     function claimRewards() external;
 
     /**
-     * @notice Collect fees pulls any pending governance fees from the Tenderizer to the governance treasury.
-     * @return amount Amount of protocol fees collected
-     * @dev Resets pendingFees.
-     * @dev Fees claimed are added to total staked.
-     */
-    function collectFees() external returns (uint256 amount);
-
-    /**
-     * @notice Collect Liquidity fees pulls any pending LP fees from the Tenderizer to TenderFarm.
-     * @return amount Amount of liquidity fees collected
-     * @dev Resets pendingFees.
-     * @dev Fees claimed are added to total staked.
-     */
-    function collectLiquidityFees() external returns (uint256 amount);
-
-    /**
      * @notice Total Staked Tokens returns the total amount of underlying tokens staked by this Tenderizer.
      * @return totalStaked total amount staked by this Tenderizer
      */
@@ -182,18 +166,6 @@ interface ITenderizer {
      * @dev to be used when there a delegation tax is deducted, for eg. in Graph.
      */
     function calcDepositOut(uint256 _amountIn) external returns (uint256 depositOut);
-
-    /**
-     * @notice Returns the amount of pending protocool fees since last claiming..
-     * @return amount the amount of fees pending since last claim
-     */
-    function pendingFees() external view returns (uint256 amount);
-
-    /**
-     * @notice Returns the amount of pending liquidity provider fees since last claiming.
-     * @return amount the amount of liqudity fees pending since last claim
-     */
-    function pendingLiquidityFees() external view returns (uint256 amount);
 
     // Governance setter funtions
 

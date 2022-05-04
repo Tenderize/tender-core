@@ -14,8 +14,8 @@ import dotenv from 'dotenv'
 dotenv.config({ path: './deploy/.env' })
 const NAME = process.env.NAME || ''
 const SYMBOL = process.env.SYMBOL || ''
-const FEE = ethers.utils.parseEther('0.025')
-const LIQUIDITY_FEE = 0
+const FEE = ethers.utils.parseEther(process.env.PROTOCOL_FEE || '0.025')
+const LIQUIDITY_FEE = ethers.utils.parseEther(process.env.LIQUIDITY_FEE || '0.025')
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { // the deploy function receive the hardhat runtime env as argument
   if (!NAME || !SYMBOL) {
@@ -72,7 +72,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   }
 
   // Deploy faucet if not mainnet
-  if (hre.network.name !== 'mainnet') {
+  if (hre.network.name !== 'mainnet' && hre.network.name !== 'arbitrum') {
     const tokenAddress = process.env.TOKEN // Address of token
     const requestAmount = process.env.FAUCET_REQUEST_AMOUNT // Amount to dispense per request
     const requestWait = process.env.FAUCET_REQUEST_WAIT // Hours requester has to wait before requesting again

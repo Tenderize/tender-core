@@ -14,6 +14,8 @@ import "./IGraph.sol";
 
 import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
 
+import "hardhat/console.sol";
+
 contract Graph is Tenderizer {
     using WithdrawalPools for WithdrawalPools.Pool;
     using SafeERC20 for IERC20;
@@ -79,11 +81,10 @@ contract Graph is Tenderizer {
         steak.safeApprove(address(graph), amount);
 
         // stake tokens
-        address _node = node;
-        uint256 delegatedShares = graph.delegate(_node, amount);
+        uint256 delegatedShares = graph.delegate(node, amount);
         assert(delegatedShares > 0);
 
-        emit Stake(_node, amount);
+        emit Stake(node, amount);
     }
 
     function _unstake(
@@ -146,7 +147,9 @@ contract Graph is Tenderizer {
         emit ProcessWithdraws(msg.sender, amount);
     }
 
-    function _claimRewards() internal override {
+    function _claimSecondaryRewards() internal override {}
+
+    function _processNewStake() internal override returns (int256 rewards) {
         IGraph.Delegation memory delegation = graph.getDelegation(node, address(this));
         IGraph.DelegationPool memory delPool = graph.delegationPools(node);
 
@@ -154,58 +157,38 @@ contract Graph is Tenderizer {
         uint256 totalShares = delPool.shares;
         uint256 totalTokens = delPool.tokens;
 
-        if (totalShares == 0) return;
+        if (totalShares == 0) return 0;
 
         uint256 stake = (delShares * totalTokens) / totalShares;
 
-        _processNewStake(stake);
-    }
-
-    function _processNewStake(uint256 _newStake) internal override {
-        // TODO: all of the below could be a general internal function in Tenderizer.sol
         uint256 currentPrincipal_ = currentPrincipal;
 
-        // adjust current token balance for potential protocol specific taxes or staking fees
-        uint256 toBeStaked = _calcDepositOut(steak.balanceOf(address(this)) - withdrawPool.amount);
+        uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)) - withdrawPool.amount);
 
-        // calculate what the new currentPrinciple would be after the call
-        // but excluding fees from rewards for this rebase
-        // which still need to be calculated if stake >= currentPrincipal
-        uint256 stake_ = _newStake + toBeStaked - withdrawPool.pendingUnlock - pendingFees - pendingLiquidityFees;
+        // calculate what the new currentPrinciple would be excluding 
+        // pending unlocks and pending user withdrawals
+        stake = stake +
+            currentBal -
+            withdrawPool.pendingUnlock;
+            // already subtracted withdrawalPool.amount from the current balancee
 
-        // Difference is negative, no rewards have been earnt
-        // So no fees are charged
-        if (stake_ <= currentPrincipal_) {
-            currentPrincipal = stake_;
-            uint256 diff = currentPrincipal_ - stake_;
+        rewards = int256(stake) - int256(currentPrincipal_); 
+
+        // Difference is negative, slash withdrawalpool
+        if (rewards < 0) {
             // calculate amount to subtract relative to current principal
-            uint256 totalUnstakePoolTokens = withdrawPool.totalTokens();
-            uint256 totalTokens = totalUnstakePoolTokens + currentPrincipal_;
-            if (totalTokens == 0) return;
-
-            uint256 unstakePoolSlash = (diff * totalUnstakePoolTokens) / totalTokens;
-            withdrawPool.updateTotalTokens(totalUnstakePoolTokens - unstakePoolSlash);
-
-            emit RewardsClaimed(-int256(diff), stake_, currentPrincipal_);
-
-            return;
+            uint256 unstakePoolTokens = withdrawPool.totalTokens();
+            uint256 totalTokens = unstakePoolTokens + currentPrincipal_;
+            if (totalTokens > 0) {
+                uint256 unstakePoolSlash = (currentPrincipal_ - stake) * unstakePoolTokens / totalTokens;
+                console.log("unstake pool slash %s", unstakePoolSlash);
+                withdrawPool.updateTotalTokens(unstakePoolTokens - unstakePoolSlash);
+            }
         }
 
-        // Difference is positive, calculate the rewards
-        uint256 totalRewards = stake_ - currentPrincipal_;
+        currentPrincipal = stake;
 
-        // calculate the protocol fees
-        uint256 fees = MathUtils.percOf(totalRewards, protocolFee);
-        pendingFees += fees;
-
-        // calculate the liquidity provider fees
-        uint256 liquidityFees = MathUtils.percOf(totalRewards, liquidityFee);
-        pendingLiquidityFees += liquidityFees;
-
-        stake_ = stake_ - fees - liquidityFees;
-        currentPrincipal = stake_;
-
-        emit RewardsClaimed(int256(stake_ - currentPrincipal_), stake_, currentPrincipal_);
+        emit RewardsClaimed(rewards, stake, currentPrincipal_);
     }
 
     function _setStakingContract(address _stakingContract) internal override {

@@ -33,8 +33,6 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
 
     uint256 public protocolFee;
     uint256 public liquidityFee;
-    uint256 public override pendingFees; // pending protocol fees since last distribution
-    uint256 public override pendingLiquidityFees;
     uint256 public currentPrincipal; // Principal since last claiming earnings
 
     address public gov;
@@ -137,12 +135,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
 
     /// @inheritdoc ITenderizer
     function claimRewards() external override {
-        // Claim rewards
-        // If received staking rewards in steak don't automatically compound, add to pendingTokens
-        // Swap tokens with address != steak to steak
-        // Add steak from swap to pendingTokens
         _claimRewards();
-        _stake(steak.balanceOf(address(this)));
     }
 
     /// @inheritdoc ITenderizer
@@ -192,29 +185,6 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         tenderFarm = _tenderFarm;
     }
 
-    // Fee collection
-    /// @inheritdoc ITenderizer
-    function collectFees() external override onlyGov returns (uint256) {
-        // mint tenderToken to fee distributor (governance)
-        tenderToken.mint(gov, pendingFees);
-
-        return _collectFees();
-    }
-
-    /// @inheritdoc ITenderizer
-    function collectLiquidityFees() external override onlyGov returns (uint256 amount) {
-        if (tenderFarm.nextTotalStake() == 0) return 0;
-
-        // mint tenderToken and transfer to tenderFarm
-        amount = pendingLiquidityFees;
-        tenderToken.mint(address(this), amount);
-        _collectLiquidityFees();
-
-        // TODO: Move this approval to infinite approval in initialize()?
-        tenderToken.approve(address(tenderFarm), amount);
-        tenderFarm.addRewards(amount);
-    }
-
     /// @inheritdoc ITenderizer
     function calcDepositOut(uint256 _amountIn) external view override returns (uint256) {
         return _calcDepositOut(_amountIn);
@@ -253,64 +223,42 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
 
     function _withdraw(address _account, uint256 _unstakeLockID) internal virtual;
 
-    function _claimRewards() internal virtual;
+    function _claimRewards() internal virtual {
+        _claimSecondaryRewards();
 
-    function _processNewStake(uint256 _newStake) internal virtual {
-        // TODO: all of the below could be a general internal function in Tenderizer.sol
-        uint256 currentPrincipal_ = currentPrincipal;
+        int256 rewards = _processNewStake();
 
-        // adjust current token balance for potential protocol specific taxes or staking fees
-        uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)));
-
-        // calculate what the new currentPrinciple would be after the call
-        // but excluding fees from rewards for this rebase
-        // which still need to be calculated if stake >= currentPrincipal
-        uint256 stake = _newStake + currentBal - pendingFees - pendingLiquidityFees;
-
-        // Difference is negative, no rewards have been earnt
-        // So no fees are charged
-        if (stake <= currentPrincipal_) {
-            currentPrincipal = stake;
-            emit RewardsClaimed(-int256(currentPrincipal_ - stake), stake, currentPrincipal_);
-
-            return;
+        if (rewards > 0) {
+            uint256 rewards_ = uint256(rewards);
+            _collectFees(rewards_);
+            _collectLiquidityFees(rewards_);
         }
 
-        // Difference is positive, calculate the rewards
-        uint256 totalRewards = stake - currentPrincipal_;
-
-        // calculate the protocol fees
-        uint256 fees = MathUtils.percOf(totalRewards, protocolFee);
-        pendingFees += fees;
-
-        // calculate the liquidity provider fees
-        uint256 liquidityFees = MathUtils.percOf(totalRewards, liquidityFee);
-        pendingLiquidityFees += liquidityFees;
-
-        stake = stake - fees - liquidityFees;
-        currentPrincipal = stake;
-
-        emit RewardsClaimed(int256(stake - currentPrincipal_), stake, currentPrincipal_);
+        _stake(steak.balanceOf(address(this)));
     }
 
-    function _collectFees() internal virtual returns (uint256) {
-        // set pendingFees to 0
-        // Controller will mint tenderToken and distribute it
-        uint256 before = pendingFees;
-        pendingFees = 0;
-        currentPrincipal += before;
-        emit ProtocolFeeCollected(before);
-        return before;
+    function _claimSecondaryRewards() internal virtual;
+
+    function _processNewStake() internal virtual returns (int256 rewards);
+
+    function _collectFees(uint256 _totalRewards) internal virtual {
+        uint256 fees = MathUtils.percOf(_totalRewards, protocolFee);
+        tenderToken.mint(gov, fees);
     }
 
-    function _collectLiquidityFees() internal virtual returns (uint256) {
-        // set pendingFees to 0
-        // Controller will mint tenderToken and distribute it
-        uint256 before = pendingLiquidityFees;
-        pendingLiquidityFees = 0;
-        currentPrincipal += before;
-        emit LiquidityFeeCollected(before);
-        return before;
+    function _collectLiquidityFees(uint256 _totalRewards) internal virtual {
+        // Don't transfer liquidity provider fees if there is no liquidity being farmed
+        if (tenderFarm.nextTotalStake() <= 0) return;
+
+        uint256 fees = MathUtils.percOf(_totalRewards, liquidityFee);
+        uint256 balBefore = tenderToken.balanceOf(address(this));
+        tenderToken.mint(address(this), fees);
+        uint256 balAfter = tenderToken.balanceOf(address(this));
+        uint256 stakeDiff = balAfter-balBefore;
+        // minting sometimes generates a little less, due to share calculation
+        // hence using the balance to transfer here
+        tenderToken.approve(address(tenderFarm), stakeDiff);
+        tenderFarm.addRewards(stakeDiff);
     }
 
     function _totalStakedTokens() internal view virtual returns (uint256) {

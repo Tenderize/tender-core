@@ -7,39 +7,28 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "../../../libs/MathUtils.sol";
+import "../libs/MathUtils.sol";
 
-import "../../Tenderizer.sol";
-import "./ILivepeer.sol";
+import "..//tenderizer/Tenderizer.sol";
 
-import "../../WithdrawalLocks.sol";
+import "../tenderizer/WithdrawalLocks.sol";
 
-import "../../../interfaces/IWETH.sol";
-import "../../../interfaces/ISwapRouter.sol";
+import "./DummyStaking.sol";
 
-import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
+import { ITenderSwapFactory } from "../tenderswap/TenderSwapFactory.sol";
 
-contract Livepeer is Tenderizer {
+contract DummyTenderizer is Tenderizer {
     using WithdrawalLocks for WithdrawalLocks.Locks;
     using SafeERC20 for IERC20;
-    using SafeERC20 for IWETH;
 
-    uint256 private constant MAX_ROUND = 2**256 - 1;
-
-    IWETH private WETH;
-    ISwapRouterWithWETH public uniswapRouter;
-    uint24 private constant UNISWAP_POOL_FEE = 10000;
-
-    ILivepeer livepeer;
-
-    uint256 private constant ethFees_threshold = 1**17;
+    DummyStaking dummyStaking;
 
     WithdrawalLocks.Locks withdrawLocks;
 
     function initialize(
         IERC20 _steak,
         string calldata _symbol,
-        ILivepeer _livepeer,
+        DummyStaking _dummyStaking,
         address _node,
         uint256 _protocolFee,
         uint256 _liquidityFee,
@@ -57,7 +46,7 @@ contract Livepeer is Tenderizer {
             _tenderFarmFactory,
             _tenderSwapFactory
         );
-        livepeer = _livepeer;
+        dummyStaking = _dummyStaking;
     }
 
     function _deposit(address _from, uint256 _amount) internal override {
@@ -74,10 +63,10 @@ contract Livepeer is Tenderizer {
         }
 
         // approve amount to Livepeer protocol
-        steak.safeApprove(address(livepeer), amount);
+        steak.safeApprove(address(dummyStaking), amount);
 
         // stake tokens
-        livepeer.bond(amount, node);
+        dummyStaking.stake(amount, node);
 
         emit Stake(node, amount);
     }
@@ -90,7 +79,7 @@ contract Livepeer is Tenderizer {
         uint256 amount = _amount;
 
         // Unbond tokens
-        livepeer.unbond(amount);
+        dummyStaking.unstake(amount, node);
 
         // Manage Livepeer unbonding locks
         withdrawalLockID = withdrawLocks.unlock(_account, amount);
@@ -102,7 +91,7 @@ contract Livepeer is Tenderizer {
         uint256 amount = withdrawLocks.withdraw(_account, _withdrawalID);
 
         // Withdraw stake, transfers steak tokens to address(this)
-        livepeer.withdrawStake(_withdrawalID);
+        dummyStaking.withdraw(_withdrawalID);
 
         // Transfer amount from unbondingLock to _account
         steak.safeTransfer(_account, amount);
@@ -112,7 +101,7 @@ contract Livepeer is Tenderizer {
 
     function _processNewStake() internal override returns (int256 rewards) {
         
-        uint256 stake = livepeer.pendingStake(address(this), MAX_ROUND);
+        uint256 stake = dummyStaking.totalStaked();
         uint256 currentPrincipal_ = currentPrincipal;
         // adjust current token balance for potential protocol specific taxes or staking fees
         uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)));
@@ -120,7 +109,7 @@ contract Livepeer is Tenderizer {
         // calculate the new total stake
         stake += currentBal;
 
-        rewards = int256(stake) - int256(currentPrincipal_);
+        rewards = int256(stake) - int256(currentPrincipal_); 
 
         currentPrincipal = stake;
 
@@ -138,53 +127,14 @@ contract Livepeer is Tenderizer {
      * added to the balance of this contract
      * @dev this is implementation specific
      */
-    function _claimSecondaryRewards() internal override {
-        uint256 ethFees = livepeer.pendingFees(address(this), MAX_ROUND);
-        // First claim any fees that are not underlying tokens
-        // withdraw fees
-        if (ethFees >= ethFees_threshold) {
-            livepeer.withdrawFees();
-
-            // Wrap ETH
-            uint256 bal = address(this).balance;
-            WETH.deposit{ value: bal }();
-            WETH.safeApprove(address(uniswapRouter), bal);
-
-            // swap ETH fees for LPT
-            if (address(uniswapRouter) != address(0)) {
-                uint256 amountOutMin = 0; // TODO: set slippage tolerance
-                ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
-                    tokenIn: address(WETH),
-                    tokenOut: address(steak),
-                    fee: UNISWAP_POOL_FEE,
-                    recipient: address(this),
-                    deadline: block.timestamp,
-                    amountIn: bal,
-                    amountOutMinimum: amountOutMin, // TODO: Set5% max slippage
-                    sqrtPriceLimitX96: 0
-                });
-                try uniswapRouter.exactInputSingle(params) returns (
-                    uint256 _swappedLPT
-                ) {
-                    assert(_swappedLPT > amountOutMin);
-                } catch {
-                    // fail silently so claiming secondary rewards doesn't block compounding primary rewards
-                }
-            }
-        }
-    }
+    function _claimSecondaryRewards() internal override {}
 
     function _setStakingContract(address _stakingContract) internal override {
         emit GovernanceUpdate(
             "STAKING_CONTRACT",
-            abi.encode(livepeer),
+            abi.encode(dummyStaking),
             abi.encode(_stakingContract)
         );
-        livepeer = ILivepeer(_stakingContract);
-    }
-
-    function setUniswapRouter(address _uniswapRouter) external onlyGov {
-        uniswapRouter = ISwapRouterWithWETH(_uniswapRouter);
-        WETH = IWETH(uniswapRouter.WETH9());
+        dummyStaking = DummyStaking(_stakingContract);
     }
 }

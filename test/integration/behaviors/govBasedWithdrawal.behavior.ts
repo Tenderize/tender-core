@@ -64,6 +64,7 @@ export default function suite () {
       await ctx.Tenderizer.processWithdraw()
       steakBalanceBefore = await ctx.Steak.balanceOf(ctx.signers[2].address)
       tx = await ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.unbondLockID)
+      await tx.wait()
     })
 
     it('reverts if account mismatch from unbondigLock', async () => {
@@ -77,12 +78,12 @@ export default function suite () {
     })
 
     it('should emit Withdraw event from Tenderizer', async () => {
-      expect(tx).to.emit(ctx.Tenderizer, 'Withdraw')
+      await expect(tx).to.emit(ctx.Tenderizer, 'Withdraw')
         .withArgs(ctx.signers[2].address, ctx.withdrawAmount, ctx.unbondLockID)
     })
   })
 
-  describe('negative rebase before gov processes unstakes', async function () {
+  describe('gov processes unstakes after being slashed', async function () {
     let steakBalanceBefore : BigNumber
     let slashFromWithdrawal: BigNumber
 
@@ -108,7 +109,7 @@ export default function suite () {
     })
   })
 
-  describe('negative rebase after gov processes unstakes', async function () {
+  describe('gov processes processes withdrawals after being slashed', async function () {
     let steakBalanceBefore : BigNumber
     let slashFromWithdrawal: BigNumber
 
@@ -124,7 +125,7 @@ export default function suite () {
 
       await ctx.Tenderizer.processWithdraw()
       await ctx.Tenderizer.claimRewards()
-      slashFromWithdrawal = slashAmount.mul(ctx.withdrawAmount).div(cpBefore.add(ctx.withdrawAmount))
+      slashFromWithdrawal = slashAmount.mul(ctx.withdrawAmount).div(cpBefore.add(this.withdrawAmount))
       steakBalanceBefore = await ctx.Steak.balanceOf(ctx.signers[2].address)
       await ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.unbondLockID)
     })
@@ -135,7 +136,7 @@ export default function suite () {
     })
   })
 
-  describe('negative rebase after gov processes withdraws', async function () {
+  describe('slash occurs after unstake is processed, reduces pending unstake locks', async function () {
     let steakBalanceBefore : BigNumber
     let slashFromWithdrawal: BigNumber
 
