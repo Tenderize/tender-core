@@ -51,7 +51,7 @@ export function stakeIncreaseTests () {
   it('collected protocol fees', () => {
     it('should increase tenderToken balance of owner', async () => {
       expect((await ctx.TenderToken.balanceOf(ctx.deployer)).sub(ownerBalBefore.add(ctx.protocolFees)).abs())
-        .to.lte(ethers.utils.parseEther('0.000001')) // TODO: Delta dues to share calculation precision ???
+        .to.lte(1)
     })
 
     it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
@@ -62,7 +62,7 @@ export function stakeIncreaseTests () {
   it('collected liquidity provider fees', () => {
     it('should increase tenderToken balance of tenderFarm', async () => {
       expect((await ctx.TenderToken.balanceOf(ctx.TenderFarm.address)).sub(farmBalanceBefore.add(ctx.liquidityFees)).abs())
-        .to.lte(ethers.utils.parseEther('0.000001')) // TODO: Delta dues to share calculation precision ???
+        .to.lte(1)
     })
 
     it('should emit ProtocolFeeCollected event from Tenderizer', async () => {

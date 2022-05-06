@@ -149,8 +149,6 @@ contract Matic is Tenderizer {
 
         rewards = int256(stake) - int256(currentPrincipal_); 
 
-        currentPrincipal = stake;
-
         emit RewardsClaimed(rewards, stake, currentPrincipal_);
     }
 

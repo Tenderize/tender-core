@@ -14,9 +14,9 @@ task('add-liquidity', 'adds liquidity to pool')
       throw new Error('Must provide Tenderizer name')
     }
 
-    const provider = hre.ethers.provider
+    const provider = ethers.provider
 
-    const signer = (await hre.ethers.getSigners())[0]
+    const signer = (await ethers.getSigners())[0]
 
     const tokenAmount = utils.parseEther(args.tokenamount.toString())
     const tenderAmount = utils.parseEther(args.tenderamount.toString())
@@ -58,4 +58,5 @@ task('add-liquidity', 'adds liquidity to pool')
 
     console.log('TenderToken reserve: ', utils.formatEther(await TenderSwap.getToken0Balance()))
     console.log('Steak Reserve: ', utils.formatEther(await TenderSwap.getToken1Balance()))
+    console.log('virtual price', utils.formatEther(await TenderSwap.getVirtualPrice()))
   })

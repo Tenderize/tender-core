@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "../tenderizer/WithdrawalLocks.sol";
 
-
 contract DummyStaking is ERC20, ERC20Permit {
     using WithdrawalLocks for WithdrawalLocks.Locks;
 
@@ -29,7 +28,7 @@ contract DummyStaking is ERC20, ERC20Permit {
 
     function stake(uint256 _amount, address /*_node*/) public {
         totalStaked += _amount;
-        transferFrom(msg.sender, address(this), _amount);
+        ERC20(address(this)).transferFrom(msg.sender, address(this), _amount);
     }
     
     function unstake(uint256 _amount, address /*_node*/) public {
@@ -37,9 +36,9 @@ contract DummyStaking is ERC20, ERC20Permit {
         uint256 lockID = withdrawalLocks.unlock(msg.sender, _amount);
     }
 
-    function withdraw(uint256 _withdrawalLockID) external {
+    function withdraw(uint256 _withdrawalLockID) public {
         uint256 amountWithdrawn =  withdrawalLocks.withdraw(msg.sender, _withdrawalLockID);
-        transfer(msg.sender, amountWithdrawn);
+        ERC20(address(this)).transfer(msg.sender, amountWithdrawn);
     }
 
     function addRewards(uint256 _amount) external {

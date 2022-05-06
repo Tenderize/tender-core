@@ -40,8 +40,8 @@ describe('Graph Integration Test', () => {
 
   let Graph: {[name: string]: Deployment}
 
-  const protocolFeesPercent = ethers.utils.parseEther('0.025')
-  const liquidityFeesPercent = ethers.utils.parseEther('0.025')
+  const protocolFeesPercent = ethers.utils.parseEther('50')
+  const liquidityFeesPercent = ethers.utils.parseEther('50')
 
   beforeEach(async () => {
     snapshotId = await rpc.snapshot()

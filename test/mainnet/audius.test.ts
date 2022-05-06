@@ -42,8 +42,8 @@ describe('Audius Mainnet Fork Test', () => {
 
   let tx: ContractTransaction
   const unbondLockID = 0
-  const protocolFeesPercent = ethers.utils.parseEther('0.025')
-  const liquidityFeesPercent = ethers.utils.parseEther('0.025')
+  const protocolFeesPercent = ethers.utils.parseEther('50')
+  const liquidityFeesPercent = ethers.utils.parseEther('50')
 
   const acceptableDelta = 2
 
@@ -399,7 +399,7 @@ describe('Audius Mainnet Fork Test', () => {
 
       it('reduces TenderToken Balance', async () => {
         // lte to account for any roundoff error in tokenToShare calcualtion during burn
-        expect(await TenderToken.balanceOf(deployer)).to.lte(acceptableDelta)
+        expect(await TenderToken.balanceOf(signers[2].address)).to.lte(1)
       })
 
       it('should emit Unstake event from Tenderizer', async () => {

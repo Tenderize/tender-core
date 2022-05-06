@@ -36,8 +36,8 @@ describe('Matic Integration Test', () => {
 
   let Matic: {[name: string]: Deployment}
 
-  const protocolFeesPercent = ethers.utils.parseEther('0.025')
-  const liquidityFeesPercent = ethers.utils.parseEther('0.025')
+  const protocolFeesPercent = ethers.utils.parseEther('50')
+  const liquidityFeesPercent = ethers.utils.parseEther('50')
 
   beforeEach(async () => {
     snapshotId = await rpc.snapshot()
@@ -137,7 +137,6 @@ describe('Matic Integration Test', () => {
     describe('Rebases', async function () {
       context('Positive Rebase', async function () {
         beforeEach(async function () {
-          this.increase = ethers.utils.parseEther('10')
           this.increase = ethers.utils.parseEther('10')
           this.liquidityFees = percOf2(this.increase, liquidityFeesPercent)
           this.protocolFees = percOf2(this.increase, protocolFeesPercent)

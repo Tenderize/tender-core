@@ -43,8 +43,8 @@ describe('Livepeer Mainnet Fork Test', () => {
 
   let tx: ContractTransaction
   const lockID = 0
-  const protocolFeesPercent = ethers.utils.parseEther('0.025')
-  const liquidityFeesPercent = ethers.utils.parseEther('0.025')
+  const protocolFeesPercent = ethers.utils.parseEther('50')
+  const liquidityFeesPercent = ethers.utils.parseEther('50')
 
   const acceptableDelta = 2
 
@@ -190,12 +190,16 @@ describe('Livepeer Mainnet Fork Test', () => {
       let newStake: BigNumber
       let totalShares: BigNumber = ONE
       let dyBefore: BigNumber
-      let farmBalanceBefore: BigNumber
       let protocolFees: BigNumber
       let liquidityFees: BigNumber
       let swappedLPTRewards: BigNumber
+      let ownerBalBefore: BigNumber
+      let farmBalanceBefore: BigNumber
 
       before(async function () {
+        ownerBalBefore = await TenderToken.balanceOf(deployer)
+        farmBalanceBefore = await TenderToken.balanceOf(TenderFarm.address)
+
         dyBefore = await TenderSwap.calculateSwap(TenderToken.address, ONE)
         this.timeout(testTimeout * 10)
         bondingManager = new ethers.Contract(bondingManagerAddr, bondingManagerAbi, ethers.provider)
@@ -238,7 +242,7 @@ describe('Livepeer Mainnet Fork Test', () => {
         ])
         await bondingManager.connect(ticketBrokerSigner).updateTranscoderWithFees(NODE, ethers.utils.parseEther('0.10'), currentRound)
 
-        // Get penging ETH FEES
+        // Get pending ETH FEES
         const pendingEthFees = await bondingManager.pendingFees(Tenderizer.address, MAX_ROUND)
 
         // Get current price of ETH -> LPT
@@ -250,12 +254,12 @@ describe('Livepeer Mainnet Fork Test', () => {
           pendingEthFees,
           0
         )
+
         increase = stakeAfter.sub(stakeBefore)
         liquidityFees = percOf2(increase.add(swappedLPTRewards), liquidityFeesPercent)
         protocolFees = percOf2(increase.add(swappedLPTRewards), protocolFeesPercent)
         newStake = deposit.add(initialStake).add(increase).add(swappedLPTRewards)
         farmBalanceBefore = await TenderToken.balanceOf(TenderFarm.address)
-
         // Transfer balance out before
         ownerBalanceBefore = await TenderToken.balanceOf(deployer)
         await TenderToken.connect(signers[0]).transfer(signers[3].address,
@@ -266,8 +270,7 @@ describe('Livepeer Mainnet Fork Test', () => {
 
       it('updates currentPrincipal', async () => {
         // Account for any slippage in the swap
-        expect((await Tenderizer.currentPrincipal()).sub(newStake).abs())
-          .to.lte(acceptableDelta)
+        expect(await Tenderizer.currentPrincipal()).to.eq(newStake)
       })
 
       it('increases tendertoken balances when rewards are added', async () => {
@@ -294,14 +297,26 @@ describe('Livepeer Mainnet Fork Test', () => {
         expect(await LivepeerToken.balanceOf(Tenderizer.address)).to.eq(0)
       })
 
-      it('should increase tenderToken balance of owner', async () => {
-        expect((await TenderToken.balanceOf(deployer)).sub(protocolFees).abs())
-          .to.lte(ethers.utils.parseEther('0.0000000001'))
+      it('collects fees', async () => {
+        it('should increase tenderToken balance of owner', async () => {
+          expect((await TenderToken.balanceOf(deployer)).sub(ownerBalBefore.add(protocolFees)).abs())
+            .to.lte(acceptableDelta)
+        })
+
+        it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
+          expect(tx).to.emit(Tenderizer, 'ProtocolFeeCollected').withArgs(protocolFees)
+        })
       })
 
-      it('should increase tenderToken balance of tenderFarm', async () => {
-        expect((await TenderToken.balanceOf(TenderFarm.address)).sub(farmBalanceBefore.add(liquidityFees)).abs())
-          .to.lte(ethers.utils.parseEther('0.0000000001'))
+      it('collects liquidity provider fees', async () => {
+        it('should increase tenderToken balance of tenderFarm', async () => {
+          expect((await TenderToken.balanceOf(TenderFarm.address)).sub(farmBalanceBefore.add(liquidityFees)).abs())
+            .to.lte(acceptableDelta)
+        })
+
+        it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
+          expect(tx).to.emit(Tenderizer, 'LiquidityFeeCollected').withArgs(liquidityFees)
+        })
       })
 
       it('should emit RewardsClaimed event from Tenderizer', async () => {
