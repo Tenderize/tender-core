@@ -2,11 +2,12 @@ import { BigNumber } from 'ethers/lib/ethers'
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
 import { Context } from 'mocha'
+import { PERC_DIVISOR } from '../../util/constants'
 
 export default function suite () {
   let ctx: Context
 
-  const expFees = BigNumber.from(25).mul(BigNumber.from(10).pow(15))
+  const expFees = ethers.utils.parseEther('50')
   const expSwapFee = BigNumber.from(5).mul(BigNumber.from(10).pow(6))
   const expAdminFee = ethers.constants.Zero
   const expIntialA = BigNumber.from(8500)
@@ -24,8 +25,16 @@ export default function suite () {
       expect(await ctx.Tenderizer.protocolFee()).to.eq(expFees)
     })
 
+    it('reverts when trying to set protocol fee higher than MAX_FEE', async function () {
+      await expect(ctx.Tenderizer.setProtocolFee(PERC_DIVISOR)).to.be.revertedWith('FEE_EXCEEDS_MAX')
+    })
+
     it('liquidity fee is set', async function () {
       expect(await ctx.Tenderizer.liquidityFee()).to.eq(expFees)
+    })
+
+    it('reverts when trying to set liquidity fee higher than MAX_FEE', async function () {
+      await expect(ctx.Tenderizer.setLiquidityFee(PERC_DIVISOR)).to.be.revertedWith('FEE_EXCEEDS_MAX')
     })
 
     it('TenderSwap is deployed and set', async function () {

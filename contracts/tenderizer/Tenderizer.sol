@@ -24,6 +24,8 @@ import "../helpers/SelfPermit.sol";
 abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     using SafeERC20 for IERC20;
 
+    uint256 constant private MAX_FEE = 5 * 10**20;
+
     IERC20 public steak;
     ITenderToken public tenderToken;
     ITenderFarm public tenderFarm;
@@ -167,11 +169,13 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     function setProtocolFee(uint256 _protocolFee) external virtual override onlyGov {
+        require(_protocolFee <= MAX_FEE, "FEE_EXCEEDS_MAX");
         emit GovernanceUpdate("PROTOCOL_FEE", abi.encode(protocolFee), abi.encode(_protocolFee));
         protocolFee = _protocolFee;
     }
 
     function setLiquidityFee(uint256 _liquidityFee) external virtual override onlyGov {
+        require(_liquidityFee <= MAX_FEE, "FEE_EXCEEDS_MAX");
         emit GovernanceUpdate("LIQUIDITY_FEE", abi.encode(liquidityFee), abi.encode(_liquidityFee));
         liquidityFee = _liquidityFee;
     }
