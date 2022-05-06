@@ -60,7 +60,7 @@ const config: HardhatUserConfig = {
       url: JSON_RPC,
       accounts: PRIVATE_KEY ? [`0x${PRIVATE_KEY}`] : undefined
     },
-    arbitrumMainnet: {
+    arbitrum: {
       url: JSON_RPC,
       accounts: PRIVATE_KEY ? [`0x${PRIVATE_KEY}`] : undefined
     },
