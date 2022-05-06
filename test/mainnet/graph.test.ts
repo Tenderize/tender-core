@@ -48,8 +48,8 @@ describe('Graph Mainnet Fork Test', () => {
   let tx: ContractTransaction
   const unbondLockID = 0
 
-  const protocolFeesPercent = ethers.utils.parseEther('0.025')
-  const liquidityFeesPercent = ethers.utils.parseEther('0.025')
+  const protocolFeesPercent = ethers.utils.parseEther('50')
+  const liquidityFeesPercent = ethers.utils.parseEther('50')
 
   const acceptableDelta = 10
 
@@ -256,7 +256,7 @@ describe('Graph Mainnet Fork Test', () => {
       })
 
       it('currentPrincipal stays the same', async () => {
-        expect((await Tenderizer.currentPrincipal()).sub(supplyAfterTax).abs()).to.lt(acceptableDelta * 5)
+        expect(await Tenderizer.currentPrincipal()).to.eq(supplyAfterTax.sub(1)) // Account for precision loss from the graph share calculation itself
       })
 
       it('tenderToken price stays the same', async () => {
@@ -266,7 +266,7 @@ describe('Graph Mainnet Fork Test', () => {
       it('should emit RewardsClaimed event from Tenderizer', async () => {
         // Sub 1 to account for round-off error
         expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
-          .withArgs(-1, supplyAfterTax.sub(1), supplyAfterTax)
+          .withArgs(-1, supplyAfterTax.sub(1), supplyAfterTax) // Account for precision loss from the graph share calculation itself
       })
     })
 

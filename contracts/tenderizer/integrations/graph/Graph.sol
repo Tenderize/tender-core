@@ -14,8 +14,6 @@ import "./IGraph.sol";
 
 import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
 
-import "hardhat/console.sol";
-
 contract Graph is Tenderizer {
     using WithdrawalPools for WithdrawalPools.Pool;
     using SafeERC20 for IERC20;
@@ -181,12 +179,9 @@ contract Graph is Tenderizer {
             uint256 totalTokens = unstakePoolTokens + currentPrincipal_;
             if (totalTokens > 0) {
                 uint256 unstakePoolSlash = (currentPrincipal_ - stake) * unstakePoolTokens / totalTokens;
-                console.log("unstake pool slash %s", unstakePoolSlash);
                 withdrawPool.updateTotalTokens(unstakePoolTokens - unstakePoolSlash);
             }
         }
-
-        currentPrincipal = stake;
 
         emit RewardsClaimed(rewards, stake, currentPrincipal_);
     }

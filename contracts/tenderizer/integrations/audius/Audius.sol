@@ -160,8 +160,6 @@ contract Audius is Tenderizer {
             }
         }
 
-        currentPrincipal = stake;
-
         emit RewardsClaimed(rewards, stake, currentPrincipal_);
     }
 

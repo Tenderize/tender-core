@@ -1,3 +1,3 @@
-import { BigNumber, utils } from 'ethers'
+import { BigNumber } from 'ethers'
 
-export const PERC_DIVISOR:BigNumber = utils.parseEther('1000')
+export const PERC_DIVISOR:BigNumber = BigNumber.from(10).pow(21)

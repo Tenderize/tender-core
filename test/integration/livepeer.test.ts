@@ -45,8 +45,8 @@ describe('Livepeer Integration Test', () => {
   // Deployment
   let Livepeer: {[name: string]: Deployment}
 
-  const protocolFeesPercent = ethers.utils.parseEther('0.025')
-  const liquidityFeesPercent = ethers.utils.parseEther('0.025')
+  const protocolFeesPercent = ethers.utils.parseEther('50')
+  const liquidityFeesPercent = ethers.utils.parseEther('50')
 
   beforeEach(async () => {
     snapshotId = await rpc.snapshot()
