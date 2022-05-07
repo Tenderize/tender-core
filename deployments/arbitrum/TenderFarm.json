@@ -1,0 +1,766 @@
+{
+  "address": "0xBA0C2D94284ac15aAb78077aaA97b66125fD1b64",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "Farm",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "Harvest",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "RewardsAdded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "Unfarm",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "CRF",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "addRewards",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_for",
+          "type": "address"
+        }
+      ],
+      "name": "availableRewards",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "farm",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_for",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "farmFor",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_deadline",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint8",
+          "name": "_v",
+          "type": "uint8"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_r",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_s",
+          "type": "bytes32"
+        }
+      ],
+      "name": "farmWithPermit",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "harvest",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "contract IERC20",
+          "name": "_stakeToken",
+          "type": "address"
+        },
+        {
+          "internalType": "contract ITenderToken",
+          "name": "_rewardToken",
+          "type": "address"
+        },
+        {
+          "internalType": "contract ITenderizer",
+          "name": "_tenderizer",
+          "type": "address"
+        }
+      ],
+      "name": "initialize",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "nextTotalStake",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "rewardToken",
+      "outputs": [
+        {
+          "internalType": "contract ITenderToken",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_token",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_value",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_deadline",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint8",
+          "name": "_v",
+          "type": "uint8"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_r",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_s",
+          "type": "bytes32"
+        }
+      ],
+      "name": "selfPermit",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_token",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_value",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_deadline",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint8",
+          "name": "_v",
+          "type": "uint8"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_r",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_s",
+          "type": "bytes32"
+        }
+      ],
+      "name": "selfPermitIfNecessary",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "contract ITenderizer",
+          "name": "_tenderizer",
+          "type": "address"
+        }
+      ],
+      "name": "setTenderizer",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_of",
+          "type": "address"
+        }
+      ],
+      "name": "stakeOf",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "stakes",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "stake",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "lastCRF",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "tenderizer",
+      "outputs": [
+        {
+          "internalType": "contract ITenderizer",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "token",
+      "outputs": [
+        {
+          "internalType": "contract IERC20",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "totalStake",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "unfarm",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0xbcd0421af0dd856b4bce3510047e9310d17cbe21026824f16e16002dc0cabcc2",
+  "receipt": {
+    "to": null,
+    "from": "0xF5ba856B4DBfBf3A56b01eFd0697fc188cE1aFD8",
+    "contractAddress": "0xBA0C2D94284ac15aAb78077aaA97b66125fD1b64",
+    "transactionIndex": 0,
+    "gasUsed": "14241255",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0xfa72c8e9f5206ae3c93029d2adb7758e425e84916a8a0b6c384ffbc973cdb773",
+    "transactionHash": "0xbcd0421af0dd856b4bce3510047e9310d17cbe21026824f16e16002dc0cabcc2",
+    "logs": [],
+    "blockNumber": 11325306,
+    "cumulativeGasUsed": "106375",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "solcInputHash": "ffb99252a5f70d94c995ad5bcc98e5d3",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.4+commit.c7e474f2\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"Farm\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"Harvest\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"RewardsAdded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"Unfarm\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"CRF\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"addRewards\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_for\",\"type\":\"address\"}],\"name\":\"availableRewards\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"farm\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_for\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"farmFor\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_deadline\",\"type\":\"uint256\"},{\"internalType\":\"uint8\",\"name\":\"_v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"_r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_s\",\"type\":\"bytes32\"}],\"name\":\"farmWithPermit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"harvest\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contract IERC20\",\"name\":\"_stakeToken\",\"type\":\"address\"},{\"internalType\":\"contract ITenderToken\",\"name\":\"_rewardToken\",\"type\":\"address\"},{\"internalType\":\"contract ITenderizer\",\"name\":\"_tenderizer\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"nextTotalStake\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rewardToken\",\"outputs\":[{\"internalType\":\"contract ITenderToken\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_deadline\",\"type\":\"uint256\"},{\"internalType\":\"uint8\",\"name\":\"_v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"_r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_s\",\"type\":\"bytes32\"}],\"name\":\"selfPermit\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_deadline\",\"type\":\"uint256\"},{\"internalType\":\"uint8\",\"name\":\"_v\",\"type\":\"uint8\"},{\"internalType\":\"bytes32\",\"name\":\"_r\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"_s\",\"type\":\"bytes32\"}],\"name\":\"selfPermitIfNecessary\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contract ITenderizer\",\"name\":\"_tenderizer\",\"type\":\"address\"}],\"name\":\"setTenderizer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_of\",\"type\":\"address\"}],\"name\":\"stakeOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"stakes\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"stake\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"lastCRF\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"tenderizer\",\"outputs\":[{\"internalType\":\"contract ITenderizer\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"token\",\"outputs\":[{\"internalType\":\"contract IERC20\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"totalStake\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"unfarm\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"addRewards(uint256)\":{\"details\":\"will 'start' a new 'epoch'.only callable by owner.\",\"params\":{\"_amount\":\"amount of reward tokens to add\"}},\"availableRewards(address)\":{\"params\":{\"_for\":\"address address of the account to check rewards for.\"},\"returns\":{\"_0\":\"rewards for the provided account address.\"}},\"farm(uint256)\":{\"details\":\"'_amount' needs to be approved for the 'TenderFarm' to transfer.harvests current rewards before accounting updates are made.\",\"params\":{\"_amount\":\"amount of liquidity pool tokens to stake\"}},\"farmFor(address,uint256)\":{\"details\":\"'_amount' needs to be approved for the 'TenderFarm' to transfer.staked tokens will belong to the account they are staked for.harvests current rewards before accounting updates are made.\",\"params\":{\"_amount\":\"amount of liquidity pool tokens to stake\",\"_for\":\"account to stake for\"}},\"farmWithPermit(uint256,uint256,uint8,bytes32,bytes32)\":{\"details\":\"'_amount' needs to be approved for the 'TenderFarm' to transfer.harvests current rewards before accounting updates are made.calls permit on LP Token.\",\"params\":{\"_amount\":\"amount of liquidity pool tokens to stake\",\"_deadline\":\"deadline of the permit\",\"_r\":\"r of signed Permit message\",\"_s\":\"s of signed Permit message\",\"_v\":\"v of signed Permit message\"}},\"harvest()\":{\"details\":\"reverts when trying to harvest multiple times if no new rewards have been added.emits an event with how many reward tokens have been harvested.\"},\"selfPermit(address,uint256,uint256,uint8,bytes32,bytes32)\":{\"details\":\"The `owner` is always msg.sender and the `spender` is always address(this).\",\"params\":{\"_deadline\":\"A timestamp, the current blocktime must be less than or equal to this timestamp\",\"_r\":\"Must produce valid secp256k1 signature from the holder along with `v` and `s`\",\"_s\":\"Must produce valid secp256k1 signature from the holder along with `r` and `v`\",\"_token\":\"The address of the token spent\",\"_v\":\"Must produce valid secp256k1 signature from the holder along with `r` and `s`\",\"_value\":\"The amount that can be spent of token\"}},\"selfPermitIfNecessary(address,uint256,uint256,uint8,bytes32,bytes32)\":{\"details\":\"The `owner` is always msg.sender and the `spender` is always address(this). Can be used instead of #selfPermit to prevent calls from failing due to a frontrun of a call to #selfPermit\",\"params\":{\"_deadline\":\"A timestamp, the current blocktime must be less than or equal to this timestamp\",\"_r\":\"Must produce valid secp256k1 signature from the holder along with `v` and `s`\",\"_s\":\"Must produce valid secp256k1 signature from the holder along with `r` and `v`\",\"_token\":\"The address of the token spent\",\"_v\":\"Must produce valid secp256k1 signature from the holder along with `r` and `s`\",\"_value\":\"The amount that can be spent of token\"}},\"setTenderizer(address)\":{\"params\":{\"_tenderizer\":\"address of the new tenderizer\"}},\"stakeOf(address)\":{\"params\":{\"_of\":\"address address of the account to check stake for.\"},\"returns\":{\"_0\":\"LP tokens deposited for address\"}},\"unfarm(uint256)\":{\"details\":\"'_amount' needs to be approved for the 'TenderFarm' to transfer.harvests current rewards before accounting updates are made.\",\"params\":{\"amount\":\"amount of liquidity pool tokens to stake\"}}},\"stateVariables\":{\"CRF\":{\"details\":\"Cumulative reward factor\"},\"nextTotalStake\":{\"return\":\"nextStake LP Tokens staked for next round\",\"returns\":{\"_0\":\"nextStake LP Tokens staked for next round\"}},\"rewardToken\":{\"details\":\"Tender token.\"},\"stakes\":{\"details\":\"stake mapping of each address\"},\"tenderizer\":{\"details\":\"tenderizer.\"},\"token\":{\"details\":\"LP token.\"},\"totalStake\":{\"return\":\"stake total amount of LP tokens staked\",\"returns\":{\"_0\":\"stake total amount of LP tokens staked\"}}},\"title\":\"TenderFarm\",\"version\":1},\"userdoc\":{\"events\":{\"Farm(address,uint256)\":{\"notice\":\"Farm gets emitted when an account stakes LP tokens.\"},\"Harvest(address,uint256)\":{\"notice\":\"Harvest gets emitted when an accounts harvests outstanding rewards.\"},\"RewardsAdded(uint256)\":{\"notice\":\"RewardsAdded gets emitted when new rewards are added and a new epoch begins\"},\"Unfarm(address,uint256)\":{\"notice\":\"Unfarm gets emitted when an account unstakes LP tokens.\"}},\"kind\":\"user\",\"methods\":{\"addRewards(uint256)\":{\"notice\":\"add new rewards\"},\"availableRewards(address)\":{\"notice\":\"Check available rewards for an account.\"},\"farm(uint256)\":{\"notice\":\"stake liquidity pool tokens to receive rewards\"},\"farmFor(address,uint256)\":{\"notice\":\"stake liquidity pool tokens for a specific account so that it receives rewards\"},\"farmWithPermit(uint256,uint256,uint8,bytes32,bytes32)\":{\"notice\":\"allow spending token and stake liquidity pool tokens to receive rewards\"},\"harvest()\":{\"notice\":\"harvest outstanding rewards\"},\"nextTotalStake()\":{\"notice\":\"Return the total amount of LP tokens staked for the next reward epoch.\"},\"selfPermit(address,uint256,uint256,uint8,bytes32,bytes32)\":{\"notice\":\"Permits this contract to spend a given token from `msg.sender`\"},\"selfPermitIfNecessary(address,uint256,uint256,uint8,bytes32,bytes32)\":{\"notice\":\"Permits this contract to spend a given token from `msg.sender`\"},\"setTenderizer(address)\":{\"notice\":\"Changes the tenderizer of the contract\"},\"stakeOf(address)\":{\"notice\":\"Check stake for an account.\"},\"totalStake()\":{\"notice\":\"Return the total amount of LP tokens staked in this farm.\"},\"unfarm(uint256)\":{\"notice\":\"unstake liquidity pool tokens\"}},\"notice\":\"TenderFarm is responsible for incetivizing liquidity providers, by accepting LP Tokens and a proportionaly rewarding them with TenderTokens over time.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/tenderfarm/TenderFarm.sol\":\"TenderFarm\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[]},\"sources\":{\"@openzeppelin/contracts/proxy/utils/Initializable.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity ^0.8.0;\\n\\n/**\\n * @dev This is a base contract to aid in writing upgradeable contracts, or any kind of contract that will be deployed\\n * behind a proxy. Since a proxied contract can't have a constructor, it's common to move constructor logic to an\\n * external initializer function, usually called `initialize`. It then becomes necessary to protect this initializer\\n * function so it can only be called once. The {initializer} modifier provided by this contract will have this effect.\\n *\\n * TIP: To avoid leaving the proxy in an uninitialized state, the initializer function should be called as early as\\n * possible by providing the encoded function call as the `_data` argument to {ERC1967Proxy-constructor}.\\n *\\n * CAUTION: When used with inheritance, manual care must be taken to not invoke a parent initializer twice, or to ensure\\n * that all initializers are idempotent. This is not verified automatically as constructors are by Solidity.\\n */\\nabstract contract Initializable {\\n    /**\\n     * @dev Indicates that the contract has been initialized.\\n     */\\n    bool private _initialized;\\n\\n    /**\\n     * @dev Indicates that the contract is in the process of being initialized.\\n     */\\n    bool private _initializing;\\n\\n    /**\\n     * @dev Modifier to protect an initializer function from being invoked twice.\\n     */\\n    modifier initializer() {\\n        require(_initializing || !_initialized, \\\"Initializable: contract is already initialized\\\");\\n\\n        bool isTopLevelCall = !_initializing;\\n        if (isTopLevelCall) {\\n            _initializing = true;\\n            _initialized = true;\\n        }\\n\\n        _;\\n\\n        if (isTopLevelCall) {\\n            _initializing = false;\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0x8b2abd85d0ece7e866e100e9d47ca9cbec93c87cf71a8d267b2b93eb81f7d5e9\",\"license\":\"MIT\"},\"@openzeppelin/contracts/token/ERC20/IERC20.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity ^0.8.0;\\n\\n/**\\n * @dev Interface of the ERC20 standard as defined in the EIP.\\n */\\ninterface IERC20 {\\n    /**\\n     * @dev Returns the amount of tokens in existence.\\n     */\\n    function totalSupply() external view returns (uint256);\\n\\n    /**\\n     * @dev Returns the amount of tokens owned by `account`.\\n     */\\n    function balanceOf(address account) external view returns (uint256);\\n\\n    /**\\n     * @dev Moves `amount` tokens from the caller's account to `recipient`.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * Emits a {Transfer} event.\\n     */\\n    function transfer(address recipient, uint256 amount) external returns (bool);\\n\\n    /**\\n     * @dev Returns the remaining number of tokens that `spender` will be\\n     * allowed to spend on behalf of `owner` through {transferFrom}. This is\\n     * zero by default.\\n     *\\n     * This value changes when {approve} or {transferFrom} are called.\\n     */\\n    function allowance(address owner, address spender) external view returns (uint256);\\n\\n    /**\\n     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * IMPORTANT: Beware that changing an allowance with this method brings the risk\\n     * that someone may use both the old and the new allowance by unfortunate\\n     * transaction ordering. One possible solution to mitigate this race\\n     * condition is to first reduce the spender's allowance to 0 and set the\\n     * desired value afterwards:\\n     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729\\n     *\\n     * Emits an {Approval} event.\\n     */\\n    function approve(address spender, uint256 amount) external returns (bool);\\n\\n    /**\\n     * @dev Moves `amount` tokens from `sender` to `recipient` using the\\n     * allowance mechanism. `amount` is then deducted from the caller's\\n     * allowance.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * Emits a {Transfer} event.\\n     */\\n    function transferFrom(\\n        address sender,\\n        address recipient,\\n        uint256 amount\\n    ) external returns (bool);\\n\\n    /**\\n     * @dev Emitted when `value` tokens are moved from one account (`from`) to\\n     * another (`to`).\\n     *\\n     * Note that `value` may be zero.\\n     */\\n    event Transfer(address indexed from, address indexed to, uint256 value);\\n\\n    /**\\n     * @dev Emitted when the allowance of a `spender` for an `owner` is set by\\n     * a call to {approve}. `value` is the new allowance.\\n     */\\n    event Approval(address indexed owner, address indexed spender, uint256 value);\\n}\\n\",\"keccak256\":\"0x027b891937d20ccf213fdb9c31531574256de774bda99d3a70ecef6e1913ed2a\",\"license\":\"MIT\"},\"@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity ^0.8.0;\\n\\n/**\\n * @dev Interface of the ERC20 Permit extension allowing approvals to be made via signatures, as defined in\\n * https://eips.ethereum.org/EIPS/eip-2612[EIP-2612].\\n *\\n * Adds the {permit} method, which can be used to change an account's ERC20 allowance (see {IERC20-allowance}) by\\n * presenting a message signed by the account. By not relying on {IERC20-approve}, the token holder account doesn't\\n * need to send a transaction, and thus is not required to hold Ether at all.\\n */\\ninterface IERC20Permit {\\n    /**\\n     * @dev Sets `value` as the allowance of `spender` over ``owner``'s tokens,\\n     * given ``owner``'s signed approval.\\n     *\\n     * IMPORTANT: The same issues {IERC20-approve} has related to transaction\\n     * ordering also apply here.\\n     *\\n     * Emits an {Approval} event.\\n     *\\n     * Requirements:\\n     *\\n     * - `spender` cannot be the zero address.\\n     * - `deadline` must be a timestamp in the future.\\n     * - `v`, `r` and `s` must be a valid `secp256k1` signature from `owner`\\n     * over the EIP712-formatted function arguments.\\n     * - the signature must use ``owner``'s current nonce (see {nonces}).\\n     *\\n     * For more information on the signature format, see the\\n     * https://eips.ethereum.org/EIPS/eip-2612#specification[relevant EIP\\n     * section].\\n     */\\n    function permit(\\n        address owner,\\n        address spender,\\n        uint256 value,\\n        uint256 deadline,\\n        uint8 v,\\n        bytes32 r,\\n        bytes32 s\\n    ) external;\\n\\n    /**\\n     * @dev Returns the current nonce for `owner`. This value must be\\n     * included whenever a signature is generated for {permit}.\\n     *\\n     * Every successful call to {permit} increases ``owner``'s nonce by one. This\\n     * prevents a signature from being used multiple times.\\n     */\\n    function nonces(address owner) external view returns (uint256);\\n\\n    /**\\n     * @dev Returns the domain separator used in the encoding of the signature for {permit}, as defined by {EIP712}.\\n     */\\n    // solhint-disable-next-line func-name-mixedcase\\n    function DOMAIN_SEPARATOR() external view returns (bytes32);\\n}\\n\",\"keccak256\":\"0x3aab711a5f9a5a5a394191e928cc8258e8a243e855bb0275e7834f9686383277\",\"license\":\"MIT\"},\"contracts/helpers/SelfPermit.sol\":{\"content\":\"// SPDX-FileCopyrightText: 2021 Tenderize <info@tenderize.me>\\n\\n// SPDX-License-Identifier: MIT\\n\\npragma solidity 0.8.4;\\n\\nimport \\\"@openzeppelin/contracts/token/ERC20/IERC20.sol\\\";\\nimport \\\"@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol\\\";\\n\\n/// @title Self Permit\\n/// @notice Functionality to call permit on any EIP-2612-compliant token for use in the route\\ninterface ISelfPermit {\\n    /// @notice Permits this contract to spend a given token from `msg.sender`\\n    /// @dev The `owner` is always msg.sender and the `spender` is always address(this).\\n    /// @param _token The address of the token spent\\n    /// @param _value The amount that can be spent of token\\n    /// @param _deadline A timestamp, the current blocktime must be less than or equal to this timestamp\\n    /// @param _v Must produce valid secp256k1 signature from the holder along with `r` and `s`\\n    /// @param _r Must produce valid secp256k1 signature from the holder along with `v` and `s`\\n    /// @param _s Must produce valid secp256k1 signature from the holder along with `r` and `v`\\n    function selfPermit(\\n        address _token,\\n        uint256 _value,\\n        uint256 _deadline,\\n        uint8 _v,\\n        bytes32 _r,\\n        bytes32 _s\\n    ) external payable;\\n\\n    /// @notice Permits this contract to spend a given token from `msg.sender`\\n    /// @dev The `owner` is always msg.sender and the `spender` is always address(this).\\n    /// Can be used instead of #selfPermit to prevent calls from failing due to a frontrun of a call to #selfPermit\\n    /// @param _token The address of the token spent\\n    /// @param _value The amount that can be spent of token\\n    /// @param _deadline A timestamp, the current blocktime must be less than or equal to this timestamp\\n    /// @param _v Must produce valid secp256k1 signature from the holder along with `r` and `s`\\n    /// @param _r Must produce valid secp256k1 signature from the holder along with `v` and `s`\\n    /// @param _s Must produce valid secp256k1 signature from the holder along with `r` and `v`\\n    function selfPermitIfNecessary(\\n        address _token,\\n        uint256 _value,\\n        uint256 _deadline,\\n        uint8 _v,\\n        bytes32 _r,\\n        bytes32 _s\\n    ) external payable;\\n}\\n\\nabstract contract SelfPermit is ISelfPermit {\\n    /// @inheritdoc ISelfPermit\\n    function selfPermit(\\n        address _token,\\n        uint256 _value,\\n        uint256 _deadline,\\n        uint8 _v,\\n        bytes32 _r,\\n        bytes32 _s\\n    ) public payable override {\\n        IERC20Permit(_token).permit(msg.sender, address(this), _value, _deadline, _v, _r, _s);\\n    }\\n\\n    /// @inheritdoc ISelfPermit\\n    function selfPermitIfNecessary(\\n        address _token,\\n        uint256 _value,\\n        uint256 _deadline,\\n        uint8 _v,\\n        bytes32 _r,\\n        bytes32 _s\\n    ) external payable override {\\n        uint256 allowance = IERC20(_token).allowance(msg.sender, address(this));\\n        if (allowance < _value) selfPermit(_token, _value - allowance, _deadline, _v, _r, _s);\\n    }\\n}\\n\",\"keccak256\":\"0x1247853b1c8a9faf19744ffd3667dd08834e88acd3389e6574da813bbd365607\",\"license\":\"MIT\"},\"contracts/libs/MathUtils.sol\":{\"content\":\"// SPDX-FileCopyrightText: 2021 Tenderize <info@tenderize.me>\\n\\n// SPDX-License-Identifier: MIT\\n\\npragma solidity 0.8.4;\\n\\nlibrary MathUtils {\\n    // Divisor used for representing percentages\\n    uint256 public constant PERC_DIVISOR = 10**21;\\n\\n    /**\\n     * @dev Returns whether an amount is a valid percentage out of PERC_DIVISOR\\n     * @param _amount Amount that is supposed to be a percentage\\n     */\\n    function validPerc(uint256 _amount) internal pure returns (bool) {\\n        return _amount <= PERC_DIVISOR;\\n    }\\n\\n    /**\\n     * @dev Compute percentage of a value with the percentage represented by a fraction\\n     * @param _amount Amount to take the percentage of\\n     * @param _fracNum Numerator of fraction representing the percentage\\n     * @param _fracDenom Denominator of fraction representing the percentage\\n     */\\n    function percOf(\\n        uint256 _amount,\\n        uint256 _fracNum,\\n        uint256 _fracDenom\\n    ) internal pure returns (uint256) {\\n        return (_amount * percPoints(_fracNum, _fracDenom)) / PERC_DIVISOR;\\n    }\\n\\n    /**\\n     * @dev Compute percentage of a value with the percentage represented by a fraction over PERC_DIVISOR\\n     * @param _amount Amount to take the percentage of\\n     * @param _fracNum Numerator of fraction representing the percentage with PERC_DIVISOR as the denominator\\n     */\\n    function percOf(uint256 _amount, uint256 _fracNum) internal pure returns (uint256) {\\n        return (_amount * _fracNum) / PERC_DIVISOR;\\n    }\\n\\n    /**\\n     * @dev Compute percentage representation of a fraction\\n     * @param _fracNum Numerator of fraction represeting the percentage\\n     * @param _fracDenom Denominator of fraction represeting the percentage\\n     */\\n    function percPoints(uint256 _fracNum, uint256 _fracDenom) internal pure returns (uint256) {\\n        return (_fracNum * PERC_DIVISOR) / _fracDenom;\\n    }\\n\\n    /**\\n     * @notice Compares a and b and returns true if the difference between a and b\\n     *         is less than 1 or equal to each other.\\n     * @param a uint256 to compare with\\n     * @param b uint256 to compare with\\n     * @return True if the difference between a and b is less than 1 or equal,\\n     *         otherwise return false\\n     */\\n    function within1(uint256 a, uint256 b) internal pure returns (bool) {\\n        return (difference(a, b) <= 1);\\n    }\\n\\n    /**\\n     * @notice Calculates absolute difference between a and b\\n     * @param a uint256 to compare with\\n     * @param b uint256 to compare with\\n     * @return Difference between a and b\\n     */\\n    function difference(uint256 a, uint256 b) internal pure returns (uint256) {\\n        if (a > b) {\\n            return a - b;\\n        }\\n        return b - a;\\n    }\\n}\\n\",\"keccak256\":\"0x4788b5ca1f6a1c34febfd25857b95e4c6c5494e2e062c820552ebaed21ae856b\",\"license\":\"MIT\"},\"contracts/tenderfarm/ITenderFarm.sol\":{\"content\":\"// SPDX-FileCopyrightText: 2021 Tenderize <info@tenderize.me>\\n\\n// SPDX-License-Identifier: MIT\\n\\npragma solidity 0.8.4;\\n\\nimport \\\"@openzeppelin/contracts/token/ERC20/IERC20.sol\\\";\\nimport \\\"../token/ITenderToken.sol\\\";\\nimport \\\"../tenderizer/ITenderizer.sol\\\";\\n\\n/**\\n * @title TenderFarm\\n * @notice TenderFarm is responsible for incetivizing liquidity providers, by accepting LP Tokens\\n * and a proportionaly rewarding them with TenderTokens over time.\\n */\\ninterface ITenderFarm {\\n    /**\\n     * @notice Farm gets emitted when an account stakes LP tokens.\\n     * @param account the account for which LP tokens were staked\\n     * @param amount the amount of LP tokens staked\\n     */\\n    event Farm(address indexed account, uint256 amount);\\n\\n    /**\\n     * @notice Unfarm gets emitted when an account unstakes LP tokens.\\n     * @param account the account for which LP tokens were unstaked\\n     * @param amount the amount of LP tokens unstaked\\n     */\\n    event Unfarm(address indexed account, uint256 amount);\\n\\n    /**\\n     * @notice Harvest gets emitted when an accounts harvests outstanding\\n     * rewards.\\n     * @param account the account which harvested rewards\\n     * @param amount the amount of rewards harvested\\n     */\\n    event Harvest(address indexed account, uint256 amount);\\n\\n    /**\\n     * @notice RewardsAdded gets emitted when new rewards are added\\n     * and a new epoch begins\\n     * @param amount amount of rewards that were addedd\\n     */\\n    event RewardsAdded(uint256 amount);\\n\\n    function initialize(\\n        IERC20 _stakeToken,\\n        ITenderToken _rewardToken,\\n        ITenderizer _tenderizer\\n    ) external returns (bool);\\n\\n    /**\\n     * @notice stake liquidity pool tokens to receive rewards\\n     * @dev '_amount' needs to be approved for the 'TenderFarm' to transfer.\\n     * @dev harvests current rewards before accounting updates are made.\\n     * @param _amount amount of liquidity pool tokens to stake\\n     */\\n    function farm(uint256 _amount) external;\\n\\n    /**\\n     * @notice allow spending token and stake liquidity pool tokens to receive rewards\\n     * @dev '_amount' needs to be approved for the 'TenderFarm' to transfer.\\n     * @dev harvests current rewards before accounting updates are made.\\n     * @dev calls permit on LP Token.\\n     * @param _amount amount of liquidity pool tokens to stake\\n     * @param _deadline deadline of the permit\\n     * @param _v v of signed Permit message\\n     * @param _r r of signed Permit message\\n     * @param _s s of signed Permit message\\n     */\\n    function farmWithPermit(\\n        uint256 _amount,\\n        uint256 _deadline,\\n        uint8 _v,\\n        bytes32 _r,\\n        bytes32 _s\\n    ) external;\\n\\n    /**\\n     * @notice stake liquidity pool tokens for a specific account so that it receives rewards\\n     * @dev '_amount' needs to be approved for the 'TenderFarm' to transfer.\\n     * @dev staked tokens will belong to the account they are staked for.\\n     * @dev harvests current rewards before accounting updates are made.\\n     * @param _for account to stake for\\n     * @param _amount amount of liquidity pool tokens to stake\\n     */\\n    function farmFor(address _for, uint256 _amount) external;\\n\\n    /**\\n     * @notice unstake liquidity pool tokens\\n     * @dev '_amount' needs to be approved for the 'TenderFarm' to transfer.\\n     * @dev harvests current rewards before accounting updates are made.\\n     * @param amount amount of liquidity pool tokens to stake\\n     */\\n    function unfarm(uint256 amount) external;\\n\\n    /**\\n     * @notice harvest outstanding rewards\\n     * @dev reverts when trying to harvest multiple times if no new rewards have been added.\\n     * @dev emits an event with how many reward tokens have been harvested.\\n     */\\n    function harvest() external;\\n\\n    /**\\n     * @notice add new rewards\\n     * @dev will 'start' a new 'epoch'.\\n     * @dev only callable by owner.\\n     * @param _amount amount of reward tokens to add\\n     */\\n    function addRewards(uint256 _amount) external;\\n\\n    /**\\n     * @notice Check available rewards for an account.\\n     * @param _for address address of the account to check rewards for.\\n     * @return amount rewards for the provided account address.\\n     */\\n    function availableRewards(address _for) external view returns (uint256 amount);\\n\\n    /**\\n     * @notice Check stake for an account.\\n     * @param _of address address of the account to check stake for.\\n     * @return amount LP tokens deposited for address\\n     */\\n    function stakeOf(address _of) external view returns (uint256 amount);\\n\\n    /**\\n     * @notice Return the total amount of LP tokens staked in this farm.\\n     * @return stake total amount of LP tokens staked\\n     */\\n    function totalStake() external view returns (uint256 stake);\\n\\n    /**\\n     * @notice Return the total amount of LP tokens staked\\n     * for the next reward epoch.\\n     * @return nextStake LP Tokens staked for next round\\n     */\\n    function nextTotalStake() external view returns (uint256 nextStake);\\n\\n    /**\\n     * @notice Changes the tenderizer of the contract\\n     * @param _tenderizer address of the new tenderizer\\n     */\\n    function setTenderizer(ITenderizer _tenderizer) external;\\n}\\n\",\"keccak256\":\"0xa555bf328cd25dbb4923a69fc9bba78fec03e1e5d83b526883fd6e4e66847369\",\"license\":\"MIT\"},\"contracts/tenderfarm/TenderFarm.sol\":{\"content\":\"// SPDX-FileCopyrightText: 2021 Tenderize <info@tenderize.me>\\n\\n// SPDX-License-Identifier: MIT\\n\\npragma solidity 0.8.4;\\n\\nimport \\\"@openzeppelin/contracts/proxy/utils/Initializable.sol\\\";\\n\\nimport \\\"../libs/MathUtils.sol\\\";\\nimport \\\"../token/ITenderToken.sol\\\";\\nimport \\\"./ITenderFarm.sol\\\";\\nimport \\\"../tenderizer/ITenderizer.sol\\\";\\nimport \\\"../helpers/SelfPermit.sol\\\";\\n\\n/**\\n * @title TenderFarm\\n * @notice TenderFarm is responsible for incetivizing liquidity providers, by accepting LP Tokens\\n * and a proportionaly rewarding them with TenderTokens over time.\\n */\\ncontract TenderFarm is Initializable, ITenderFarm, SelfPermit {\\n    /**\\n     * @dev LP token.\\n     */\\n    IERC20 public token;\\n\\n    /**\\n     * @dev Tender token.\\n     */\\n    ITenderToken public rewardToken;\\n\\n    /**\\n     * @dev tenderizer.\\n     */\\n    ITenderizer public tenderizer;\\n\\n    /// @inheritdoc ITenderFarm\\n    uint256 public override totalStake;\\n\\n    /// @inheritdoc ITenderFarm\\n    uint256 public override nextTotalStake;\\n\\n    /**\\n     * @dev Cumulative reward factor\\n     */\\n    uint256 public CRF;\\n\\n    struct Stake {\\n        uint256 stake;\\n        uint256 lastCRF;\\n    }\\n\\n    /**\\n     * @dev stake mapping of each address\\n     */\\n    mapping(address => Stake) public stakes;\\n\\n    function initialize(\\n        IERC20 _stakeToken,\\n        ITenderToken _rewardToken,\\n        ITenderizer _tenderizer\\n    ) external override initializer returns (bool) {\\n        token = _stakeToken;\\n        rewardToken = _rewardToken;\\n        tenderizer = _tenderizer;\\n\\n        return true;\\n    }\\n\\n    modifier onlyTenderizer() {\\n        require(msg.sender == address(tenderizer));\\n        _;\\n    }\\n\\n    /// @inheritdoc ITenderFarm\\n    function farm(uint256 _amount) external override {\\n        _farmFor(msg.sender, _amount);\\n    }\\n\\n    /// @inheritdoc ITenderFarm\\n    function farmWithPermit(\\n        uint256 _amount,\\n        uint256 _deadline,\\n        uint8 _v,\\n        bytes32 _r,\\n        bytes32 _s\\n    ) external override {\\n        selfPermit(address(token), _amount, _deadline, _v, _r, _s);\\n        _farmFor(msg.sender, _amount);\\n    }\\n\\n    /// @inheritdoc ITenderFarm\\n    function farmFor(address _for, uint256 _amount) external override {\\n        _farmFor(_for, _amount);\\n    }\\n\\n    /// @inheritdoc ITenderFarm\\n    function unfarm(uint256 _amount) external override {\\n        _unfarm(msg.sender, _amount);\\n    }\\n\\n    /// @inheritdoc ITenderFarm\\n    function harvest() external override {\\n        _harvest(msg.sender);\\n    }\\n\\n    /// @inheritdoc ITenderFarm\\n    function addRewards(uint256 _amount) external override onlyTenderizer {\\n        uint256 _nextStake = nextTotalStake;\\n        require(_nextStake > 0, \\\"NO_STAKE\\\");\\n        totalStake = _nextStake;\\n        uint256 shares = rewardToken.tokensToShares(_amount);\\n        CRF += MathUtils.percPoints(shares, _nextStake);\\n        require(rewardToken.transferFrom(msg.sender, address(this), _amount), \\\"TRANSFER_FAILED\\\");\\n        emit RewardsAdded(_amount);\\n    }\\n\\n    /// @inheritdoc ITenderFarm\\n    function availableRewards(address _for) external view override returns (uint256) {\\n        return rewardToken.sharesToTokens(_availableRewardShares(_for));\\n    }\\n\\n    /// @inheritdoc ITenderFarm\\n    function stakeOf(address _of) external view override returns (uint256) {\\n        return _stakeOf(_of);\\n    }\\n\\n    // INTERNAL FUNCTIONS\\n\\n    function _farmFor(address _for, uint256 _amount) internal {\\n        _harvest(_for);\\n\\n        stakes[_for].stake += _amount;\\n        nextTotalStake += _amount;\\n\\n        require(token.transferFrom(msg.sender, address(this), _amount), \\\"TRANSFERFROM_FAIL\\\");\\n\\n        emit Farm(_for, _amount);\\n    }\\n\\n    function _unfarm(address _for, uint256 _amount) internal {\\n        Stake storage _stake = stakes[_for];\\n        require(_amount <= _stake.stake, \\\"AMOUNT_EXCEEDS_STAKE\\\");\\n\\n        _harvest(_for);\\n\\n        _stake.stake -= _amount;\\n        nextTotalStake -= _amount;\\n\\n        require(token.transfer(_for, _amount), \\\"TRANSFER_FAIL\\\");\\n        emit Unfarm(_for, _amount);\\n    }\\n\\n    function _harvest(address _for) internal {\\n        Stake storage _stake = stakes[_for];\\n\\n        // Calculate available rewards\\n        uint256 rewards = _availableRewardShares(_for);\\n\\n        // Checkpoint CRF\\n        _stake.lastCRF = CRF;\\n\\n        if (rewards > 0) {\\n            uint256 rewardTokens = rewardToken.sharesToTokens(rewards);\\n            require(rewardToken.transfer(_for, rewardTokens), \\\"TRANSFER_FAIL\\\");\\n            emit Harvest(_for, rewardTokens);\\n        }\\n    }\\n\\n    function _availableRewardShares(address _for) internal view returns (uint256) {\\n        Stake storage _stake = stakes[_for];\\n\\n        if (CRF == 0) return 0;\\n\\n        return MathUtils.percOf(_stake.stake, CRF - _stake.lastCRF);\\n    }\\n\\n    function _stakeOf(address _of) internal view returns (uint256) {\\n        return stakes[_of].stake;\\n    }\\n\\n    function setTenderizer(ITenderizer _tenderizer) external override onlyTenderizer {\\n        tenderizer = _tenderizer;\\n    }\\n}\\n\",\"keccak256\":\"0x819acb0b1918bf435a7e6466f47a29ce3e52246f7f9388cd36977bf434b58c2a\",\"license\":\"MIT\"},\"contracts/tenderizer/ITenderizer.sol\":{\"content\":\"// SPDX-FileCopyrightText: 2021 Tenderize <info@tenderize.me>\\n\\n// SPDX-License-Identifier: MIT\\n\\npragma solidity 0.8.4;\\n\\nimport \\\"@openzeppelin/contracts/token/ERC20/IERC20.sol\\\";\\nimport \\\"../tenderfarm/ITenderFarm.sol\\\";\\n\\n/**\\n * @title Tenderizer is the base contract to be implemented.\\n * @notice Tenderizer is responsible for all Protocol interactions (staking, unstaking, claiming rewards)\\n * while also keeping track of user depsotis/withdrawals and protocol fees.\\n * @dev New implementations are required to inherit this contract and override any required internal functions.\\n */\\ninterface ITenderizer {\\n    // Events\\n\\n    /**\\n     * @notice Deposit gets emitted when an accounts deposits underlying tokens.\\n     * @param from the account that deposited\\n     * @param amount the amount of tokens deposited\\n     */\\n    event Deposit(address indexed from, uint256 amount);\\n\\n    /**\\n     * @notice Stake gets emitted when funds are staked/delegated from the Tenderizer contract\\n     * into the underlying protocol.\\n     * @param node the address the funds are staked to\\n     * @param amount the amount staked\\n     */\\n    event Stake(address indexed node, uint256 amount);\\n\\n    /**\\n     * @notice Unstake gets emitted when an account burns TenderTokens to unlock\\n     * tokens staked through the Tenderizer\\n     * @param from the account that unstaked\\n     * @param node the node in the underlying token from which tokens are unstaked\\n     * @param amount the amount unstaked\\n     */\\n    event Unstake(address indexed from, address indexed node, uint256 amount, uint256 unstakeLockID);\\n\\n    /**\\n     * @notice Withdraw gets emitted when an account withdraws tokens that have been\\n     * succesfully unstaked and thus unlocked for withdrawal.\\n     * @param from the account withdrawing tokens\\n     * @param amount the amount being withdrawn\\n     * @param unstakeLockID the unstake lock ID being consumed\\n     */\\n    event Withdraw(address indexed from, uint256 amount, uint256 unstakeLockID);\\n\\n    /**\\n     * @notice RewardsClaimed gets emitted when the Tenderizer processes staking rewards (or slashing)\\n     * from the underlying protocol.\\n     * @param stakeDiff the stake difference since the last event, can be negative in case slashing occured\\n     * @param currentPrincipal TVL after claiming rewards\\n     * @param oldPrincipal TVL before claiming rewards\\n     */\\n    event RewardsClaimed(int256 stakeDiff, uint256 currentPrincipal, uint256 oldPrincipal);\\n\\n    /**\\n     * @notice ProtocolFeeCollected gets emitted when the treasury claims its outstanding\\n     * protocol fees.\\n     * @param amount the amount of fees claimed (in TenderTokens)\\n     */\\n    event ProtocolFeeCollected(uint256 amount);\\n\\n    /**\\n     * @notice LiquidityFeeCollected gets emitted when liquidity provider fees are moved to the TenderFarm.\\n     * @param amount the amount of fees moved for farming\\n     */\\n    event LiquidityFeeCollected(uint256 amount);\\n\\n    /**\\n     * @notice GovernanceUpdate gets emitted when a parameter on the Tenderizer gets updated.\\n     * @param param the parameter that got updated\\n     * @param oldValue oldValue of the parameter\\n      @param newValue newValue of the parameter\\n     */\\n    event GovernanceUpdate(string param, bytes oldValue, bytes newValue);\\n\\n    /**\\n     * @notice Deposit tokens in Tenderizer.\\n     * @param _amount amount deposited\\n     * @dev doesn't actually stakes the tokens but aggregates the balance in the tenderizer\\n     * awaiting to be staked.\\n     * @dev requires '_amount' to be approved by '_from'.\\n     */\\n    function deposit(uint256 _amount) external;\\n\\n    /**\\n     * @notice Deposit tokens in Tenderizer with permit.\\n     * @param _amount amount deposited\\n     * @param _deadline deadline for the permit\\n     * @param _v from ECDSA signature\\n     * @param _r from ECDSA signature\\n     * @param _s from ECDSA signature\\n     * @dev doesn't actually stakes the tokens but aggregates the balance in the tenderizer\\n     * awaiting to be staked.\\n     * @dev requires '_amount' to be approved by '_from'.\\n     */\\n    function depositWithPermit(\\n        uint256 _amount,\\n        uint256 _deadline,\\n        uint8 _v,\\n        bytes32 _r,\\n        bytes32 _s\\n    ) external;\\n\\n    /**\\n     * @notice Stake '_amount' of tokens.\\n     * @param _amount amount to stake\\n     * @dev Only callable by Gov.\\n     */\\n    function stake(uint256 _amount) external;\\n\\n    /**\\n     * @notice Unstake '_amount' of tokens from '_account'.\\n     * @param _amount amount to unstake\\n     * @return unstakeLockID unstake lockID generated for unstake\\n     * @dev unstake from the default address.\\n     * @dev If '_amount' is 0, unstake the entire amount staked towards _account.\\n     */\\n    function unstake(uint256 _amount) external returns (uint256 unstakeLockID);\\n\\n    /**\\n     * @notice RescueUnstake unstakes all tokens from underlying protocol\\n     * @return unstakeLockID unstake lockID generated for unstake\\n     * @dev Used to rescue all staked funds.\\n     */\\n    function rescueUnlock() external returns (uint256 unstakeLockID);\\n\\n    /**\\n     * @notice Withdraw '_amount' of tokens previously unstaked by '_account'.\\n     * @param _unstakeLockID ID for the lock to request the withdraw for\\n     * @dev If '_amount' isn't specified all unstake tokens by '_account' will be withdrawn.\\n     * @dev Requires '_account' to have unstaked prior to calling withdraw.\\n     */\\n    function withdraw(uint256 _unstakeLockID) external;\\n\\n    /**\\n     * @notice RescueWithdraw withdraws all tokens into the Tenderizer from the underlying protocol \\n     * after the unlock period ends\\n     * @dev To be called after rescueUnlock() with the unstakeLockID returned there.\\n     * @dev Process unlocks/withdrawals before rescueWithdraw for integrations with WithdrawPools.\\n     */\\n    function rescueWithdraw(uint256 _unstakeLockID) external;\\n\\n    /**\\n     * @notice Compound all the rewards and new deposits.\\n     * Claim staking rewards and earned fees for the underlying protocol and stake\\n     * any leftover token balance. Process Tender protocol fees if revenue is positive.\\n     */\\n    function claimRewards() external;\\n\\n    /**\\n     * @notice Total Staked Tokens returns the total amount of underlying tokens staked by this Tenderizer.\\n     * @return totalStaked total amount staked by this Tenderizer\\n     */\\n    function totalStakedTokens() external view returns (uint256 totalStaked);\\n\\n    /**\\n     * @notice Returns the number of tenderTokens to be minted for amountIn deposit.\\n     * @return depositOut number of tokens staked for `amountIn`.\\n     * @dev used by controller to calculate tokens to be minted before depositing.\\n     * @dev to be used when there a delegation tax is deducted, for eg. in Graph.\\n     */\\n    function calcDepositOut(uint256 _amountIn) external returns (uint256 depositOut);\\n\\n    // Governance setter funtions\\n\\n    function setGov(address _gov) external;\\n\\n    function setNode(address _node) external;\\n\\n    function setSteak(IERC20 _steak) external;\\n\\n    function setProtocolFee(uint256 _protocolFee) external;\\n\\n    function setLiquidityFee(uint256 _liquidityFee) external;\\n\\n    function setStakingContract(address _stakingContract) external;\\n\\n    function setTenderFarm(ITenderFarm _tenderFarm) external;\\n}\\n\",\"keccak256\":\"0xa0dde1b54de5e5ccf47c1a9225bdc84615086c67e7bc5fe4de4e45ec3764176b\",\"license\":\"MIT\"},\"contracts/tenderizer/ITotalStakedReader.sol\":{\"content\":\"// SPDX-FileCopyrightText: 2021 Tenderize <info@tenderize.me>\\n\\n// SPDX-License-Identifier: MIT\\n\\npragma solidity 0.8.4;\\n\\ninterface ITotalStakedReader {\\n    /**\\n     * @notice Total Staked Tokens returns the total amount of underlying tokens staked by this Tenderizer.\\n     * @return _totalStakedTokens total amount staked by this Tenderizer\\n     */\\n    function totalStakedTokens() external view returns (uint256 _totalStakedTokens);\\n}\\n\",\"keccak256\":\"0x134a07faf2487ca55c05288c5d09e611ab5f9fde0d0635c790055bd28ffc5e0c\",\"license\":\"MIT\"},\"contracts/token/ITenderToken.sol\":{\"content\":\"// SPDX-FileCopyrightText: 2021 Tenderize <info@tenderize.me>\\n\\n// SPDX-License-Identifier: MIT\\n\\npragma solidity 0.8.4;\\n\\nimport \\\"../tenderizer/ITotalStakedReader.sol\\\";\\n\\n/**\\n * @title Interest-bearing ERC20-like token for Tenderize protocol.\\n * @author Tenderize <info@tenderize.me>\\n * @dev TenderToken balances are dynamic and are calculated based on the accounts' shares\\n * and the total amount of Tokens controlled by the protocol. Account shares aren't\\n * normalized, so the contract also stores the sum of all shares to calculate\\n * each account's token balance which equals to:\\n *\\n * shares[account] * _getTotalPooledTokens() / _getTotalShares()\\n */\\ninterface ITenderToken {\\n    /**\\n     * @notice Initilize the TenderToken Contract\\n     * @param _name name of the token (steak)\\n     * @param _symbol symbol of the token (steak)\\n     * @param _stakedReader contract address implementing the ITotalStakedReader interface\\n     * @return a boolean value indicating whether the init succeeded.\\n     */\\n    function initialize(\\n        string memory _name,\\n        string memory _symbol,\\n        ITotalStakedReader _stakedReader\\n    ) external returns (bool);\\n\\n    /**\\n     * @notice The number of decimals the TenderToken uses.\\n     * @return decimals the number of decimals for getting user representation of a token amount.\\n     */\\n    function decimals() external pure returns (uint8);\\n\\n    /**\\n     * @notice The total supply of tender tokens in existence.\\n     * @dev Always equals to `_getTotalPooledTokens()` since token amount\\n     * is pegged to the total amount of Tokens controlled by the protocol.\\n     * @return totalSupply total supply\\n     */\\n    function totalSupply() external view returns (uint256);\\n\\n    /**\\n     * @notice Total amount of underlying tokens controlled by the Tenderizer.\\n     * @dev The sum of all Tokens balances in the protocol, equals to the total supply of TenderToken.\\n     * @return totalPooledTokens total amount of pooled tokens\\n     */\\n    function getTotalPooledTokens() external view returns (uint256);\\n\\n    /**\\n     * @notice The total amount of shares in existence.\\n     * @dev The sum of all accounts' shares can be an arbitrary number, therefore\\n     * it is necessary to store it in order to calculate each account's relative share.\\n     * @return totalShares total amount of shares\\n     */\\n    function getTotalShares() external view returns (uint256);\\n\\n    /**\\n     * @notice the amount of tokens owned by the `_account`.\\n     * @dev Balances are dynamic and equal the `_account`'s share in the amount of the\\n        total Tokens controlled by the protocol. See `sharesOf`.\\n     * @param _account address of the account to check the balance for\\n     * @return balance token balance of `_account`\\n     */\\n    function balanceOf(address _account) external view returns (uint256);\\n\\n    /**\\n     * @notice The amount of shares owned by an account\\n     * @param _account address of the account\\n     * @return shares the amount of shares owned by `_account`.\\n     */\\n    function sharesOf(address _account) external view returns (uint256);\\n\\n    /**\\n     * @notice The remaining number of tokens that `_spender` is allowed to spend\\n     * behalf of `_owner` through `transferFrom`. This is zero by default.\\n     * @dev This value changes when `approve` or `transferFrom` is called.\\n     * @param _owner address that approved the allowance\\n     * @param _spender address that is allowed to spend the allowance\\n     * @return allowance amount '_spender' is allowed to spend from '_owner'\\n     */\\n    function allowance(address _owner, address _spender) external view returns (uint256);\\n\\n    /**\\n     * @notice The amount of shares that corresponds to `_tokens` protocol-controlled Tokens.\\n     * @param _tokens amount of tokens to calculate shares for\\n     * @return shares nominal amount of shares the tokens represent\\n     */\\n    function tokensToShares(uint256 _tokens) external view returns (uint256);\\n\\n    /**\\n     * @notice The amount of tokens that corresponds to `_shares` token shares.\\n     * @param _shares the amount of shares to calculate the amount of tokens for\\n     * @return tokens the amount of tokens represented by the shares\\n     */\\n    function sharesToTokens(uint256 _shares) external view returns (uint256);\\n\\n    /**\\n     * @notice Transfers `_amount` tokens from the caller's account to the `_recipient` account.\\n     * @param _recipient address of the recipient\\n     * @param _amount amount of tokens to transfer\\n     * @return success a boolean value indicating whether the operation succeeded.\\n     * @dev Emits a `Transfer` event.\\n     * @dev Requirements:\\n     * - `_recipient` cannot be the zero address.\\n     * - the caller must have a balance of at least `_amount`.\\n     * @dev The `_amount` argument is the amount of tokens, not shares.\\n     */\\n    function transfer(address _recipient, uint256 _amount) external returns (bool);\\n\\n    /**\\n     * @notice Sets `_amount` as the allowance of `_spender` over the caller's tokens.\\n     * @param _spender address of the spender allowed to approve tokens from caller\\n     * @param _amount amount of tokens to allow '_spender' to spend\\n     * @return success a boolean value indicating whether the operation succeeded.\\n     * @dev Emits an `Approval` event.\\n     * @dev Requirements:\\n     * - `_spender` cannot be the zero address.\\n     * @dev The `_amount` argument is the amount of tokens, not shares.\\n     */\\n    function approve(address _spender, uint256 _amount) external returns (bool);\\n\\n    /**\\n     * @notice Transfers `_amount` tokens from `_sender` to `_recipient` using the\\n     * allowance mechanism. `_amount` is then deducted from the caller's allowance.\\n     * @param _sender address of the account to transfer tokens from\\n     * @param _recipient address of the recipient\\n     * @return success a boolean value indicating whether the operation succeeded.\\n     * @dev Emits a `Transfer` event.\\n     * @dev Emits an `Approval` event indicating the updated allowance.\\n     * @dev Requirements:\\n     * - `_sender` and `_recipient` cannot be the zero addresses.\\n     * - `_sender` must have a balance of at least `_amount`.\\n     * - the caller must have allowance for `_sender`'s tokens of at least `_amount`.\\n     * @dev The `_amount` argument is the amount of tokens, not shares.\\n     */\\n    function transferFrom(\\n        address _sender,\\n        address _recipient,\\n        uint256 _amount\\n    ) external returns (bool);\\n\\n    /**\\n     * @notice Atomically increases the allowance granted to `_spender` by the caller by `_addedValue`.\\n     * @param _spender address of the spender allowed to approve tokens from caller\\n     * @param _addedValue amount to add to allowance\\n     * @return success a boolean value indicating whether the operation succeeded.\\n     * @dev This is an alternative to `approve` that can be used as a mitigation for problems described in:\\n     * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol#L42\\n     * @dev Emits an `Approval` event indicating the updated allowance.\\n     * @dev Requirements:\\n     * - `_spender` cannot be the the zero address.\\n     */\\n    function increaseAllowance(address _spender, uint256 _addedValue) external returns (bool);\\n\\n    /**\\n     * @notice Atomically decreases the allowance granted to `_spender` by the caller by `_subtractedValue`.\\n     * @param _spender address of the spender allowed to approve tokens from caller\\n     * @param _subtractedValue amount to subtract from current allowance\\n     * @return success a boolean value indicating whether the operation succeeded.\\n     * @dev This is an alternative to `approve` that can be used as a mitigation for problems described in:\\n     * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol#L42\\n     * @dev Emits an `Approval` event indicating the updated allowance.\\n     * @dev Requirements:\\n     * - `_spender` cannot be the zero address.\\n     * - `_spender` must have allowance for the caller of at least `_subtractedValue`.\\n     */\\n    function decreaseAllowance(address _spender, uint256 _subtractedValue) external returns (bool);\\n\\n    /**\\n     * @notice Mints '_amount' of tokens for '_recipient'\\n     * @param _recipient address to mint tokens for\\n     * @param _amount amount to mint\\n     * @return success a boolean value indicating whether the operation succeeded.\\n     * @dev Only callable by contract owner\\n     * @dev Calculates the amount of shares to create based on the specified '_amount'\\n     * and creates new shares rather than minting actual tokens\\n     * @dev '_recipient' should also deposit into Tenderizer\\n     * atomically to prevent diluation of existing particpants\\n     */\\n    function mint(address _recipient, uint256 _amount) external returns (bool);\\n\\n    /**\\n     * @notice Burns '_amount' of tokens from '_recipient'\\n     * @param _account address to burn the tokens from\\n     * @param _amount amount to burn\\n     * @return success a boolean value indicating whether the operation succeeded.\\n     * @dev Only callable by contract owner\\n     * @dev Calculates the amount of shares to destroy based on the specified '_amount'\\n     * and destroy shares rather than burning tokens\\n     * @dev '_recipient' should also withdraw from Tenderizer atomically\\n     */\\n    function burn(address _account, uint256 _amount) external returns (bool);\\n\\n    /**\\n     * @notice sets a TotalStakedReader to read the total staked tokens from\\n     * @param _stakedReader contract address implementing the ITotalStakedReader interface\\n     * @dev Only callable by contract owner.\\n     * @dev Used to determine TenderToken total supply.\\n     */\\n    function setTotalStakedReader(ITotalStakedReader _stakedReader) external;\\n}\\n\",\"keccak256\":\"0x8ded75ce98c4c0c99d5db628244e93f856900ed730b7164476f2b41da9d2a09d\",\"license\":\"MIT\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b50611ef6806100206000396000f3fe6080604052600436106101145760003560e01c80638b0e9f3f116100a0578063f3995c6711610064578063f3995c671461037d578063f7c618c114610399578063f854a27f146103c4578063fa827a8414610401578063fc0c546a1461042a57610114565b80638b0e9f3f146102a55780638ebed616146102d0578063beceed39146102fb578063c0c53b8b14610324578063c2e3140a1461036157610114565b806342623360116100e757806342623360146101d45780634641257d14610211578063538a85a1146102285780635b3e2077146102515780635d1cf7b51461027c57610114565b806304c834271461011957806304d3b7c41461014257806316934fc41461016d5780631c885bae146101ab575b600080fd5b34801561012557600080fd5b50610140600480360381019061013b91906115c3565b610455565b005b34801561014e57600080fd5b506101576104f3565b6040516101649190611a23565b60405180910390f35b34801561017957600080fd5b50610194600480360381019061018f919061145d565b6104f9565b6040516101a2929190611a3e565b60405180910390f35b3480156101b757600080fd5b506101d260048036038101906101cd91906115ec565b61051d565b005b3480156101e057600080fd5b506101fb60048036038101906101f6919061145d565b61052a565b6040516102089190611a23565b60405180910390f35b34801561021d57600080fd5b5061022661053c565b005b34801561023457600080fd5b5061024f600480360381019061024a91906115ec565b610547565b005b34801561025d57600080fd5b50610266610554565b6040516102739190611948565b60405180910390f35b34801561028857600080fd5b506102a3600480360381019061029e9190611486565b61057a565b005b3480156102b157600080fd5b506102ba610588565b6040516102c79190611a23565b60405180910390f35b3480156102dc57600080fd5b506102e561058e565b6040516102f29190611a23565b60405180910390f35b34801561030757600080fd5b50610322600480360381019061031d91906115ec565b610594565b005b34801561033057600080fd5b5061034b60048036038101906103469190611574565b61083c565b60405161035891906118f7565b60405180910390f35b61037b600480360381019061037691906114c2565b6109e2565b005b610397600480360381019061039291906114c2565b610a9c565b005b3480156103a557600080fd5b506103ae610b1b565b6040516103bb919061192d565b60405180910390f35b3480156103d057600080fd5b506103eb60048036038101906103e6919061145d565b610b41565b6040516103f89190611a23565b60405180910390f35b34801561040d57600080fd5b506104286004803603810190610423919061163e565b610bfd565b005b34801561043657600080fd5b5061043f610c3e565b60405161044c9190611912565b60405180910390f35b600260009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff16146104af57600080fd5b80600260006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555050565b60045481565b60066020528060005260406000206000915090508060000154908060010154905082565b6105273382610c64565b50565b600061053582610e6c565b9050919050565b61054533610eb8565b565b610551338261110e565b50565b600260009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b610584828261110e565b5050565b60035481565b60055481565b600260009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff16146105ee57600080fd5b6000600454905060008111610638576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161062f90611963565b60405180910390fd5b806003819055506000600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1663f3044ac7846040518263ffffffff1660e01b815260040161069c9190611a23565b60206040518083038186803b1580156106b457600080fd5b505afa1580156106c8573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906106ec9190611615565b90506106f881836112cb565b600560008282546107099190611a78565b92505081905550600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166323b872dd3330866040518463ffffffff1660e01b815260040161076f93929190611828565b602060405180830381600087803b15801561078957600080fd5b505af115801561079d573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906107c1919061154b565b610800576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004016107f7906119e3565b60405180910390fd5b7ff8fad42e780bfa5459be3fe691e8ba1aec70342250112139c5771c3fd155f3128360405161082f9190611a23565b60405180910390a1505050565b60008060019054906101000a900460ff1680610863575060008054906101000a900460ff16155b6108a2576040517f08c379a0000000000000000000000000000000000000000000000000000000008152600401610899906119c3565b60405180910390fd5b60008060019054906101000a900460ff1615905080156108f2576001600060016101000a81548160ff02191690831515021790555060016000806101000a81548160ff0219169083151502179055505b84600060026101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555083600160006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555082600260006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055506001915080156109da5760008060016101000a81548160ff0219169083151502179055505b509392505050565b60008673ffffffffffffffffffffffffffffffffffffffff1663dd62ed3e33306040518363ffffffff1660e01b8152600401610a1f9291906117ff565b60206040518083038186803b158015610a3757600080fd5b505afa158015610a4b573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610a6f9190611615565b905085811015610a9357610a92878288610a899190611b59565b87878787610a9c565b5b50505050505050565b8573ffffffffffffffffffffffffffffffffffffffff1663d505accf333088888888886040518863ffffffff1660e01b8152600401610ae1979695949392919061185f565b600060405180830381600087803b158015610afb57600080fd5b505af1158015610b0f573d6000803e3d6000fd5b50505050505050505050565b600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b6000600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166327def4fd610b8a846112f5565b6040518263ffffffff1660e01b8152600401610ba69190611a23565b60206040518083038186803b158015610bbe57600080fd5b505afa158015610bd2573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610bf69190611615565b9050919050565b610c2d600060029054906101000a900473ffffffffffffffffffffffffffffffffffffffff168686868686610a9c565b610c37338661110e565b5050505050565b600060029054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b6000600660008473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002090508060000154821115610cee576040517f08c379a0000000000000000000000000000000000000000000000000000000008152600401610ce590611a03565b60405180910390fd5b610cf783610eb8565b81816000016000828254610d0b9190611b59565b925050819055508160046000828254610d249190611b59565b92505081905550600060029054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1663a9059cbb84846040518363ffffffff1660e01b8152600401610d889291906118ce565b602060405180830381600087803b158015610da257600080fd5b505af1158015610db6573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610dda919061154b565b610e19576040517f08c379a0000000000000000000000000000000000000000000000000000000008152600401610e10906119a3565b60405180910390fd5b8273ffffffffffffffffffffffffffffffffffffffff167f20257c99a1831ee05678eabb34e57a99bf067b4a5e2cb2d5559ea0a23f65518d83604051610e5f9190611a23565b60405180910390a2505050565b6000600660008373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020600001549050919050565b6000600660008373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002090506000610f06836112f5565b905060055482600101819055506000811115611109576000600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166327def4fd836040518263ffffffff1660e01b8152600401610f799190611a23565b60206040518083038186803b158015610f9157600080fd5b505afa158015610fa5573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610fc99190611615565b9050600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1663a9059cbb85836040518363ffffffff1660e01b81526004016110289291906118ce565b602060405180830381600087803b15801561104257600080fd5b505af1158015611056573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061107a919061154b565b6110b9576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004016110b0906119a3565b60405180910390fd5b8373ffffffffffffffffffffffffffffffffffffffff167fc9695243a805adb74c91f28311176c65b417e842d5699893cef56d18bfa48cba826040516110ff9190611a23565b60405180910390a2505b505050565b61111782610eb8565b80600660008473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060000160008282546111699190611a78565b9250508190555080600460008282546111829190611a78565b92505081905550600060029054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166323b872dd3330846040518463ffffffff1660e01b81526004016111e893929190611828565b602060405180830381600087803b15801561120257600080fd5b505af1158015611216573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061123a919061154b565b611279576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161127090611983565b60405180910390fd5b8173ffffffffffffffffffffffffffffffffffffffff167f1b359373bd6268b2ceac132cf22673d4f046a13deb2e7980f81baabf1b4d72f7826040516112bf9190611a23565b60405180910390a25050565b600081683635c9adc5dea00000846112e39190611aff565b6112ed9190611ace565b905092915050565b600080600660008473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002090506000600554141561134e576000915050611371565b61136d816000015482600101546005546113689190611b59565b611376565b9150505b919050565b6000683635c9adc5dea00000828461138e9190611aff565b6113989190611ace565b905092915050565b6000813590506113af81611e08565b92915050565b6000815190506113c481611e1f565b92915050565b6000813590506113d981611e36565b92915050565b6000813590506113ee81611e4d565b92915050565b60008135905061140381611e64565b92915050565b60008135905061141881611e7b565b92915050565b60008135905061142d81611e92565b92915050565b60008151905061144281611e92565b92915050565b60008135905061145781611ea9565b92915050565b60006020828403121561146f57600080fd5b600061147d848285016113a0565b91505092915050565b6000806040838503121561149957600080fd5b60006114a7858286016113a0565b92505060206114b88582860161141e565b9150509250929050565b60008060008060008060c087890312156114db57600080fd5b60006114e989828a016113a0565b96505060206114fa89828a0161141e565b955050604061150b89828a0161141e565b945050606061151c89828a01611448565b935050608061152d89828a016113ca565b92505060a061153e89828a016113ca565b9150509295509295509295565b60006020828403121561155d57600080fd5b600061156b848285016113b5565b91505092915050565b60008060006060848603121561158957600080fd5b6000611597868287016113df565b93505060206115a8868287016113f4565b92505060406115b986828701611409565b9150509250925092565b6000602082840312156115d557600080fd5b60006115e384828501611409565b91505092915050565b6000602082840312156115fe57600080fd5b600061160c8482850161141e565b91505092915050565b60006020828403121561162757600080fd5b600061163584828501611433565b91505092915050565b600080600080600060a0868803121561165657600080fd5b60006116648882890161141e565b95505060206116758882890161141e565b945050604061168688828901611448565b9350506060611697888289016113ca565b92505060806116a8888289016113ca565b9150509295509295909350565b6116be81611b8d565b82525050565b6116cd81611b9f565b82525050565b6116dc81611bab565b82525050565b6116eb81611c22565b82525050565b6116fa81611c46565b82525050565b61170981611c6a565b82525050565b600061171c600883611a67565b915061172782611cec565b602082019050919050565b600061173f601183611a67565b915061174a82611d15565b602082019050919050565b6000611762600d83611a67565b915061176d82611d3e565b602082019050919050565b6000611785602e83611a67565b915061179082611d67565b604082019050919050565b60006117a8600f83611a67565b91506117b382611db6565b602082019050919050565b60006117cb601483611a67565b91506117d682611ddf565b602082019050919050565b6117ea81611c0b565b82525050565b6117f981611c15565b82525050565b600060408201905061181460008301856116b5565b61182160208301846116b5565b9392505050565b600060608201905061183d60008301866116b5565b61184a60208301856116b5565b61185760408301846117e1565b949350505050565b600060e082019050611874600083018a6116b5565b61188160208301896116b5565b61188e60408301886117e1565b61189b60608301876117e1565b6118a860808301866117f0565b6118b560a08301856116d3565b6118c260c08301846116d3565b98975050505050505050565b60006040820190506118e360008301856116b5565b6118f060208301846117e1565b9392505050565b600060208201905061190c60008301846116c4565b92915050565b600060208201905061192760008301846116e2565b92915050565b600060208201905061194260008301846116f1565b92915050565b600060208201905061195d6000830184611700565b92915050565b6000602082019050818103600083015261197c8161170f565b9050919050565b6000602082019050818103600083015261199c81611732565b9050919050565b600060208201905081810360008301526119bc81611755565b9050919050565b600060208201905081810360008301526119dc81611778565b9050919050565b600060208201905081810360008301526119fc8161179b565b9050919050565b60006020820190508181036000830152611a1c816117be565b9050919050565b6000602082019050611a3860008301846117e1565b92915050565b6000604082019050611a5360008301856117e1565b611a6060208301846117e1565b9392505050565b600082825260208201905092915050565b6000611a8382611c0b565b9150611a8e83611c0b565b9250827fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff03821115611ac357611ac2611c8e565b5b828201905092915050565b6000611ad982611c0b565b9150611ae483611c0b565b925082611af457611af3611cbd565b5b828204905092915050565b6000611b0a82611c0b565b9150611b1583611c0b565b9250817fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0483118215151615611b4e57611b4d611c8e565b5b828202905092915050565b6000611b6482611c0b565b9150611b6f83611c0b565b925082821015611b8257611b81611c8e565b5b828203905092915050565b6000611b9882611beb565b9050919050565b60008115159050919050565b6000819050919050565b6000611bc082611b8d565b9050919050565b6000611bd282611b8d565b9050919050565b6000611be482611b8d565b9050919050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b6000819050919050565b600060ff82169050919050565b6000611c2d82611c34565b9050919050565b6000611c3f82611beb565b9050919050565b6000611c5182611c58565b9050919050565b6000611c6382611beb565b9050919050565b6000611c7582611c7c565b9050919050565b6000611c8782611beb565b9050919050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601260045260246000fd5b7f4e4f5f5354414b45000000000000000000000000000000000000000000000000600082015250565b7f5452414e5346455246524f4d5f4641494c000000000000000000000000000000600082015250565b7f5452414e534645525f4641494c00000000000000000000000000000000000000600082015250565b7f496e697469616c697a61626c653a20636f6e747261637420697320616c72656160008201527f647920696e697469616c697a6564000000000000000000000000000000000000602082015250565b7f5452414e534645525f4641494c45440000000000000000000000000000000000600082015250565b7f414d4f554e545f455843454544535f5354414b45000000000000000000000000600082015250565b611e1181611b8d565b8114611e1c57600080fd5b50565b611e2881611b9f565b8114611e3357600080fd5b50565b611e3f81611bab565b8114611e4a57600080fd5b50565b611e5681611bb5565b8114611e6157600080fd5b50565b611e6d81611bc7565b8114611e7857600080fd5b50565b611e8481611bd9565b8114611e8f57600080fd5b50565b611e9b81611c0b565b8114611ea657600080fd5b50565b611eb281611c15565b8114611ebd57600080fd5b5056fea2646970667358221220cf3cdf32644eb284cdf3580c946d40b23719e40362b9a3f235230e1333792cfb64736f6c63430008040033",
+  "deployedBytecode": "0x6080604052600436106101145760003560e01c80638b0e9f3f116100a0578063f3995c6711610064578063f3995c671461037d578063f7c618c114610399578063f854a27f146103c4578063fa827a8414610401578063fc0c546a1461042a57610114565b80638b0e9f3f146102a55780638ebed616146102d0578063beceed39146102fb578063c0c53b8b14610324578063c2e3140a1461036157610114565b806342623360116100e757806342623360146101d45780634641257d14610211578063538a85a1146102285780635b3e2077146102515780635d1cf7b51461027c57610114565b806304c834271461011957806304d3b7c41461014257806316934fc41461016d5780631c885bae146101ab575b600080fd5b34801561012557600080fd5b50610140600480360381019061013b91906115c3565b610455565b005b34801561014e57600080fd5b506101576104f3565b6040516101649190611a23565b60405180910390f35b34801561017957600080fd5b50610194600480360381019061018f919061145d565b6104f9565b6040516101a2929190611a3e565b60405180910390f35b3480156101b757600080fd5b506101d260048036038101906101cd91906115ec565b61051d565b005b3480156101e057600080fd5b506101fb60048036038101906101f6919061145d565b61052a565b6040516102089190611a23565b60405180910390f35b34801561021d57600080fd5b5061022661053c565b005b34801561023457600080fd5b5061024f600480360381019061024a91906115ec565b610547565b005b34801561025d57600080fd5b50610266610554565b6040516102739190611948565b60405180910390f35b34801561028857600080fd5b506102a3600480360381019061029e9190611486565b61057a565b005b3480156102b157600080fd5b506102ba610588565b6040516102c79190611a23565b60405180910390f35b3480156102dc57600080fd5b506102e561058e565b6040516102f29190611a23565b60405180910390f35b34801561030757600080fd5b50610322600480360381019061031d91906115ec565b610594565b005b34801561033057600080fd5b5061034b60048036038101906103469190611574565b61083c565b60405161035891906118f7565b60405180910390f35b61037b600480360381019061037691906114c2565b6109e2565b005b610397600480360381019061039291906114c2565b610a9c565b005b3480156103a557600080fd5b506103ae610b1b565b6040516103bb919061192d565b60405180910390f35b3480156103d057600080fd5b506103eb60048036038101906103e6919061145d565b610b41565b6040516103f89190611a23565b60405180910390f35b34801561040d57600080fd5b506104286004803603810190610423919061163e565b610bfd565b005b34801561043657600080fd5b5061043f610c3e565b60405161044c9190611912565b60405180910390f35b600260009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff16146104af57600080fd5b80600260006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555050565b60045481565b60066020528060005260406000206000915090508060000154908060010154905082565b6105273382610c64565b50565b600061053582610e6c565b9050919050565b61054533610eb8565b565b610551338261110e565b50565b600260009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b610584828261110e565b5050565b60035481565b60055481565b600260009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff163373ffffffffffffffffffffffffffffffffffffffff16146105ee57600080fd5b6000600454905060008111610638576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161062f90611963565b60405180910390fd5b806003819055506000600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1663f3044ac7846040518263ffffffff1660e01b815260040161069c9190611a23565b60206040518083038186803b1580156106b457600080fd5b505afa1580156106c8573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906106ec9190611615565b90506106f881836112cb565b600560008282546107099190611a78565b92505081905550600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166323b872dd3330866040518463ffffffff1660e01b815260040161076f93929190611828565b602060405180830381600087803b15801561078957600080fd5b505af115801561079d573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906107c1919061154b565b610800576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004016107f7906119e3565b60405180910390fd5b7ff8fad42e780bfa5459be3fe691e8ba1aec70342250112139c5771c3fd155f3128360405161082f9190611a23565b60405180910390a1505050565b60008060019054906101000a900460ff1680610863575060008054906101000a900460ff16155b6108a2576040517f08c379a0000000000000000000000000000000000000000000000000000000008152600401610899906119c3565b60405180910390fd5b60008060019054906101000a900460ff1615905080156108f2576001600060016101000a81548160ff02191690831515021790555060016000806101000a81548160ff0219169083151502179055505b84600060026101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555083600160006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555082600260006101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff1602179055506001915080156109da5760008060016101000a81548160ff0219169083151502179055505b509392505050565b60008673ffffffffffffffffffffffffffffffffffffffff1663dd62ed3e33306040518363ffffffff1660e01b8152600401610a1f9291906117ff565b60206040518083038186803b158015610a3757600080fd5b505afa158015610a4b573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610a6f9190611615565b905085811015610a9357610a92878288610a899190611b59565b87878787610a9c565b5b50505050505050565b8573ffffffffffffffffffffffffffffffffffffffff1663d505accf333088888888886040518863ffffffff1660e01b8152600401610ae1979695949392919061185f565b600060405180830381600087803b158015610afb57600080fd5b505af1158015610b0f573d6000803e3d6000fd5b50505050505050505050565b600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b6000600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166327def4fd610b8a846112f5565b6040518263ffffffff1660e01b8152600401610ba69190611a23565b60206040518083038186803b158015610bbe57600080fd5b505afa158015610bd2573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610bf69190611615565b9050919050565b610c2d600060029054906101000a900473ffffffffffffffffffffffffffffffffffffffff168686868686610a9c565b610c37338661110e565b5050505050565b600060029054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b6000600660008473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002090508060000154821115610cee576040517f08c379a0000000000000000000000000000000000000000000000000000000008152600401610ce590611a03565b60405180910390fd5b610cf783610eb8565b81816000016000828254610d0b9190611b59565b925050819055508160046000828254610d249190611b59565b92505081905550600060029054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1663a9059cbb84846040518363ffffffff1660e01b8152600401610d889291906118ce565b602060405180830381600087803b158015610da257600080fd5b505af1158015610db6573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610dda919061154b565b610e19576040517f08c379a0000000000000000000000000000000000000000000000000000000008152600401610e10906119a3565b60405180910390fd5b8273ffffffffffffffffffffffffffffffffffffffff167f20257c99a1831ee05678eabb34e57a99bf067b4a5e2cb2d5559ea0a23f65518d83604051610e5f9190611a23565b60405180910390a2505050565b6000600660008373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020600001549050919050565b6000600660008373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002090506000610f06836112f5565b905060055482600101819055506000811115611109576000600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166327def4fd836040518263ffffffff1660e01b8152600401610f799190611a23565b60206040518083038186803b158015610f9157600080fd5b505afa158015610fa5573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610fc99190611615565b9050600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1663a9059cbb85836040518363ffffffff1660e01b81526004016110289291906118ce565b602060405180830381600087803b15801561104257600080fd5b505af1158015611056573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061107a919061154b565b6110b9576040517f08c379a00000000000000000000000000000000000000000000000000000000081526004016110b0906119a3565b60405180910390fd5b8373ffffffffffffffffffffffffffffffffffffffff167fc9695243a805adb74c91f28311176c65b417e842d5699893cef56d18bfa48cba826040516110ff9190611a23565b60405180910390a2505b505050565b61111782610eb8565b80600660008473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002060000160008282546111699190611a78565b9250508190555080600460008282546111829190611a78565b92505081905550600060029054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166323b872dd3330846040518463ffffffff1660e01b81526004016111e893929190611828565b602060405180830381600087803b15801561120257600080fd5b505af1158015611216573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061123a919061154b565b611279576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161127090611983565b60405180910390fd5b8173ffffffffffffffffffffffffffffffffffffffff167f1b359373bd6268b2ceac132cf22673d4f046a13deb2e7980f81baabf1b4d72f7826040516112bf9190611a23565b60405180910390a25050565b600081683635c9adc5dea00000846112e39190611aff565b6112ed9190611ace565b905092915050565b600080600660008473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200190815260200160002090506000600554141561134e576000915050611371565b61136d816000015482600101546005546113689190611b59565b611376565b9150505b919050565b6000683635c9adc5dea00000828461138e9190611aff565b6113989190611ace565b905092915050565b6000813590506113af81611e08565b92915050565b6000815190506113c481611e1f565b92915050565b6000813590506113d981611e36565b92915050565b6000813590506113ee81611e4d565b92915050565b60008135905061140381611e64565b92915050565b60008135905061141881611e7b565b92915050565b60008135905061142d81611e92565b92915050565b60008151905061144281611e92565b92915050565b60008135905061145781611ea9565b92915050565b60006020828403121561146f57600080fd5b600061147d848285016113a0565b91505092915050565b6000806040838503121561149957600080fd5b60006114a7858286016113a0565b92505060206114b88582860161141e565b9150509250929050565b60008060008060008060c087890312156114db57600080fd5b60006114e989828a016113a0565b96505060206114fa89828a0161141e565b955050604061150b89828a0161141e565b945050606061151c89828a01611448565b935050608061152d89828a016113ca565b92505060a061153e89828a016113ca565b9150509295509295509295565b60006020828403121561155d57600080fd5b600061156b848285016113b5565b91505092915050565b60008060006060848603121561158957600080fd5b6000611597868287016113df565b93505060206115a8868287016113f4565b92505060406115b986828701611409565b9150509250925092565b6000602082840312156115d557600080fd5b60006115e384828501611409565b91505092915050565b6000602082840312156115fe57600080fd5b600061160c8482850161141e565b91505092915050565b60006020828403121561162757600080fd5b600061163584828501611433565b91505092915050565b600080600080600060a0868803121561165657600080fd5b60006116648882890161141e565b95505060206116758882890161141e565b945050604061168688828901611448565b9350506060611697888289016113ca565b92505060806116a8888289016113ca565b9150509295509295909350565b6116be81611b8d565b82525050565b6116cd81611b9f565b82525050565b6116dc81611bab565b82525050565b6116eb81611c22565b82525050565b6116fa81611c46565b82525050565b61170981611c6a565b82525050565b600061171c600883611a67565b915061172782611cec565b602082019050919050565b600061173f601183611a67565b915061174a82611d15565b602082019050919050565b6000611762600d83611a67565b915061176d82611d3e565b602082019050919050565b6000611785602e83611a67565b915061179082611d67565b604082019050919050565b60006117a8600f83611a67565b91506117b382611db6565b602082019050919050565b60006117cb601483611a67565b91506117d682611ddf565b602082019050919050565b6117ea81611c0b565b82525050565b6117f981611c15565b82525050565b600060408201905061181460008301856116b5565b61182160208301846116b5565b9392505050565b600060608201905061183d60008301866116b5565b61184a60208301856116b5565b61185760408301846117e1565b949350505050565b600060e082019050611874600083018a6116b5565b61188160208301896116b5565b61188e60408301886117e1565b61189b60608301876117e1565b6118a860808301866117f0565b6118b560a08301856116d3565b6118c260c08301846116d3565b98975050505050505050565b60006040820190506118e360008301856116b5565b6118f060208301846117e1565b9392505050565b600060208201905061190c60008301846116c4565b92915050565b600060208201905061192760008301846116e2565b92915050565b600060208201905061194260008301846116f1565b92915050565b600060208201905061195d6000830184611700565b92915050565b6000602082019050818103600083015261197c8161170f565b9050919050565b6000602082019050818103600083015261199c81611732565b9050919050565b600060208201905081810360008301526119bc81611755565b9050919050565b600060208201905081810360008301526119dc81611778565b9050919050565b600060208201905081810360008301526119fc8161179b565b9050919050565b60006020820190508181036000830152611a1c816117be565b9050919050565b6000602082019050611a3860008301846117e1565b92915050565b6000604082019050611a5360008301856117e1565b611a6060208301846117e1565b9392505050565b600082825260208201905092915050565b6000611a8382611c0b565b9150611a8e83611c0b565b9250827fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff03821115611ac357611ac2611c8e565b5b828201905092915050565b6000611ad982611c0b565b9150611ae483611c0b565b925082611af457611af3611cbd565b5b828204905092915050565b6000611b0a82611c0b565b9150611b1583611c0b565b9250817fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0483118215151615611b4e57611b4d611c8e565b5b828202905092915050565b6000611b6482611c0b565b9150611b6f83611c0b565b925082821015611b8257611b81611c8e565b5b828203905092915050565b6000611b9882611beb565b9050919050565b60008115159050919050565b6000819050919050565b6000611bc082611b8d565b9050919050565b6000611bd282611b8d565b9050919050565b6000611be482611b8d565b9050919050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b6000819050919050565b600060ff82169050919050565b6000611c2d82611c34565b9050919050565b6000611c3f82611beb565b9050919050565b6000611c5182611c58565b9050919050565b6000611c6382611beb565b9050919050565b6000611c7582611c7c565b9050919050565b6000611c8782611beb565b9050919050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601260045260246000fd5b7f4e4f5f5354414b45000000000000000000000000000000000000000000000000600082015250565b7f5452414e5346455246524f4d5f4641494c000000000000000000000000000000600082015250565b7f5452414e534645525f4641494c00000000000000000000000000000000000000600082015250565b7f496e697469616c697a61626c653a20636f6e747261637420697320616c72656160008201527f647920696e697469616c697a6564000000000000000000000000000000000000602082015250565b7f5452414e534645525f4641494c45440000000000000000000000000000000000600082015250565b7f414d4f554e545f455843454544535f5354414b45000000000000000000000000600082015250565b611e1181611b8d565b8114611e1c57600080fd5b50565b611e2881611b9f565b8114611e3357600080fd5b50565b611e3f81611bab565b8114611e4a57600080fd5b50565b611e5681611bb5565b8114611e6157600080fd5b50565b611e6d81611bc7565b8114611e7857600080fd5b50565b611e8481611bd9565b8114611e8f57600080fd5b50565b611e9b81611c0b565b8114611ea657600080fd5b50565b611eb281611c15565b8114611ebd57600080fd5b5056fea2646970667358221220cf3cdf32644eb284cdf3580c946d40b23719e40362b9a3f235230e1333792cfb64736f6c63430008040033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {
+      "addRewards(uint256)": {
+        "details": "will 'start' a new 'epoch'.only callable by owner.",
+        "params": {
+          "_amount": "amount of reward tokens to add"
+        }
+      },
+      "availableRewards(address)": {
+        "params": {
+          "_for": "address address of the account to check rewards for."
+        },
+        "returns": {
+          "_0": "rewards for the provided account address."
+        }
+      },
+      "farm(uint256)": {
+        "details": "'_amount' needs to be approved for the 'TenderFarm' to transfer.harvests current rewards before accounting updates are made.",
+        "params": {
+          "_amount": "amount of liquidity pool tokens to stake"
+        }
+      },
+      "farmFor(address,uint256)": {
+        "details": "'_amount' needs to be approved for the 'TenderFarm' to transfer.staked tokens will belong to the account they are staked for.harvests current rewards before accounting updates are made.",
+        "params": {
+          "_amount": "amount of liquidity pool tokens to stake",
+          "_for": "account to stake for"
+        }
+      },
+      "farmWithPermit(uint256,uint256,uint8,bytes32,bytes32)": {
+        "details": "'_amount' needs to be approved for the 'TenderFarm' to transfer.harvests current rewards before accounting updates are made.calls permit on LP Token.",
+        "params": {
+          "_amount": "amount of liquidity pool tokens to stake",
+          "_deadline": "deadline of the permit",
+          "_r": "r of signed Permit message",
+          "_s": "s of signed Permit message",
+          "_v": "v of signed Permit message"
+        }
+      },
+      "harvest()": {
+        "details": "reverts when trying to harvest multiple times if no new rewards have been added.emits an event with how many reward tokens have been harvested."
+      },
+      "selfPermit(address,uint256,uint256,uint8,bytes32,bytes32)": {
+        "details": "The `owner` is always msg.sender and the `spender` is always address(this).",
+        "params": {
+          "_deadline": "A timestamp, the current blocktime must be less than or equal to this timestamp",
+          "_r": "Must produce valid secp256k1 signature from the holder along with `v` and `s`",
+          "_s": "Must produce valid secp256k1 signature from the holder along with `r` and `v`",
+          "_token": "The address of the token spent",
+          "_v": "Must produce valid secp256k1 signature from the holder along with `r` and `s`",
+          "_value": "The amount that can be spent of token"
+        }
+      },
+      "selfPermitIfNecessary(address,uint256,uint256,uint8,bytes32,bytes32)": {
+        "details": "The `owner` is always msg.sender and the `spender` is always address(this). Can be used instead of #selfPermit to prevent calls from failing due to a frontrun of a call to #selfPermit",
+        "params": {
+          "_deadline": "A timestamp, the current blocktime must be less than or equal to this timestamp",
+          "_r": "Must produce valid secp256k1 signature from the holder along with `v` and `s`",
+          "_s": "Must produce valid secp256k1 signature from the holder along with `r` and `v`",
+          "_token": "The address of the token spent",
+          "_v": "Must produce valid secp256k1 signature from the holder along with `r` and `s`",
+          "_value": "The amount that can be spent of token"
+        }
+      },
+      "setTenderizer(address)": {
+        "params": {
+          "_tenderizer": "address of the new tenderizer"
+        }
+      },
+      "stakeOf(address)": {
+        "params": {
+          "_of": "address address of the account to check stake for."
+        },
+        "returns": {
+          "_0": "LP tokens deposited for address"
+        }
+      },
+      "unfarm(uint256)": {
+        "details": "'_amount' needs to be approved for the 'TenderFarm' to transfer.harvests current rewards before accounting updates are made.",
+        "params": {
+          "amount": "amount of liquidity pool tokens to stake"
+        }
+      }
+    },
+    "stateVariables": {
+      "CRF": {
+        "details": "Cumulative reward factor"
+      },
+      "nextTotalStake": {
+        "return": "nextStake LP Tokens staked for next round",
+        "returns": {
+          "_0": "nextStake LP Tokens staked for next round"
+        }
+      },
+      "rewardToken": {
+        "details": "Tender token."
+      },
+      "stakes": {
+        "details": "stake mapping of each address"
+      },
+      "tenderizer": {
+        "details": "tenderizer."
+      },
+      "token": {
+        "details": "LP token."
+      },
+      "totalStake": {
+        "return": "stake total amount of LP tokens staked",
+        "returns": {
+          "_0": "stake total amount of LP tokens staked"
+        }
+      }
+    },
+    "title": "TenderFarm",
+    "version": 1
+  },
+  "userdoc": {
+    "events": {
+      "Farm(address,uint256)": {
+        "notice": "Farm gets emitted when an account stakes LP tokens."
+      },
+      "Harvest(address,uint256)": {
+        "notice": "Harvest gets emitted when an accounts harvests outstanding rewards."
+      },
+      "RewardsAdded(uint256)": {
+        "notice": "RewardsAdded gets emitted when new rewards are added and a new epoch begins"
+      },
+      "Unfarm(address,uint256)": {
+        "notice": "Unfarm gets emitted when an account unstakes LP tokens."
+      }
+    },
+    "kind": "user",
+    "methods": {
+      "addRewards(uint256)": {
+        "notice": "add new rewards"
+      },
+      "availableRewards(address)": {
+        "notice": "Check available rewards for an account."
+      },
+      "farm(uint256)": {
+        "notice": "stake liquidity pool tokens to receive rewards"
+      },
+      "farmFor(address,uint256)": {
+        "notice": "stake liquidity pool tokens for a specific account so that it receives rewards"
+      },
+      "farmWithPermit(uint256,uint256,uint8,bytes32,bytes32)": {
+        "notice": "allow spending token and stake liquidity pool tokens to receive rewards"
+      },
+      "harvest()": {
+        "notice": "harvest outstanding rewards"
+      },
+      "nextTotalStake()": {
+        "notice": "Return the total amount of LP tokens staked for the next reward epoch."
+      },
+      "selfPermit(address,uint256,uint256,uint8,bytes32,bytes32)": {
+        "notice": "Permits this contract to spend a given token from `msg.sender`"
+      },
+      "selfPermitIfNecessary(address,uint256,uint256,uint8,bytes32,bytes32)": {
+        "notice": "Permits this contract to spend a given token from `msg.sender`"
+      },
+      "setTenderizer(address)": {
+        "notice": "Changes the tenderizer of the contract"
+      },
+      "stakeOf(address)": {
+        "notice": "Check stake for an account."
+      },
+      "totalStake()": {
+        "notice": "Return the total amount of LP tokens staked in this farm."
+      },
+      "unfarm(uint256)": {
+        "notice": "unstake liquidity pool tokens"
+      }
+    },
+    "notice": "TenderFarm is responsible for incetivizing liquidity providers, by accepting LP Tokens and a proportionaly rewarding them with TenderTokens over time.",
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 2048,
+        "contract": "contracts/tenderfarm/TenderFarm.sol:TenderFarm",
+        "label": "_initialized",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_bool"
+      },
+      {
+        "astId": 2051,
+        "contract": "contracts/tenderfarm/TenderFarm.sol:TenderFarm",
+        "label": "_initializing",
+        "offset": 1,
+        "slot": "0",
+        "type": "t_bool"
+      },
+      {
+        "astId": 4881,
+        "contract": "contracts/tenderfarm/TenderFarm.sol:TenderFarm",
+        "label": "token",
+        "offset": 2,
+        "slot": "0",
+        "type": "t_contract(IERC20)2728"
+      },
+      {
+        "astId": 4885,
+        "contract": "contracts/tenderfarm/TenderFarm.sol:TenderFarm",
+        "label": "rewardToken",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_contract(ITenderToken)15481"
+      },
+      {
+        "astId": 4889,
+        "contract": "contracts/tenderfarm/TenderFarm.sol:TenderFarm",
+        "label": "tenderizer",
+        "offset": 0,
+        "slot": "2",
+        "type": "t_contract(ITenderizer)5593"
+      },
+      {
+        "astId": 4893,
+        "contract": "contracts/tenderfarm/TenderFarm.sol:TenderFarm",
+        "label": "totalStake",
+        "offset": 0,
+        "slot": "3",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 4897,
+        "contract": "contracts/tenderfarm/TenderFarm.sol:TenderFarm",
+        "label": "nextTotalStake",
+        "offset": 0,
+        "slot": "4",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 4900,
+        "contract": "contracts/tenderfarm/TenderFarm.sol:TenderFarm",
+        "label": "CRF",
+        "offset": 0,
+        "slot": "5",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 4911,
+        "contract": "contracts/tenderfarm/TenderFarm.sol:TenderFarm",
+        "label": "stakes",
+        "offset": 0,
+        "slot": "6",
+        "type": "t_mapping(t_address,t_struct(Stake)4905_storage)"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_bool": {
+        "encoding": "inplace",
+        "label": "bool",
+        "numberOfBytes": "1"
+      },
+      "t_contract(IERC20)2728": {
+        "encoding": "inplace",
+        "label": "contract IERC20",
+        "numberOfBytes": "20"
+      },
+      "t_contract(ITenderToken)15481": {
+        "encoding": "inplace",
+        "label": "contract ITenderToken",
+        "numberOfBytes": "20"
+      },
+      "t_contract(ITenderizer)5593": {
+        "encoding": "inplace",
+        "label": "contract ITenderizer",
+        "numberOfBytes": "20"
+      },
+      "t_mapping(t_address,t_struct(Stake)4905_storage)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => struct TenderFarm.Stake)",
+        "numberOfBytes": "32",
+        "value": "t_struct(Stake)4905_storage"
+      },
+      "t_struct(Stake)4905_storage": {
+        "encoding": "inplace",
+        "label": "struct TenderFarm.Stake",
+        "members": [
+          {
+            "astId": 4902,
+            "contract": "contracts/tenderfarm/TenderFarm.sol:TenderFarm",
+            "label": "stake",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint256"
+          },
+          {
+            "astId": 4904,
+            "contract": "contracts/tenderfarm/TenderFarm.sol:TenderFarm",
+            "label": "lastCRF",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_uint256"
+          }
+        ],
+        "numberOfBytes": "64"
+      },
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      }
+    }
+  }
+}
