@@ -29,22 +29,27 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 
   const tenderizer = await deploy(NAME, {
     from: deployer,
-    args: [
-      process.env.TOKEN,
-      process.env.SYMBOL,
-      process.env.CONTRACT,
-      process.env.VALIDATOR,
-      FEE,
-      LIQUIDITY_FEE,
-      (await deployments.get('TenderToken')).address,
-      (await deployments.get('TenderFarmFactory')).address,
-      (await deployments.get('TenderSwapFactoryV1')).address
-    ],
+    args: [],
     log: true, // display the address and gas used in the console (not when run in test though),
     proxy: {
       proxyContract: 'EIP173ProxyWithReceive',
       owner: deployer,
-      methodName: 'initialize'
+      execute: {
+        init: {
+          methodName: 'initialize',
+          args: [
+            process.env.TOKEN,
+            process.env.SYMBOL,
+            process.env.CONTRACT,
+            process.env.VALIDATOR,
+            FEE,
+            LIQUIDITY_FEE,
+            (await deployments.get('TenderToken')).address,
+            (await deployments.get('TenderFarmFactory')).address,
+            (await deployments.get('TenderSwapFactoryV1')).address
+          ]
+        }
+      }
     }
   })
 
