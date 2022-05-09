@@ -42,8 +42,14 @@ if (
 const config: HardhatUserConfig = {
   solidity: {
     compilers: [
-      { version: '0.8.4', settings: {} },
-      { version: '0.7.0', settings: {} }
+      {
+        version: '0.8.4',
+        settings: {
+          optimizer: {
+            runs: 200
+          }
+        }
+      }
     ]
   },
   namedAccounts: {
