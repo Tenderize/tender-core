@@ -163,7 +163,7 @@ describe('Livepeer Integration Test', () => {
     describe('Stake', stakeTests.bind(this))
 
     const swappedLPTRewards = ethers.utils.parseEther('10')
-    describe('Rebases', async function () {
+    describe.only('Rebases', async function () {
       context('Positive Rebase', async function () {
         beforeEach(async function () {
           this.increase = ethers.utils.parseEther('90')

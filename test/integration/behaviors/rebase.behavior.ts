@@ -48,7 +48,7 @@ export function stakeIncreaseTests () {
     expect(await ctx.TenderSwap.calculateSwap(ctx.TenderToken.address, ONE)).to.be.lt(dyBefore)
   })
 
-  it('collected protocol fees', () => {
+  describe('collected protocol fees', () => {
     it('should increase tenderToken balance of owner', async () => {
       expect((await ctx.TenderToken.balanceOf(ctx.deployer)).sub(ownerBalBefore.add(ctx.protocolFees)).abs())
         .to.lte(1)
@@ -59,14 +59,14 @@ export function stakeIncreaseTests () {
     })
   })
 
-  it('collected liquidity provider fees', () => {
+  describe('collected liquidity provider fees', () => {
     it('should increase tenderToken balance of tenderFarm', async () => {
       expect((await ctx.TenderToken.balanceOf(ctx.TenderFarm.address)).sub(farmBalanceBefore.add(ctx.liquidityFees)).abs())
-        .to.lte(1)
+        .to.lte(2)
     })
 
-    it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
-      await expect(tx).to.emit(ctx.Tenderizer, 'LiquidityFeeCollected').withArgs(ctx.liquidityFees)
+    it('should emit LiquidityFeeCollected event from Tenderizer', async () => {
+      await expect(tx).to.emit(ctx.Tenderizer, 'LiquidityFeeCollected').withArgs(ctx.liquidityFees.sub(1))
     })
   })
 
