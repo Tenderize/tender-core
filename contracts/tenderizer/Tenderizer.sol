@@ -253,6 +253,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         fees = MathUtils.percOf(_totalRewards, protocolFee);
         tenderToken.mint(gov, fees);
         currentPrincipal += fees;
+        emit ProtocolFeeCollected(fees);
     }
 
     function _collectLiquidityFees(uint256 _totalRewards) internal virtual returns (uint256 fees) {
@@ -269,6 +270,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         // hence using the balance to transfer here
         tenderToken.approve(address(tenderFarm), stakeDiff);
         tenderFarm.addRewards(stakeDiff);
+        emit LiquidityFeeCollected(stakeDiff);
     }
 
     function _totalStakedTokens() internal view virtual returns (uint256) {
