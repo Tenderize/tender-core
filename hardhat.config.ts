@@ -11,6 +11,7 @@ import '@openzeppelin/hardhat-upgrades'
 // Tools
 import 'hardhat-gas-reporter'
 import 'solidity-coverage'
+import "@nomiclabs/hardhat-etherscan"
 
 import { HardhatUserConfig } from 'hardhat/types'
 
@@ -21,6 +22,7 @@ import fs from 'fs'
 dotenv.config()
 const PRIVATE_KEY = process.env.PRIVATE_KEY
 const JSON_RPC = process.env.JSON_RPC
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY
 
 function loadTasks () {
   const tasksPath = path.join(__dirname, 'tasks')
@@ -77,6 +79,9 @@ const config: HardhatUserConfig = {
   },
   mocha: {
     timeout: 200000
+  },
+  etherscan: {
+    apiKey: ETHERSCAN_API_KEY
   }
 }
 
