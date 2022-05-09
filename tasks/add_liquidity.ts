@@ -39,7 +39,7 @@ task('add-liquidity', 'adds liquidity to pool')
       TenderToken.address,
       signer.address,
       TenderSwap.address,
-      tokenAmount.toString()
+      tenderAmount.toString()
     )
 
     const tx = await TenderSwap.multicall([
