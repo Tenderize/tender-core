@@ -23,6 +23,7 @@ task('tenderizer-info', 'get contract addresses')
     const LpToken: LiquidityPoolToken = (await ethers.getContractAt('LiquidityPoolToken', await TenderSwap.lpToken())) as LiquidityPoolToken
     const TenderFarm = (await ethers.getContractAt('TenderFarm', await Tenderizer.tenderFarm())) as TenderFarm
 
+    console.log('Tenderizer Implementation', await ethers.provider.getStorageAt(Tenderizer.address, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc'))
     console.log(`Tenderizer ${Tenderizer.address}`)
     console.log(`TenderToken ${TenderToken.address}`)
     console.log(`Staking Token ${Steak.address}`)

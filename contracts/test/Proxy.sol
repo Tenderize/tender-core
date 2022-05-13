@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GNUV3
 
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.4;
 
-import "hardhat-deploy/solc_0.7/proxy/EIP173ProxyWithReceive.sol";
+import "hardhat-deploy/solc_0.8/proxy/EIP173ProxyWithReceive.sol";

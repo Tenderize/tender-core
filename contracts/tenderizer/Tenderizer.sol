@@ -234,9 +234,12 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
 
         if (rewards > 0) {
             uint256 rewards_ = uint256(rewards);
-            uint256 pFees = _collectFees(rewards_);
-            uint256 lFees = _collectLiquidityFees(rewards_);
-            currentPrincipal += (rewards_ - (pFees + lFees));
+            uint256 pFees = _calculateFees(rewards_, protocolFee);
+            uint256 lFees = _calculateFees(rewards_, liquidityFee);
+            currentPrincipal += (rewards_ - pFees - lFees);
+
+            _collectFees(pFees);
+            _collectLiquidityFees(lFees);
         } else if (rewards < 0) {
             uint256 rewards_ = uint256(-rewards);
             currentPrincipal -= rewards_;
@@ -249,26 +252,30 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
 
     function _processNewStake() internal virtual returns (int256 rewards);
 
-    function _collectFees(uint256 _totalRewards) internal virtual returns (uint256 fees){
-        fees = MathUtils.percOf(_totalRewards, protocolFee);
+    function _collectFees(uint256 fees) internal virtual {
         tenderToken.mint(gov, fees);
         currentPrincipal += fees;
+        emit ProtocolFeeCollected(fees);
     }
 
-    function _collectLiquidityFees(uint256 _totalRewards) internal virtual returns (uint256 fees) {
+    function _collectLiquidityFees(uint256 liquidityFees) internal virtual {
         // Don't transfer liquidity provider fees if there is no liquidity being farmed
-        if (tenderFarm.nextTotalStake() <= 0) return 0;
+        if (tenderFarm.nextTotalStake() <= 0) return;
 
-        fees = MathUtils.percOf(_totalRewards, liquidityFee);
         uint256 balBefore = tenderToken.balanceOf(address(this));
-        tenderToken.mint(address(this), fees);
-        currentPrincipal += fees;
+        tenderToken.mint(address(this), liquidityFees);
+        currentPrincipal += liquidityFees;
         uint256 balAfter = tenderToken.balanceOf(address(this));
         uint256 stakeDiff = balAfter-balBefore;
         // minting sometimes generates a little less, due to share calculation
         // hence using the balance to transfer here
         tenderToken.approve(address(tenderFarm), stakeDiff);
         tenderFarm.addRewards(stakeDiff);
+        emit LiquidityFeeCollected(stakeDiff);
+    }
+
+    function _calculateFees(uint256 _rewards, uint256 _feePerc) internal pure returns (uint256 fees) {
+        return MathUtils.percOf(_rewards, _feePerc);
     }
 
     function _totalStakedTokens() internal view virtual returns (uint256) {
