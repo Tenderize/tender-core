@@ -31,7 +31,8 @@ export default function suite () {
     let tx: ContractTransaction
     beforeEach(async function () {
       // Gov Unstake
-      await ctx.Tenderizer.processUnstake()
+      tx = await ctx.Tenderizer.processUnstake()
+      await tx.wait()
       balBefore = await ctx.Steak.balanceOf(ctx.Tenderizer.address)
       tx = await ctx.Tenderizer.processWithdraw()
       await tx.wait()
@@ -93,14 +94,16 @@ export default function suite () {
       const staked = await ctx.StakingContract.staked()
       await ctx.StakingContract.setStaked(staked.sub(slashAmount))
       const cpBefore = await ctx.Tenderizer.totalStakedTokens()
-      await ctx.Tenderizer.claimRewards()
+      let _tx = await ctx.Tenderizer.claimRewards()
+      await _tx.wait()
 
       // Gov Unstake
       await ctx.Tenderizer.processUnstake()
       await ctx.Tenderizer.processWithdraw()
       slashFromWithdrawal = slashAmount.mul(ctx.withdrawAmount).div(cpBefore.add(ctx.withdrawAmount))
       steakBalanceBefore = await ctx.Steak.balanceOf(ctx.signers[2].address)
-      await ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.unbondLockID)
+      _tx = await ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.unbondLockID)
+      await _tx.wait()
     })
 
     it('reduces the unstaked amount', async () => {
@@ -115,19 +118,23 @@ export default function suite () {
 
     beforeEach(async function () {
       // Gov Unstake
-      const tx = await ctx.Tenderizer.processUnstake()
-      await tx.wait()
+      let _tx  = await ctx.Tenderizer.processUnstake()
+      await _tx.wait()
       // reduce staked on mock
       const slashAmount = ethers.utils.parseEther('1')
       const staked = await ctx.StakingContract.staked()
       const cpBefore = await ctx.Tenderizer.totalStakedTokens()
-      await ctx.StakingContract.setStaked(staked.sub(slashAmount))
+      _tx = await ctx.StakingContract.setStaked(staked.sub(slashAmount))
+      await _tx.wait()
 
-      await ctx.Tenderizer.processWithdraw()
-      await ctx.Tenderizer.claimRewards()
+      _tx = await ctx.Tenderizer.processWithdraw()
+      await _tx.wait()
+      _tx = await ctx.Tenderizer.claimRewards()
+      await _tx.wait()
       slashFromWithdrawal = slashAmount.mul(ctx.withdrawAmount).div(cpBefore.add(this.withdrawAmount))
       steakBalanceBefore = await ctx.Steak.balanceOf(ctx.signers[2].address)
-      await ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.unbondLockID)
+      _tx = await ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.unbondLockID)
+      await _tx.wait()
     })
 
     it('reduces the unstaked amount', async () => {
