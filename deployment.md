@@ -58,9 +58,12 @@ So if you deposit 10 LPT and 10tLPT you will get 20 tLPT-SWAP
 
 But make sure to check your balance first and enter it as `$SWAP_AMOUNT`
 
+`$RECEIVER` defaults to the transaction sender but can be optionally be provided to transfer ownership of farmed tokens to another account (e.g. multisig)
+
 ```bash
-npx hardhat farm --tenderizer $NAME --tokenamount $SWAP_AMOUNT --network $NETWORK
+npx hardhat farm --tenderizer $NAME --tokenamount $SWAP_AMOUNT --receiver $RECEIVER --network $NETWORK
 ```
+
 
 ## Ensure Parameters are set correctly
 
