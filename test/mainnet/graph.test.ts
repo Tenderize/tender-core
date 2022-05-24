@@ -61,7 +61,7 @@ describe('Graph Mainnet Fork Test', () => {
   })
 
   const STEAK_AMOUNT = '100000'
-  const NODE = '0x4D6a8776a164776C93618233a0003E8894e7e6C2'
+  const NODE = '0x63e2C9a3Db9fFd3cC108f08EAd601966EA031f5C'
   const stakingAddr = '0xF55041E37E12cD407ad00CE2910B8269B01263b9'
   const curationAddr = '0x8FE00a685Bcb3B2cc296ff6FfEaB10acA4CE1538'
   const epochManagerAddr = '0x64F990Bf16552A693dCB043BB7bf3866c5E05DdB'
