@@ -32,7 +32,7 @@ contract Livepeer is Tenderizer {
 
     ILivepeer livepeer;
 
-    uint256 private constant ethFees_threshold = 1**17;
+    uint256 private constant ethFees_threshold = 5**17; // DEPRECATED
 
     WithdrawalLocks.Locks withdrawLocks;
 
@@ -140,8 +140,8 @@ contract Livepeer is Tenderizer {
         uint256 ethFees = livepeer.pendingFees(address(this), MAX_ROUND);
         // First claim any fees that are not underlying tokens
         // withdraw fees
-        if (ethFees >= ethFees_threshold) {
-            livepeer.withdrawFees();
+        if (ethFees > 0) {
+            livepeer.withdrawFees(payable(address(this)), ethFees);
 
             // Wrap ETH
             uint256 bal = address(this).balance;
