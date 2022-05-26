@@ -28,7 +28,7 @@ contract LivepeerMock is MockStaking {
         token.transfer(unstakeLocks[_unbondingLockId].account, unstakeLocks[_unbondingLockId].amount);
     }
 
-    function withdrawFees() external reverted(this.withdrawFees.selector) {
+    function withdrawFees(address _recepeint, uint256 _amount) external reverted(this.withdrawFees.selector) {
         staked += secondaryRewards;
         secondaryRewards = 0;
     }
