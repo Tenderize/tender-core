@@ -34,22 +34,22 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
     proxy: {
       proxyContract: 'EIP173ProxyWithReceive',
       owner: deployer,
-      execute: {
-        init: {
-          methodName: 'initialize',
-          args: [
-            process.env.TOKEN,
-            process.env.SYMBOL,
-            process.env.CONTRACT,
-            process.env.VALIDATOR,
-            FEE,
-            LIQUIDITY_FEE,
-            (await deployments.get('TenderToken')).address,
-            (await deployments.get('TenderFarmFactory')).address,
-            (await deployments.get('TenderSwapFactoryV1')).address
-          ]
-        }
-      }
+      // execute: {
+      //   init: {
+      //     methodName: 'initialize',
+      //     args: [
+      //       process.env.TOKEN,
+      //       process.env.SYMBOL,
+      //       process.env.CONTRACT,
+      //       process.env.VALIDATOR,
+      //       FEE,
+      //       LIQUIDITY_FEE,
+      //       (await deployments.get('TenderToken')).address,
+      //       (await deployments.get('TenderFarmFactory')).address,
+      //       (await deployments.get('TenderSwapFactoryV1')).address
+      //     ]
+      //   }
+      // }
     }
   })
 
@@ -58,46 +58,46 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
   const tenderTokenAddress = await Tenderizer.tenderToken()
   const TenderFarm: TenderFarm = (await ethers.getContractAt('TenderFarm', await Tenderizer.tenderFarm())) as TenderFarm
 
-  // register protocol
-  const allDeployed = await deployments.all()
-  if (allDeployed.Registry) {
-    const registryAddr = allDeployed.Registry.address
-    const Registry: Registry = (await ethers.getContractAt('Registry', registryAddr)) as Registry
+  // // register protocol
+  // const allDeployed = await deployments.all()
+  // if (allDeployed.Registry) {
+  //   const registryAddr = allDeployed.Registry.address
+  //   const Registry: Registry = (await ethers.getContractAt('Registry', registryAddr)) as Registry
 
-    await Registry.addTenderizer({
-      name: NAME,
-      steak: process.env.TOKEN || constants.AddressZero,
-      tenderizer: Tenderizer.address,
-      tenderToken: tenderTokenAddress,
-      tenderSwap: swapAddress,
-      tenderFarm: TenderFarm.address
-    })
-  } else if (hre.network.name === 'mainnet' || hre.network.name === 'rinkeby') {
-    throw new Error('can not register Tenderizer, Registry not deployed')
-  }
+  //   await Registry.addTenderizer({
+  //     name: NAME,
+  //     steak: process.env.TOKEN || constants.AddressZero,
+  //     tenderizer: Tenderizer.address,
+  //     tenderToken: tenderTokenAddress,
+  //     tenderSwap: swapAddress,
+  //     tenderFarm: TenderFarm.address
+  //   })
+  // } else if (hre.network.name === 'mainnet' || hre.network.name === 'rinkeby') {
+  //   throw new Error('can not register Tenderizer, Registry not deployed')
+  // }
 
-  // Deploy faucet if not mainnet
-  if (hre.network.name !== 'mainnet' && hre.network.name !== 'arbitrum') {
-    const tokenAddress = process.env.TOKEN // Address of token
-    const requestAmount = process.env.FAUCET_REQUEST_AMOUNT // Amount to dispense per request
-    const requestWait = process.env.FAUCET_REQUEST_WAIT // Hours requester has to wait before requesting again
-    const seedAmount = process.env.FAUCET_SEED_AMOUNT // Seed amount of tokens to be added to the faucet
+  // // Deploy faucet if not mainnet
+  // if (hre.network.name !== 'mainnet' && hre.network.name !== 'arbitrum') {
+  //   const tokenAddress = process.env.TOKEN // Address of token
+  //   const requestAmount = process.env.FAUCET_REQUEST_AMOUNT // Amount to dispense per request
+  //   const requestWait = process.env.FAUCET_REQUEST_WAIT // Hours requester has to wait before requesting again
+  //   const seedAmount = process.env.FAUCET_SEED_AMOUNT // Seed amount of tokens to be added to the faucet
 
-    if (!tokenAddress || !requestAmount || !requestWait || !seedAmount) {
-      return
-    }
+  //   if (!tokenAddress || !requestAmount || !requestWait || !seedAmount) {
+  //     return
+  //   }
 
-    const Faucet = await deploy('TokenFaucet', {
-      from: deployer,
-      log: true,
-      args: [tokenAddress, ethers.utils.parseEther(requestAmount), +requestWait]
-    })
+  //   const Faucet = await deploy('TokenFaucet', {
+  //     from: deployer,
+  //     log: true,
+  //     args: [tokenAddress, ethers.utils.parseEther(requestAmount), +requestWait]
+  //   })
 
-    // Add seed funds
-    const Token: ERC20 = (await ethers.getContractAt('ERC20', tokenAddress)) as ERC20
-    await Token.transfer(Faucet.address, ethers.utils.parseEther(seedAmount))
-    deployments.save(`${NAME}_Faucet`, Faucet)
-  }
+  //   // Add seed funds
+  //   const Token: ERC20 = (await ethers.getContractAt('ERC20', tokenAddress)) as ERC20
+  //   await Token.transfer(Faucet.address, ethers.utils.parseEther(seedAmount))
+  //   deployments.save(`${NAME}_Faucet`, Faucet)
+  // }
 }
 
 func.dependencies = ['Registry', 'TenderToken', 'TenderSwap', 'TenderFarm']
