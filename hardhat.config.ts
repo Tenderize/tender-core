@@ -22,6 +22,8 @@ import fs from 'fs'
 dotenv.config()
 const PRIVATE_KEY = process.env.PRIVATE_KEY
 const JSON_RPC = process.env.JSON_RPC
+const ALCHEMY_MAINNET_RPC = process.env.ALCHEMY_MAINNET_RPC
+const ALCHEMY_ARBITRUM_RPC = process.env.ALCHEMY_ARBITRUM_RPC
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY
 const ARBISCAN_API_KEY = process.env.ARBISCAN_API_KEY
 
@@ -62,7 +64,7 @@ const config: HardhatUserConfig = {
       blockGasLimit: 12000000
     },
     mainnet: {
-      url: JSON_RPC,
+      url: ALCHEMY_MAINNET_RPC,
       accounts: PRIVATE_KEY ? [`0x${PRIVATE_KEY}`] : undefined
     },
     rinkeby: {
@@ -70,7 +72,7 @@ const config: HardhatUserConfig = {
       accounts: PRIVATE_KEY ? [`0x${PRIVATE_KEY}`] : undefined
     },
     arbitrum: {
-      url: JSON_RPC,
+      url: ALCHEMY_ARBITRUM_RPC,
       accounts: PRIVATE_KEY ? [`0x${PRIVATE_KEY}`] : undefined
     },
     arbitrumRinkeby: {
@@ -90,6 +92,7 @@ const config: HardhatUserConfig = {
   etherscan: {
     apiKey: {
       mainnet: ETHERSCAN_API_KEY,
+      rinkeby: ETHERSCAN_API_KEY,
       arbitrumOne: ARBISCAN_API_KEY
     }
   }
