@@ -11,7 +11,7 @@ interface ILivepeer {
 
     function withdrawStake(uint256 _unbondingLockId) external;
 
-    function withdrawFees() external;
+    function withdrawFees(address payable _recipient, uint256 _amount) external;
 
     function pendingFees(address _delegator, uint256 _endRound) external view returns (uint256);
 
