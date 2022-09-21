@@ -24,10 +24,10 @@ task('tenderizer-ownership', 'Set a new owner for the tenderizer contract')
       await Tenderizer.tenderSwap()
     )) as TenderSwap
 
-    await Tenderizer.setGov(args.owner)
+    await (await Tenderizer.setGov(args.owner)).wait()
     console.log(`Governance for ${args.tenderizer} Tenderizer changed to ${await Tenderizer.gov()}`)
-    await TenderizerAsProxy.transferOwnership(args.owner)
+    await (await TenderizerAsProxy.transferOwnership(args.owner)).wait()
     console.log(`Proxy owner for ${args.tenderizer} Tenderizer changed to ${await TenderizerAsProxy.owner()}`)
-    await TenderSwap.transferOwnership(args.owner)
+    await (await TenderSwap.transferOwnership(args.owner)).wait()
     console.log(`TenderSwap owner for ${args.tenderizer} Tenderizer changed to ${await TenderSwap.owner()}`)
   })
