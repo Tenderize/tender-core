@@ -63,12 +63,12 @@ contract BNB is Tenderizer {
         uint256 pendingWithdrawals = withdrawPool.getAmount();
         uint256 relayerFee = bnb.getRelayerFee();
 
-        // This check also validates 'amount - pendingWithdrawals' > 0
+        // This check also validates 'amount - pendingWithdrawals - relayerFee' > minDelegation
         // Shares the cost of the relayer fee in BNB among all depositers
         unchecked {
             amount = amount - pendingWithdrawals - relayerFee;
         }
-        if (amount < type(uint256).max - pendingWithdrawals - relayerFee) return;
+        if (amount < type(uint256).max - pendingWithdrawals - relayerFee - bnb.getMinDelegation()) return;
 
         steak.safeIncreaseAllowance(address(bnb), amount);
 
