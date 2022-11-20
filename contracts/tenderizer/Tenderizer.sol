@@ -119,7 +119,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     /// @inheritdoc ITenderizer
-    function rescueUnlock() external override onlyGov returns (uint256) {
+    function rescueUnlock() external payable override onlyGov returns (uint256) {
         return _unstake(address(this), node, currentPrincipal);
     }
 
@@ -131,12 +131,12 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     /// @inheritdoc ITenderizer
-    function rescueWithdraw(uint256 _unstakeLockID) external override onlyGov {
+    function rescueWithdraw(uint256 _unstakeLockID) external payable override onlyGov {
         _withdraw(address(this), _unstakeLockID);
     }
 
     /// @inheritdoc ITenderizer
-    function claimRewards() external override {
+    function claimRewards() external payable override {
         _claimRewards();
     }
 
