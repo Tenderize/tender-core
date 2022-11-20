@@ -24,7 +24,7 @@ import "../helpers/SelfPermit.sol";
 abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     using SafeERC20 for IERC20;
 
-    uint256 constant private MAX_FEE = 5 * 10**20;
+    uint256 private constant MAX_FEE = 5 * 10**20;
 
     IERC20 public steak;
     ITenderToken public tenderToken;
@@ -88,7 +88,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     /// @inheritdoc ITenderizer
-    function deposit(uint256 _amount) external override {
+    function deposit(uint256 _amount) external payable override {
         _depositHook(msg.sender, _amount);
     }
 
@@ -99,7 +99,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         uint8 _v,
         bytes32 _r,
         bytes32 _s
-    ) external override {
+    ) external payable override {
         selfPermit(address(steak), _amount, _deadline, _v, _r, _s);
 
         _depositHook(msg.sender, _amount);
@@ -110,7 +110,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         require(_amount > 0, "ZERO_AMOUNT");
 
         require(tenderToken.burn(msg.sender, _amount), "TENDER_BURN_FAILED");
-        
+
         // Execute state updates to pending withdrawals
         // Unstake tokens
         uint256 id = _unstake(msg.sender, node, _amount);
@@ -124,7 +124,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     /// @inheritdoc ITenderizer
-    function withdraw(uint256 _unstakeLockID) external override {
+    function withdraw(uint256 _unstakeLockID) external payable override {
         // Execute state updates to pending withdrawals
         // Transfer tokens to _account
         _withdraw(msg.sender, _unstakeLockID);
@@ -146,7 +146,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     /// @inheritdoc ITenderizer
-    function stake(uint256 _amount) external override onlyGov {
+    function stake(uint256 _amount) external payable override onlyGov {
         // Execute state updates
         // approve pendingTokens for staking
         // Stake tokens
@@ -266,7 +266,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         tenderToken.mint(address(this), liquidityFees);
         currentPrincipal += liquidityFees;
         uint256 balAfter = tenderToken.balanceOf(address(this));
-        uint256 stakeDiff = balAfter-balBefore;
+        uint256 stakeDiff = balAfter - balBefore;
         // minting sometimes generates a little less, due to share calculation
         // hence using the balance to transfer here
         tenderToken.approve(address(tenderFarm), stakeDiff);

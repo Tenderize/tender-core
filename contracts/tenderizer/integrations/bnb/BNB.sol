@@ -49,6 +49,27 @@ contract BNB is Tenderizer {
         bnb = _bnb;
     }
 
+    // override depositHook to handle native chain currency instead of ERC20 tokens
+    // uses msg.value instead of the passed amount
+    function _depositHook(address _for, uint256 _amount) internal override {
+        require(msg.value > 0, "ZERO_AMOUNT");
+
+        uint256 amountOut = _calcDepositOut(msg.value);
+
+        // mint tenderTokens
+        require(tenderToken.mint(_for, amountOut), "TENDER_MINT_FAILED");
+
+        _deposit(_for, msg.value);
+    }
+
+    // TODO: require user to submit relayer fee to msg.value
+    // and check msg.value - relayerFee > 0 ?
+    // -- user paying extra doesn't feel nice
+    // TODO: Option 2 would be to deduct it from the deposit
+    // -- user receiving less feels not nice and imposes min deposit
+    // TODO: Option 3 just don't deduct it here or handle it in deposit
+    // Take it from pending funds to be staked and spread the cost over everyone
+    // -- feels okay, might need a stake threshold that's a multiple of the fee
     function _calcDepositOut(uint256 _amountIn) internal view override returns (uint256) {
         return _amountIn - bnb.getRelayerFee();
     }
@@ -60,20 +81,19 @@ contract BNB is Tenderizer {
 
     function _stake(uint256 _amount) internal override {
         uint256 amount = _amount;
-        uint256 pendingWithdrawals = withdrawPool.getAmount();
         uint256 relayerFee = bnb.getRelayerFee();
 
         // This check also validates 'amount - pendingWithdrawals - relayerFee' > minDelegation
         // Shares the cost of the relayer fee in BNB among all depositers
         unchecked {
-            amount = amount - pendingWithdrawals - relayerFee;
+            amount = amount - relayerFee;
         }
-        if (amount < type(uint256).max - pendingWithdrawals - relayerFee - bnb.getMinDelegation()) return;
-
-        steak.safeIncreaseAllowance(address(bnb), amount);
+        if (amount < type(uint256).max - relayerFee - bnb.getMinDelegation()) return;
 
         // delegate tokens in BNB staking contract
-        bnb.delegate(node, amount);
+        // use the full '_amount' for msg.value
+        // use the amount - relayerFee as argument for 'bnb.delegate'
+        bnb.delegate{ value: _amount }(node, amount);
 
         emit Stake(node, amount);
     }
@@ -87,19 +107,28 @@ contract BNB is Tenderizer {
         emit Unstake(_account, _node, _amount, withdrawalID);
     }
 
+    // TODO: handle relayer fee
+    // Subtract it from amount that is actually undelegated
+    // While gov can provide the relayer fee
+    // In V2 this would need to be automated
+    // and the contract would always need to keep
+    // at least the relayer fee on hand
+    // the latter would have to be handled in '_claimRewards'
+    // so the implementation of this function leaves both options open
     function processUnstake() external onlyGov {
         // prevent more unstakes when one is pending
         require(block.timestamp >= bnb.getPendingUndelegateTime(address(this), node));
 
         uint256 amount = withdrawPool.processUnlocks();
         // undelegate from bnb staking contract
-        bnb.undelegate(node, amount);
+        uint256 relayerFee = bnb.getRelayerFee();
+        bnb.undelegate{ value: relayerFee }(node, amount);
         emit ProcessUnstakes(msg.sender, node, amount);
     }
 
     function _withdraw(address _account, uint256 _withdrawalID) internal override {
         uint256 amount = withdrawPool.withdraw(_withdrawalID, _account);
-        steak.safeTransfer(_account, amount);
+        payable(_account).transfer(amount);
         emit Withdraw(_account, amount, _withdrawalID);
     }
 
@@ -109,13 +138,33 @@ contract BNB is Tenderizer {
         emit ProcessWithdraws(msg.sender, amount);
     }
 
+    function _claimRewards() internal override {
+        // _claimSecondaryRewards(); - skip call to save gas
+        int256 rewards = _processNewStake();
+
+        if (rewards > 0) {
+            uint256 rewards_ = uint256(rewards);
+            uint256 pFees = _calculateFees(rewards_, protocolFee);
+            uint256 lFees = _calculateFees(rewards_, liquidityFee);
+            currentPrincipal += (rewards_ - pFees - lFees);
+
+            _collectFees(pFees);
+            _collectLiquidityFees(lFees);
+        } else if (rewards < 0) {
+            uint256 rewards_ = uint256(-rewards);
+            currentPrincipal -= rewards_;
+        }
+
+        _stake(address(this).balance - withdrawPool.getAmount());
+    }
+
     function _claimSecondaryRewards() internal override {}
 
     function _processNewStake() internal override returns (int256 rewards) {
         bnb.claimReward();
         uint256 stake = bnb.getTotalDelegated(address(this));
         uint256 currentPrincipal_ = currentPrincipal;
-        uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)) - withdrawPool.amount);
+        uint256 currentBal = _calcDepositOut(address(this).balance - withdrawPool.amount);
 
         rewards = int256(stake) - int256(currentPrincipal_);
 

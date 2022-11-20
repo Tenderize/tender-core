@@ -86,7 +86,7 @@ interface ITenderizer {
      * awaiting to be staked.
      * @dev requires '_amount' to be approved by '_from'.
      */
-    function deposit(uint256 _amount) external;
+    function deposit(uint256 _amount) external payable;
 
     /**
      * @notice Deposit tokens in Tenderizer with permit.
@@ -105,14 +105,14 @@ interface ITenderizer {
         uint8 _v,
         bytes32 _r,
         bytes32 _s
-    ) external;
+    ) external payable;
 
     /**
      * @notice Stake '_amount' of tokens.
      * @param _amount amount to stake
      * @dev Only callable by Gov.
      */
-    function stake(uint256 _amount) external;
+    function stake(uint256 _amount) external payable;
 
     /**
      * @notice Unstake '_amount' of tokens from '_account'.
@@ -136,10 +136,10 @@ interface ITenderizer {
      * @dev If '_amount' isn't specified all unstake tokens by '_account' will be withdrawn.
      * @dev Requires '_account' to have unstaked prior to calling withdraw.
      */
-    function withdraw(uint256 _unstakeLockID) external;
+    function withdraw(uint256 _unstakeLockID) external payable;
 
     /**
-     * @notice RescueWithdraw withdraws all tokens into the Tenderizer from the underlying protocol 
+     * @notice RescueWithdraw withdraws all tokens into the Tenderizer from the underlying protocol
      * after the unlock period ends
      * @dev To be called after rescueUnlock() with the unstakeLockID returned there.
      * @dev Process unlocks/withdrawals before rescueWithdraw for integrations with WithdrawPools.
