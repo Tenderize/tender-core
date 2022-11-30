@@ -24,7 +24,7 @@ import "../helpers/SelfPermit.sol";
 abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     using SafeERC20 for IERC20;
 
-    uint256 constant private MAX_FEE = 5 * 10**20;
+    uint256 private constant MAX_FEE = 5 * 10**20;
 
     IERC20 public steak;
     ITenderToken public tenderToken;
@@ -38,6 +38,8 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     uint256 public currentPrincipal; // Principal since last claiming earnings
 
     address public gov;
+
+    bool public claimRewardsPaused;
 
     modifier onlyGov() {
         require(msg.sender == gov);
@@ -110,7 +112,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         require(_amount > 0, "ZERO_AMOUNT");
 
         require(tenderToken.burn(msg.sender, _amount), "TENDER_BURN_FAILED");
-        
+
         // Execute state updates to pending withdrawals
         // Unstake tokens
         uint256 id = _unstake(msg.sender, node, _amount);
@@ -228,6 +230,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     function _withdraw(address _account, uint256 _unstakeLockID) internal virtual;
 
     function _claimRewards() internal virtual {
+        require(!claimRewardsPaused, "REBASES_PAUSED");
         _claimSecondaryRewards();
 
         int256 rewards = _processNewStake();
@@ -266,7 +269,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         tenderToken.mint(address(this), liquidityFees);
         currentPrincipal += liquidityFees;
         uint256 balAfter = tenderToken.balanceOf(address(this));
-        uint256 stakeDiff = balAfter-balBefore;
+        uint256 stakeDiff = balAfter - balBefore;
         // minting sometimes generates a little less, due to share calculation
         // hence using the balance to transfer here
         tenderToken.approve(address(tenderFarm), stakeDiff);
@@ -283,4 +286,8 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     function _setStakingContract(address _stakingContract) internal virtual;
+
+    function setClaimRewardsPaused(bool _claimRewardsPaused) external onlyGov {
+        claimRewardsPaused = _claimRewardsPaused;
+    }
 }

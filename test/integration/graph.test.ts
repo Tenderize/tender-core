@@ -6,7 +6,7 @@ import {
 
 import { percOf2 } from '../util/helpers'
 
-import chai from 'chai'
+import chai, { expect } from 'chai'
 import {
   solidity
 } from 'ethereum-waffle'
@@ -189,5 +189,19 @@ describe('Graph Integration Test', () => {
     describe('Rescue Functions', rescueFunctions.bind(this))
     describe('Upgrades', upgradeTests.bind(this))
     describe('Setting contract variables', setterTests.bind(this))
+
+    describe('Pausing Rebases', async function () {
+      it('sets pausing rebases', async function () {
+        expect(await this.Tenderizer.claimRewardsPaused()).to.eq(false)
+        await this.Tenderizer.setClaimRewardsPaused(true)
+        expect(await this.Tenderizer.claimRewardsPaused()).to.eq(true)
+      })
+
+      it('claimRewards() reverts if paused', async function () {
+        await this.Tenderizer.setClaimRewardsPaused(true)
+        await expect (this.Tenderizer.claimRewards()).to.be.revertedWith('REBASES_PAUSED')
+      })
+    })
   })
 })
+

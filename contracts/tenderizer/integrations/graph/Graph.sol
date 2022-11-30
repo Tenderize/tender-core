@@ -12,6 +12,8 @@ import "../../Tenderizer.sol";
 import "../../WithdrawalPools.sol";
 import "./IGraph.sol";
 
+import "hardhat/console.sol";
+
 import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
 
 contract Graph is Tenderizer {
@@ -98,13 +100,16 @@ contract Graph is Tenderizer {
     }
 
     function processUnstake() external onlyGov {
+        _claimRewards();
         uint256 amount = withdrawPool.processUnlocks();
 
         address node_ = node;
 
         // Calculate the amount of shares to undelegate
         IGraph.DelegationPool memory delPool = graph.delegationPools(node_);
+        IGraph.Delegation memory delegation = graph.getDelegation(node, address(this));
 
+        uint256 delShares = delegation.shares;
         uint256 totalShares = delPool.shares;
         uint256 totalTokens = delPool.tokens;
 
@@ -163,14 +168,12 @@ contract Graph is Tenderizer {
 
         uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)) - withdrawPool.amount);
 
-        // calculate what the new currentPrinciple would be excluding 
+        // calculate what the new currentPrinciple would be excluding
         // pending unlocks and pending user withdrawals
-        stake = stake +
-            currentBal -
-            withdrawPool.pendingUnlock;
-            // already subtracted withdrawalPool.amount from the current balancee
+        stake = stake + currentBal - withdrawPool.pendingUnlock;
+        // already subtracted withdrawalPool.amount from the current balancee
 
-        rewards = int256(stake) - int256(currentPrincipal_); 
+        rewards = int256(stake) - int256(currentPrincipal_);
 
         // Difference is negative, slash withdrawalpool
         if (rewards < 0) {
@@ -178,7 +181,7 @@ contract Graph is Tenderizer {
             uint256 unstakePoolTokens = withdrawPool.totalTokens();
             uint256 totalTokens = unstakePoolTokens + currentPrincipal_;
             if (totalTokens > 0) {
-                uint256 unstakePoolSlash = (currentPrincipal_ - stake) * unstakePoolTokens / totalTokens;
+                uint256 unstakePoolSlash = ((currentPrincipal_ - stake) * unstakePoolTokens) / totalTokens;
                 withdrawPool.updateTotalTokens(unstakePoolTokens - unstakePoolSlash);
             }
         }
@@ -187,11 +190,7 @@ contract Graph is Tenderizer {
     }
 
     function _setStakingContract(address _stakingContract) internal override {
-        emit GovernanceUpdate(
-            "STAKING_CONTRACT",
-            abi.encode(graph),
-            abi.encode(_stakingContract)
-        );
+        emit GovernanceUpdate("STAKING_CONTRACT", abi.encode(graph), abi.encode(_stakingContract));
         graph = IGraph(_stakingContract);
     }
 }
