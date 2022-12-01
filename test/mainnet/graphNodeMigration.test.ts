@@ -51,6 +51,9 @@ describe("Graph Mainnet Fork Test", () => {
 
   const testTimeout = 120000;
 
+  const DELEGATION_TAX = BigNumber.from(5000);
+  const MAX_PPM = BigNumber.from(1000000);
+
   const ALCHEMY_KEY = "s93KFT7TnttkCPdNS2Fg_HAoCpP6dEda";
 
   before("deploy Graph Tenderizer", async function () {
@@ -137,25 +140,32 @@ describe("Graph Mainnet Fork Test", () => {
       });
       const gov = await ethers.provider.getSigner(govAddress);
       const lockID = await Tenderizer.connect(gov).callStatic.rescueUnlock();
+      // console.log((await Tenderizer.currentPrincipal()).toString());
       await Tenderizer.connect(gov).rescueUnlock();
+      // console.log((await Tenderizer.currentPrincipal()).toString());
       await Tenderizer.connect(gov).processUnstake();
+      // console.log((await Tenderizer.currentPrincipal()).toString());
       // TODO: Progress blocks
       for (let j = 0; j < 100; j++) {
         await hre.ethers.provider.send("evm_mine", []);
       }
       await Tenderizer.connect(gov).processWithdraw();
+      // console.log((await Tenderizer.currentPrincipal()).toString());
       await Tenderizer.connect(gov).rescueWithdraw(lockID);
+      // console.log((await Tenderizer.currentPrincipal()).toString());
       await Tenderizer.connect(gov).setNode(newNode);
-      await Tenderizer.connect(gov).stake(lockID);
       await Tenderizer.connect(gov).claimRewards();
+      console.log((await Tenderizer.currentPrincipal()).toString());
     });
 
     it("new node is set", async function () {
       expect(await Tenderizer.node()).to.eq(newNode);
     });
 
-    it("current priciple stays the same", async function () {
-      expect(await Tenderizer.currentPrincipal()).to.eq(cpBefore);
+    it("current priciple stays the same - delegation tax", async function () {
+      const expCP = cpBefore.sub(cpBefore.mul(DELEGATION_TAX).div(MAX_PPM));
+      console.log("diff:", expCP.sub(await Tenderizer.currentPrincipal()).toString());
+      expect(await Tenderizer.currentPrincipal()).to.eq(expCP);
     });
   });
 });

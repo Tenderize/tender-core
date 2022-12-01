@@ -100,7 +100,7 @@ contract Graph is Tenderizer {
     }
 
     function processUnstake() external onlyGov {
-        _claimRewards();
+        _stake(steak.balanceOf(address(this)) - withdrawPool.amount);
         uint256 amount = withdrawPool.processUnlocks();
 
         address node_ = node;
@@ -178,6 +178,8 @@ contract Graph is Tenderizer {
         // Difference is negative, slash withdrawalpool
         if (rewards < 0) {
             // calculate amount to subtract relative to current principal
+            console.log("slash");
+            console.log(uint256(-rewards));
             uint256 unstakePoolTokens = withdrawPool.totalTokens();
             uint256 totalTokens = unstakePoolTokens + currentPrincipal_;
             if (totalTokens > 0) {
