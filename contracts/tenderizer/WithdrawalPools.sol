@@ -36,11 +36,7 @@ library WithdrawalPools {
 
         uint256 shares = calcShares(_pool, _amount);
 
-        _pool.withdrawals[withdrawalID] = Withdrawal({
-            shares: shares,
-            receiver: _receiver,
-            epoch: _pool.epoch
-        });
+        _pool.withdrawals[withdrawalID] = Withdrawal({ shares: shares, receiver: _receiver, epoch: _pool.epoch });
 
         _pool.pendingUnlock += _amount;
 
@@ -68,7 +64,7 @@ library WithdrawalPools {
         delete _pool.withdrawals[_withdrawalID];
     }
 
-    function processUnlocks(Pool storage _pool) internal returns (uint256 pendingUnlock_){
+    function processUnlocks(Pool storage _pool) internal returns (uint256 pendingUnlock_) {
         require(_pool.epoch == _pool.lastEpoch, "ONGOING_UNLOCK");
         _pool.pendingWithdrawal += _pool.pendingUnlock;
         pendingUnlock_ = _pool.pendingUnlock;
@@ -87,21 +83,19 @@ library WithdrawalPools {
         // calculate relative amounts to subtract from 'amount' and 'pendingUnlock'
         uint256 amount_ = _pool.amount;
         uint256 pendingUnlock_ = _pool.pendingUnlock;
-        uint256 pendingWithdrawal = _pool.pendingWithdrawal;
-        uint256 total = amount_ + pendingUnlock_ + pendingWithdrawal;
-        if(total > 0) {
-            _pool.amount = _newAmount * amount_ / total;
-            _pool.pendingUnlock = _newAmount * pendingUnlock_ / total;
-            _pool.pendingWithdrawal = _newAmount * pendingWithdrawal / total;
+        uint256 total = amount_ + pendingUnlock_;
+        if (total > 0) {
+            _pool.amount = (_newAmount * amount_) / total;
+            _pool.pendingUnlock = (_newAmount * pendingUnlock_) / total;
         }
     }
 
     function totalTokens(Pool storage _pool) internal view returns (uint256) {
-        return  _pool.amount + _pool.pendingUnlock + _pool.pendingWithdrawal;
+        return _pool.amount + _pool.pendingUnlock + _pool.pendingWithdrawal;
     }
 
     function getAmount(Pool storage _pool) internal view returns (uint256) {
-        return  _pool.amount;
+        return _pool.amount;
     }
 
     function epoch(Pool storage _pool) internal view returns (uint256) {
@@ -112,11 +106,7 @@ library WithdrawalPools {
         return _pool.lastEpoch;
     }
 
-    function getWithdrawal(Pool storage _pool, uint256 _withdrawalID)
-        internal
-        view
-        returns (Withdrawal memory)
-    {
+    function getWithdrawal(Pool storage _pool, uint256 _withdrawalID) internal view returns (Withdrawal memory) {
         return _pool.withdrawals[_withdrawalID];
     }
 
