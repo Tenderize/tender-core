@@ -126,6 +126,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
 
     function migrateUnlock() external onlyGov returns (uint256) {
         uint256 amount = _tokensDelegated(node);
+        currentPrincipal -= amount;
         pendingMigration = amount;
         return _unstake(address(this), node, amount);
     }

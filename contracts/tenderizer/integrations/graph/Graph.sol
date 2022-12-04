@@ -156,9 +156,14 @@ contract Graph is Tenderizer {
 
         // calculate what the new currentPrinciple would be excluding
         // pending unlocks and pending user withdrawals
-        stake = stake + currentBal - withdrawPool.pendingUnlock;
+        stake = (stake - withdrawPool.pendingUnlock) + (currentBal - withdrawPool.pendingWithdrawal) + pendingMigration;
         // already subtracted withdrawalPool.amount from the current balancee
 
+        // stake = stake + current Bal - withdrawPool.pendingUnlock + pendingMigration
+        // 1. MigrateUnlock: 500 + 0 - 500 + 500 = 500
+        // 2. ProcessUnstake: 0 + 0 - 0 + 500 = 500
+        // 3. processWithdraw: 0 + 500 - 0 + 500 = 1000 !incorrect
+        // 4. MigrateWithdraw: 0 + 500 - 0 + 0 = 500 correct
         rewards = int256(stake) - int256(currentPrincipal_);
 
         // Difference is negative, slash withdrawalpool
