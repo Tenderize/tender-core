@@ -148,29 +148,18 @@ contract Graph is Tenderizer {
     function _claimSecondaryRewards() internal override {}
 
     function _processNewStake() internal override returns (int256 rewards) {
-        IGraph.Delegation memory delegation = graph.getDelegation(node, address(this));
-        IGraph.DelegationPool memory delPool = graph.delegationPools(node);
-
-        uint256 delShares = delegation.shares;
-        uint256 totalShares = delPool.shares;
-        uint256 totalTokens = delPool.tokens;
-
-        if (totalShares == 0) return 0;
-
-        uint256 stake = (delShares * totalTokens) / totalShares;
+        uint256 stake = _tokensDelegated(node);
 
         uint256 currentPrincipal_ = currentPrincipal;
 
         uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)) - withdrawPool.amount);
 
-        // calculate what the new currentPrinciple would be excluding 
+        // calculate what the new currentPrinciple would be excluding
         // pending unlocks and pending user withdrawals
-        stake = stake +
-            currentBal -
-            withdrawPool.pendingUnlock;
-            // already subtracted withdrawalPool.amount from the current balancee
+        stake = stake + currentBal - withdrawPool.pendingUnlock;
+        // already subtracted withdrawalPool.amount from the current balancee
 
-        rewards = int256(stake) - int256(currentPrincipal_); 
+        rewards = int256(stake) - int256(currentPrincipal_);
 
         // Difference is negative, slash withdrawalpool
         if (rewards < 0) {
@@ -178,7 +167,7 @@ contract Graph is Tenderizer {
             uint256 unstakePoolTokens = withdrawPool.totalTokens();
             uint256 totalTokens = unstakePoolTokens + currentPrincipal_;
             if (totalTokens > 0) {
-                uint256 unstakePoolSlash = (currentPrincipal_ - stake) * unstakePoolTokens / totalTokens;
+                uint256 unstakePoolSlash = ((currentPrincipal_ - stake) * unstakePoolTokens) / totalTokens;
                 withdrawPool.updateTotalTokens(unstakePoolTokens - unstakePoolSlash);
             }
         }
@@ -186,12 +175,21 @@ contract Graph is Tenderizer {
         emit RewardsClaimed(rewards, stake, currentPrincipal_);
     }
 
+    function _tokensDelegated(address _node) internal view override returns (uint256) {
+        IGraph.Delegation memory delegation = graph.getDelegation(_node, address(this));
+        IGraph.DelegationPool memory delPool = graph.delegationPools(_node);
+
+        uint256 delShares = delegation.shares;
+        uint256 totalShares = delPool.shares;
+        uint256 totalTokens = delPool.tokens;
+
+        if (totalShares == 0) return 0;
+
+        return (delShares * totalTokens) / totalShares;
+    }
+
     function _setStakingContract(address _stakingContract) internal override {
-        emit GovernanceUpdate(
-            "STAKING_CONTRACT",
-            abi.encode(graph),
-            abi.encode(_stakingContract)
-        );
+        emit GovernanceUpdate("STAKING_CONTRACT", abi.encode(graph), abi.encode(_stakingContract));
         graph = IGraph(_stakingContract);
     }
 }
