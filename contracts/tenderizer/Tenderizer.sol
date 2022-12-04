@@ -39,6 +39,8 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
 
     address public gov;
 
+    uint256 pendingMigration;
+
     modifier onlyGov() {
         require(msg.sender == gov);
         _;
@@ -122,6 +124,12 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
         return _unstake(address(this), node, _tokensDelegated(node));
     }
 
+    function migrateUnlock() external onlyGov returns (uint256) {
+        uint256 amount = _tokensDelegated(node);
+        pendingMigration = amount;
+        return _unstake(address(this), node, amount);
+    }
+
     /// @inheritdoc ITenderizer
     function withdraw(uint256 _unstakeLockID) external override {
         // Execute state updates to pending withdrawals
@@ -131,6 +139,11 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
 
     /// @inheritdoc ITenderizer
     function rescueWithdraw(uint256 _unstakeLockID) external override onlyGov {
+        _withdraw(address(this), _unstakeLockID);
+    }
+
+    function migrateWithdraw(uint256 _unstakeLockID) external onlyGov {
+        pendingMigration = 0;
         _withdraw(address(this), _unstakeLockID);
     }
 

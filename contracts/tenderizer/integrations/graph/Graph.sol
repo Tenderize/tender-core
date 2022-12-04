@@ -132,10 +132,10 @@ contract Graph is Tenderizer {
         emit Withdraw(_account, amount, _withdrawalID);
     }
 
-    function processWithdraw() external onlyGov {
+    function processWithdraw(address _node) external onlyGov {
         uint256 balBefore = steak.balanceOf(address(this));
 
-        graph.withdrawDelegated(node, address(0));
+        graph.withdrawDelegated(_node, address(0));
 
         uint256 balAfter = steak.balanceOf(address(this));
         uint256 amount = balAfter - balBefore;
