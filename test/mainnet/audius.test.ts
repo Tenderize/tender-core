@@ -53,7 +53,7 @@ describe('Audius Mainnet Fork Test', () => {
     deployer = namedAccs.deployer
   })
 
-  const STEAK_AMOUNT = '100000'
+  const STEAK_AMOUNT = '10000000'
   const NODE = '0x528D6Fe7dF9356C8EabEC850B0f908F53075B382'
 
   const delegateManagerAddr = '0x4d7968ebfD390D5E7926Cb3587C39eFf2F9FB225'
