@@ -10,6 +10,8 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../../../libs/MathUtils.sol";
 
 import "../../Tenderizer.sol";
+import { GovernanceParameter } from "../../ITenderizer.sol";
+
 import "./IMatic.sol";
 
 import "../../WithdrawalLocks.sol";
@@ -59,7 +61,7 @@ contract Matic is Tenderizer {
 
     function setNode(address _node) external override onlyGov {
         require(_node != address(0), "ZERO_ADDRESS");
-        emit GovernanceUpdate("NODE", abi.encode(node), abi.encode(_node));
+        emit GovernanceUpdate(GovernanceParameter.NODE, abi.encode(node), abi.encode(_node));
         node = _node;
         matic = IMatic(_node);
     }
@@ -136,7 +138,6 @@ contract Matic is Tenderizer {
     function _claimSecondaryRewards() internal override {}
 
     function _processNewStake() internal override returns (int256 rewards) {
-        
         uint256 shares = matic.balanceOf(address(this));
         uint256 stake = (shares * _getExchangeRate(matic)) / _getExchangeRatePrecision(matic);
 
@@ -147,14 +148,14 @@ contract Matic is Tenderizer {
         // calculate the new total stake
         stake += currentBal;
 
-        rewards = int256(stake) - int256(currentPrincipal_); 
+        rewards = int256(stake) - int256(currentPrincipal_);
 
         emit RewardsClaimed(rewards, stake, currentPrincipal_);
     }
 
     function _setStakingContract(address _stakingContract) internal override {
         emit GovernanceUpdate(
-            "STAKING_CONTRACT",
+            GovernanceParameter.STAKING_CONTRACT,
             abi.encode(maticStakeManager),
             abi.encode(_stakingContract)
         );

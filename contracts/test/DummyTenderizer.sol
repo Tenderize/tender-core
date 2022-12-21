@@ -12,6 +12,7 @@ import "../libs/MathUtils.sol";
 import "..//tenderizer/Tenderizer.sol";
 
 import "../tenderizer/WithdrawalLocks.sol";
+import { GovernanceParameter } from "../tenderizer/ITenderizer.sol";
 
 import "./DummyStaking.sol";
 
@@ -100,7 +101,6 @@ contract DummyTenderizer is Tenderizer {
     }
 
     function _processNewStake() internal override returns (int256 rewards) {
-        
         uint256 stake = dummyStaking.totalStaked();
         uint256 currentPrincipal_ = currentPrincipal;
         // adjust current token balance for potential protocol specific taxes or staking fees
@@ -109,7 +109,7 @@ contract DummyTenderizer is Tenderizer {
         // calculate the new total stake
         stake += currentBal;
 
-        rewards = int256(stake) - int256(currentPrincipal_); 
+        rewards = int256(stake) - int256(currentPrincipal_);
 
         emit RewardsClaimed(rewards, stake, currentPrincipal_);
     }
@@ -129,7 +129,7 @@ contract DummyTenderizer is Tenderizer {
 
     function _setStakingContract(address _stakingContract) internal override {
         emit GovernanceUpdate(
-            "STAKING_CONTRACT",
+            GovernanceParameter.STAKING_CONTRACT,
             abi.encode(dummyStaking),
             abi.encode(_stakingContract)
         );

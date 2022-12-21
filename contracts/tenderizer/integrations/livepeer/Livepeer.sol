@@ -10,6 +10,8 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../../../libs/MathUtils.sol";
 
 import "../../Tenderizer.sol";
+import { GovernanceParameter } from "../../ITenderizer.sol";
+
 import "./ILivepeer.sol";
 
 import "../../WithdrawalLocks.sol";
@@ -111,7 +113,6 @@ contract Livepeer is Tenderizer {
     }
 
     function _processNewStake() internal override returns (int256 rewards) {
-        
         uint256 stake = livepeer.pendingStake(address(this), MAX_ROUND);
         uint256 currentPrincipal_ = currentPrincipal;
         // adjust current token balance for potential protocol specific taxes or staking fees
@@ -161,9 +162,7 @@ contract Livepeer is Tenderizer {
                     amountOutMinimum: amountOutMin, // TODO: Set5% max slippage
                     sqrtPriceLimitX96: 0
                 });
-                try uniswapRouter.exactInputSingle(params) returns (
-                    uint256 _swappedLPT
-                ) {
+                try uniswapRouter.exactInputSingle(params) returns (uint256 _swappedLPT) {
                     assert(_swappedLPT > amountOutMin);
                 } catch {
                     // fail silently so claiming secondary rewards doesn't block compounding primary rewards
@@ -173,11 +172,7 @@ contract Livepeer is Tenderizer {
     }
 
     function _setStakingContract(address _stakingContract) internal override {
-        emit GovernanceUpdate(
-            "STAKING_CONTRACT",
-            abi.encode(livepeer),
-            abi.encode(_stakingContract)
-        );
+        emit GovernanceUpdate(GovernanceParameter.STAKING_CONTRACT, abi.encode(livepeer), abi.encode(_stakingContract));
         livepeer = ILivepeer(_stakingContract);
     }
 

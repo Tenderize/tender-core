@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../../../libs/MathUtils.sol";
 
 import "../../Tenderizer.sol";
+import { GovernanceParameter } from "../../ITenderizer.sol";
 import "../../WithdrawalPools.sol";
 import "./IGraph.sol";
 
@@ -163,14 +164,12 @@ contract Graph is Tenderizer {
 
         uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)) - withdrawPool.amount);
 
-        // calculate what the new currentPrinciple would be excluding 
+        // calculate what the new currentPrinciple would be excluding
         // pending unlocks and pending user withdrawals
-        stake = stake +
-            currentBal -
-            withdrawPool.pendingUnlock;
-            // already subtracted withdrawalPool.amount from the current balancee
+        stake = stake + currentBal - withdrawPool.pendingUnlock;
+        // already subtracted withdrawalPool.amount from the current balancee
 
-        rewards = int256(stake) - int256(currentPrincipal_); 
+        rewards = int256(stake) - int256(currentPrincipal_);
 
         // Difference is negative, slash withdrawalpool
         if (rewards < 0) {
@@ -178,7 +177,7 @@ contract Graph is Tenderizer {
             uint256 unstakePoolTokens = withdrawPool.totalTokens();
             uint256 totalTokens = unstakePoolTokens + currentPrincipal_;
             if (totalTokens > 0) {
-                uint256 unstakePoolSlash = (currentPrincipal_ - stake) * unstakePoolTokens / totalTokens;
+                uint256 unstakePoolSlash = ((currentPrincipal_ - stake) * unstakePoolTokens) / totalTokens;
                 withdrawPool.updateTotalTokens(unstakePoolTokens - unstakePoolSlash);
             }
         }
@@ -187,11 +186,7 @@ contract Graph is Tenderizer {
     }
 
     function _setStakingContract(address _stakingContract) internal override {
-        emit GovernanceUpdate(
-            "STAKING_CONTRACT",
-            abi.encode(graph),
-            abi.encode(_stakingContract)
-        );
+        emit GovernanceUpdate(GovernanceParameter.STAKING_CONTRACT, abi.encode(graph), abi.encode(_stakingContract));
         graph = IGraph(_stakingContract);
     }
 }
