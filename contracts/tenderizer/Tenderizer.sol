@@ -40,7 +40,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     address public gov;
 
     modifier onlyGov() {
-        require(msg.sender == gov);
+        _onlyGov();
         _;
     }
 
@@ -283,4 +283,8 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     function _setStakingContract(address _stakingContract) internal virtual;
+
+    function _onlyGov() internal view {
+        require(msg.sender == gov);
+    }
 }
