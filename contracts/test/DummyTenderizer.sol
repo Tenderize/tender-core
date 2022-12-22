@@ -129,7 +129,7 @@ contract DummyTenderizer is Tenderizer {
 
     function _setStakingContract(address _stakingContract) internal override {
         emit GovernanceUpdate(
-            "STAKING_CONTRACT",
+            GovernanceParameter.STAKING_CONTRACT,
             abi.encode(dummyStaking),
             abi.encode(_stakingContract)
         );
