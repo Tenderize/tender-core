@@ -100,7 +100,7 @@ describe('Matic Integration Test', () => {
     this.DELEGATION_TAX = BigNumber.from(0)
     this.MAX_PPM = BigNumber.from(1000000)
 
-    this.lockID = 0
+    this.lockID = 1
 
     Matic = await hre.deployments.fixture(['Matic'], {
       keepExistingDeployments: false
@@ -115,6 +115,7 @@ describe('Matic Integration Test', () => {
     // Set contract variables
     await this.Tenderizer.setProtocolFee(protocolFeesPercent)
     await this.Tenderizer.setLiquidityFee(liquidityFeesPercent)
+    await this.Tenderizer.setWithdrawLockStart(this.lockID)
 
     // Matic specific stuff
     this.exchangeRatePrecision = 100
