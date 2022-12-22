@@ -16,6 +16,8 @@ import "../../WithdrawalLocks.sol";
 
 import { ITenderSwapFactory } from "../../../tenderswap/TenderSwapFactory.sol";
 
+uint256 constant WITHDRAW_LOCK_START = 2; // Starting point for withdraw lock IDs
+
 contract Matic is Tenderizer {
     using WithdrawalLocks for WithdrawalLocks.Locks;
     using SafeERC20 for IERC20;
@@ -55,6 +57,7 @@ contract Matic is Tenderizer {
         );
         maticStakeManager = _matic;
         matic = IMatic(_node);
+        withdrawLocks.initialize(WITHDRAW_LOCK_START);
     }
 
     function setNode(address _node) external override onlyGov {
@@ -62,6 +65,10 @@ contract Matic is Tenderizer {
         emit GovernanceUpdate(GovernanceParameter.NODE, abi.encode(node), abi.encode(_node));
         node = _node;
         matic = IMatic(_node);
+    }
+
+    function setWithdrawLockStart(uint256 _startID) external onlyGov {
+        withdrawLocks.initialize(_startID);
     }
 
     function _deposit(address _from, uint256 _amount) internal override {
