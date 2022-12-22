@@ -19,6 +19,10 @@ library WithdrawalLocks {
         uint256 nextWithdrawLockID;
     }
 
+    function initialize(Locks storage _lock, uint256 _initialLockID) internal {
+        _lock.nextWithdrawLockID = _initialLockID;
+    }
+
     function unlock(
         Locks storage _lock,
         address _receiver,
