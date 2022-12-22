@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./ITenderizer.sol";
+import { GovernanceParameter, ITenderizer } from "./ITenderizer.sol";
 import "../token/ITenderToken.sol";
 import { ITenderSwapFactory, ITenderSwap } from "../tenderswap/TenderSwapFactory.sol";
 import "../tenderfarm/TenderFarmFactory.sol";
@@ -154,29 +154,29 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     function setGov(address _gov) external virtual override onlyGov {
-        emit GovernanceUpdate("GOV", abi.encode(gov), abi.encode(_gov));
+        emit GovernanceUpdate(GovernanceParameter.GOV, abi.encode(gov), abi.encode(_gov));
         gov = _gov;
     }
 
     function setNode(address _node) external virtual override onlyGov {
-        emit GovernanceUpdate("NODE", abi.encode(node), abi.encode(_node));
+        emit GovernanceUpdate(GovernanceParameter.NODE, abi.encode(node), abi.encode(_node));
         node = _node;
     }
 
     function setSteak(IERC20 _steak) external virtual override onlyGov {
-        emit GovernanceUpdate("STEAK", abi.encode(steak), abi.encode(_steak));
+        emit GovernanceUpdate(GovernanceParameter.STEAK, abi.encode(steak), abi.encode(_steak));
         steak = _steak;
     }
 
     function setProtocolFee(uint256 _protocolFee) external virtual override onlyGov {
         require(_protocolFee <= MAX_FEE, "FEE_EXCEEDS_MAX");
-        emit GovernanceUpdate("PROTOCOL_FEE", abi.encode(protocolFee), abi.encode(_protocolFee));
+        emit GovernanceUpdate(GovernanceParameter.PROTOCOL_FEE, abi.encode(protocolFee), abi.encode(_protocolFee));
         protocolFee = _protocolFee;
     }
 
     function setLiquidityFee(uint256 _liquidityFee) external virtual override onlyGov {
         require(_liquidityFee <= MAX_FEE, "FEE_EXCEEDS_MAX");
-        emit GovernanceUpdate("LIQUIDITY_FEE", abi.encode(liquidityFee), abi.encode(_liquidityFee));
+        emit GovernanceUpdate(GovernanceParameter.LIQUIDITY_FEE, abi.encode(liquidityFee), abi.encode(_liquidityFee));
         liquidityFee = _liquidityFee;
     }
 
@@ -185,7 +185,7 @@ abstract contract Tenderizer is Initializable, ITenderizer, SelfPermit {
     }
 
     function setTenderFarm(ITenderFarm _tenderFarm) external override onlyGov {
-        emit GovernanceUpdate("TENDERFARM", abi.encode(tenderFarm), abi.encode(_tenderFarm));
+        emit GovernanceUpdate(GovernanceParameter.TENDERFARM, abi.encode(tenderFarm), abi.encode(_tenderFarm));
         tenderFarm = _tenderFarm;
     }
 

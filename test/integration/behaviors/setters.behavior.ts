@@ -7,6 +7,15 @@ import { Context } from 'mocha'
 export default function suite () {
   let tx: ContractTransaction
   let ctx: Context
+  enum GovernanceParameter {
+    GOV,
+    NODE,
+    STEAK,
+    PROTOCOL_FEE,
+    LIQUIDITY_FEE,
+    TENDERFARM,
+    STAKING_CONTRACT
+}
   beforeEach(async function () {
     ctx = this.test?.ctx!
   })
@@ -19,7 +28,7 @@ export default function suite () {
 
     it('should emit GovernanceUpdate event', async () => {
       expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate')
-        .withArgs('STAKING_CONTRACT',
+        .withArgs(GovernanceParameter.STAKING_CONTRACT,
         ethers.utils.hexZeroPad(ctx.StakingContract.address.toLowerCase(), 32),
         ethers.utils.hexZeroPad(newStakingContract.address.toLowerCase(), 32))
     })
@@ -41,9 +50,10 @@ export default function suite () {
       })
       
       it('should emit GovernanceUpdate event', async () => {
-        expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('NODE',
-        ethers.utils.hexZeroPad(ctx.NODE.toLowerCase(), 32),
-        ethers.utils.hexZeroPad(newNodeAddress.toLowerCase(), 32))
+        expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs(
+          GovernanceParameter.NODE,
+          ethers.utils.hexZeroPad(ctx.NODE.toLowerCase(), 32),
+          ethers.utils.hexZeroPad(newNodeAddress.toLowerCase(), 32))
       })
     })
   })
@@ -60,9 +70,11 @@ export default function suite () {
     })
 
     it('should emit GovernanceUpdate event', async () => {
-      expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('STEAK',
-      ethers.utils.hexZeroPad(ctx.Steak.address.toLowerCase(), 32),
-      ethers.utils.hexZeroPad(newSteakAddress, 32))
+      expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs(
+        GovernanceParameter.STEAK,
+        ethers.utils.hexZeroPad(ctx.Steak.address.toLowerCase(), 32),
+        ethers.utils.hexZeroPad(newSteakAddress, 32)
+      )
     })
   })
 
@@ -80,7 +92,7 @@ export default function suite () {
     })
 
     it('should emit GovernanceUpdate event', async () => {
-      expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('PROTOCOL_FEE', oldFee, newFee)
+      expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs(GovernanceParameter.PROTOCOL_FEE, oldFee, newFee)
     })
   })
 
@@ -98,7 +110,7 @@ export default function suite () {
     })
 
     it('should emit GovernanceUpdate event', async () => {
-      expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('LIQUIDITY_FEE', oldFee, newFee)
+      expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs(GovernanceParameter.LIQUIDITY_FEE, oldFee, newFee)
     })
   })
 
@@ -118,7 +130,8 @@ export default function suite () {
       })
 
       it('should emit GovernanceUpdate event', async () => {
-        expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs('GOV', 
+        expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs(
+          GovernanceParameter.GOV, 
           ethers.utils.hexZeroPad(ctx.deployer.toLowerCase(), 32), 
           ethers.utils.hexZeroPad(newGovAddress.toLowerCase(), 32))
       })

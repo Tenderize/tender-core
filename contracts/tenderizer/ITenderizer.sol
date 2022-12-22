@@ -7,6 +7,16 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../tenderfarm/ITenderFarm.sol";
 
+    enum GovernanceParameter {
+        GOV,
+        NODE,
+        STEAK,
+        PROTOCOL_FEE,
+        LIQUIDITY_FEE,
+        TENDERFARM,
+        STAKING_CONTRACT
+    }
+
 /**
  * @title Tenderizer is the base contract to be implemented.
  * @notice Tenderizer is responsible for all Protocol interactions (staking, unstaking, claiming rewards)
@@ -77,7 +87,7 @@ interface ITenderizer {
      * @param oldValue oldValue of the parameter
       @param newValue newValue of the parameter
      */
-    event GovernanceUpdate(string param, bytes oldValue, bytes newValue);
+    event GovernanceUpdate(GovernanceParameter param, bytes oldValue, bytes newValue);
 
     /**
      * @notice Deposit tokens in Tenderizer.
