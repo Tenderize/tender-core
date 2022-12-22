@@ -18,7 +18,10 @@ task('tenderizer-ownership', 'Set a new owner for the tenderizer contract')
     const tenderizer = (await deployments.get(args.tenderizer)).address
 
     const Tenderizer: Tenderizer = (await ethers.getContractAt('Tenderizer', tenderizer)) as Tenderizer
-    const TenderizerAsProxy: EIP173ProxyWithReceive = (await ethers.getContractAt('EIP173ProxyWithReceive', tenderizer)) as EIP173ProxyWithReceive
+    const TenderizerAsProxy: EIP173ProxyWithReceive = (await ethers.getContractAt(
+      'EIP173ProxyWithReceive',
+      tenderizer
+    )) as EIP173ProxyWithReceive
     const TenderSwap: TenderSwap = (await ethers.getContractAt(
       'TenderSwap',
       await Tenderizer.tenderSwap()

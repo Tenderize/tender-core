@@ -28,9 +28,18 @@ task('farm', 'farm SWAP tokens to receive rewards')
     const tenderizer = (await deployments.get(args.tenderizer)).address
 
     const Tenderizer: Tenderizer = (await ethers.getContractAt('Tenderizer', tenderizer)) as Tenderizer
-    const TenderSwap: TenderSwap = (await ethers.getContractAt('TenderSwap', await Tenderizer.tenderSwap())) as TenderSwap
-    const LPToken: LiquidityPoolToken = (await ethers.getContractAt('LiquidityPoolToken', await TenderSwap.lpToken())) as LiquidityPoolToken
-    const TenderFarm: TenderFarm = (await ethers.getContractAt('TenderFarm', await Tenderizer.tenderFarm())) as TenderFarm
+    const TenderSwap: TenderSwap = (await ethers.getContractAt(
+      'TenderSwap',
+      await Tenderizer.tenderSwap()
+    )) as TenderSwap
+    const LPToken: LiquidityPoolToken = (await ethers.getContractAt(
+      'LiquidityPoolToken',
+      await TenderSwap.lpToken()
+    )) as LiquidityPoolToken
+    const TenderFarm: TenderFarm = (await ethers.getContractAt(
+      'TenderFarm',
+      await Tenderizer.tenderFarm()
+    )) as TenderFarm
 
     let tx = await LPToken.approve(TenderFarm.address, tokenAmount)
     await tx.wait()

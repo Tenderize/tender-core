@@ -24,14 +24,17 @@ task('add-liquidity', 'adds liquidity to pool')
     const tenderizer = (await deployments.get(args.tenderizer)).address
 
     const Tenderizer: Tenderizer = (await ethers.getContractAt('Tenderizer', tenderizer)) as Tenderizer
-    const TenderToken: TenderToken = (await ethers.getContractAt('TenderToken', await Tenderizer.tenderToken())) as TenderToken
+    const TenderToken: TenderToken = (await ethers.getContractAt(
+      'TenderToken',
+      await Tenderizer.tenderToken()
+    )) as TenderToken
     const Steak: ERC20 = (await ethers.getContractAt('ERC20', await Tenderizer.steak())) as ERC20
     const TenderSwap: TenderSwap = (await ethers.getContractAt(
       'TenderSwap',
       await Tenderizer.tenderSwap()
     )) as TenderSwap
 
-    const deadline = Math.floor((new Date().getTime() + 20 * 60000) / 1000)
+    const deadline = Math.floor((new Date(1674139736000).getTime() + 20 * 60000) / 1000)
     const approveTx = await Steak.approve(TenderSwap.address, tokenAmount)
     await approveTx.wait()
     const tenderTokenApproval = await signERC2612Permit(

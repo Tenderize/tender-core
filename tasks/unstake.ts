@@ -17,7 +17,10 @@ task('unstake', 'unstake tenderTokens')
     const tenderizer = (await deployments.get(args.tenderizer)).address
 
     const Tenderizer: Tenderizer = (await ethers.getContractAt('Tenderizer', tenderizer)) as Tenderizer
-    const TenderToken: TenderToken = (await ethers.getContractAt('TenderToken', await Tenderizer.tenderToken())) as TenderToken
+    const TenderToken: TenderToken = (await ethers.getContractAt(
+      'TenderToken',
+      await Tenderizer.tenderToken()
+    )) as TenderToken
 
     await TenderToken.approve(Tenderizer.address, tokenAmount)
     const id = await await Tenderizer.callStatic.unstake(tokenAmount)

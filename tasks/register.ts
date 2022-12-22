@@ -1,5 +1,5 @@
 import { task, types } from 'hardhat/config'
-import { TenderToken, Tenderizer, TenderSwap, ERC20, TenderFarm, LiquidityPoolToken, Registry } from '../typechain'
+import { TenderToken, Tenderizer, TenderSwap, ERC20, TenderFarm, Registry } from '../typechain'
 
 task('register', 'get contract addresses')
   .addParam('tenderizer', 'tenderizer name e.g. "Livepeer"', '', types.string)
@@ -15,7 +15,10 @@ task('register', 'get contract addresses')
     const registry = (await deployments.get('Registry')).address
 
     const Tenderizer: Tenderizer = (await ethers.getContractAt('Tenderizer', tenderizer)) as Tenderizer
-    const TenderToken: TenderToken = (await ethers.getContractAt('TenderToken', await Tenderizer.tenderToken())) as TenderToken
+    const TenderToken: TenderToken = (await ethers.getContractAt(
+      'TenderToken',
+      await Tenderizer.tenderToken()
+    )) as TenderToken
     const Steak: ERC20 = (await ethers.getContractAt('ERC20', await Tenderizer.steak())) as ERC20
     const TenderSwap: TenderSwap = (await ethers.getContractAt(
       'TenderSwap',

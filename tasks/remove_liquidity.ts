@@ -23,7 +23,10 @@ task('remove-liquidity', 'adds liquidity to pool')
       await Tenderizer.tenderSwap()
     )) as TenderSwap
 
-    const LpToken: LiquidityPoolToken = (await ethers.getContractAt('LiquidityPoolToken', await TenderSwap.lpToken())) as LiquidityPoolToken
+    const LpToken: LiquidityPoolToken = (await ethers.getContractAt(
+      'LiquidityPoolToken',
+      await TenderSwap.lpToken()
+    )) as LiquidityPoolToken
 
     const balance = await LpToken.balanceOf(signer.address)
 
