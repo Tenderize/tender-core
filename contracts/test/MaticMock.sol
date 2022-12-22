@@ -7,7 +7,9 @@ contract MaticMock is MockStaking {
     uint256 public constant validatorId = 1;
     uint256 public constant exchangeRate = 100;
 
-    constructor(IERC20 _token) MockStaking(_token) {}
+    constructor(IERC20 _token) MockStaking(_token) {
+        nextUnstakeLockID = 1;
+    }
 
     function owner() external view returns (address) {
         return msg.sender;

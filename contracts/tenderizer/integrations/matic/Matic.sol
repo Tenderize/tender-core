@@ -122,7 +122,9 @@ contract Matic is Tenderizer {
 
         // Check for any slashes during undelegation
         uint256 balBefore = steak.balanceOf(address(this));
-        matic.unstakeClaimTokens_new(_withdrawalID);
+        // Matic locks start at one, see commit 31f410a3feb63ce58a617356185a332e50504402
+        // This change allows one outstanding lock to still be claimed after this commit
+        matic.unstakeClaimTokens_new(_withdrawalID == 0 ? 1 : _withdrawalID);
         uint256 balAfter = steak.balanceOf(address(this));
         require(balAfter >= balBefore, "ZERO_AMOUNT");
         uint256 amount = balAfter - balBefore;
