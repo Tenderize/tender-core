@@ -2,7 +2,6 @@ import '@nomiclabs/hardhat-ethers'
 import '@nomiclabs/hardhat-web3'
 import '@nomiclabs/hardhat-waffle'
 import 'hardhat-typechain'
-import 'hardhat-contract-sizer'
 
 // deployment plugins
 import 'hardhat-deploy'
@@ -26,7 +25,7 @@ const JSON_RPC = process.env.JSON_RPC
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY
 const ARBISCAN_API_KEY = process.env.ARBISCAN_API_KEY
 
-function loadTasks () {
+function loadTasks() {
   const tasksPath = path.join(__dirname, 'tasks')
   fs.readdirSync(tasksPath).forEach(task => {
     require(`${tasksPath}/${task}`)
