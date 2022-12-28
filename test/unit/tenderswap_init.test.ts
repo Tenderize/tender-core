@@ -152,7 +152,7 @@ describe('TenderSwap', () => {
           0,
           constants.AddressZero
         )
-      ).to.be.revertedWith('function returned an unexpected amount of data')
+      ).to.be.reverted
     })
   })
 })
