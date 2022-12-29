@@ -3,7 +3,7 @@ import * as rpc from '../util/snapshot'
 import { MockContract, smock } from '@defi-wonderland/smock'
 
 import {
-  SimpleToken, TenderToken, Livepeer, ISwapRouterWithWETH, IWETH, TenderFarm, TenderSwap, LiquidityPoolToken, LivepeerMock, WETHMock__factory, UniswapRouterMock__factory, Livepeer__factory, UniswapRouterMock, WETHMock, LivepeerMock__factory
+  SimpleToken, TenderToken, Livepeer, TenderFarm, TenderSwap, LiquidityPoolToken, LivepeerMock, WETHMock__factory, UniswapRouterMock__factory, UniswapRouterMock, WETHMock, LivepeerMock__factory
 } from '../../typechain/'
 
 import chai from 'chai'

@@ -9,7 +9,6 @@ pragma solidity 0.8.4;
  * @notice WithdrawalLocks are used to "proxy" user unlocks/withdrawals to the underlying contracts
  */
 library WithdrawalLocks {
-
     struct WithdrawLock {
         uint256 amount;
         address account;
@@ -26,9 +25,9 @@ library WithdrawalLocks {
         uint256 _amount
     ) internal returns (uint256 withdrawalLockID) {
         withdrawalLockID = _lock.nextWithdrawLockID;
-        
+
         _lock.nextWithdrawLockID = withdrawalLockID + 1;
-        
+
         _lock.withdrawals[withdrawalLockID] = WithdrawLock({ amount: _amount, account: _receiver });
     }
 
@@ -40,9 +39,9 @@ library WithdrawalLocks {
         WithdrawLock storage lock = _lock.withdrawals[_withdrawalLockID];
         address account = lock.account;
         amount = lock.amount;
-        
+
         require(account == _account, "ACCOUNT_MISTMATCH");
-        
+
         delete _lock.withdrawals[_withdrawalLockID];
     }
 }

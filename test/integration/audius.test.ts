@@ -1,7 +1,9 @@
 import hre, { ethers } from 'hardhat'
 import * as rpc from '../util/snapshot'
+import { MockContract, smock } from '@defi-wonderland/smock'
+
 import {
-  SimpleToken, TenderToken, AudiusMock, TenderFarm, TenderSwap, LiquidityPoolToken, Audius
+  SimpleToken, TenderToken, AudiusMock, TenderFarm, TenderSwap, LiquidityPoolToken, Audius, AudiusMock__factory
 } from '../../typechain'
 import { percOf2 } from '../util/helpers'
 import chai from 'chai'
@@ -33,9 +35,9 @@ chai.use(solidity)
 
 describe('Audius Integration Test', () => {
   let snapshotId: any
-  let AudiusMock: AudiusMock
+  let AudiusMock: MockContract<AudiusMock>
 
-  let Audius: {[name: string]: Deployment}
+  let Audius: { [name: string]: Deployment }
 
   const protocolFeesPercent = ethers.utils.parseEther('50')
   const liquidityFeesPercent = ethers.utils.parseEther('50')
@@ -65,12 +67,8 @@ describe('Audius Integration Test', () => {
   })
 
   beforeEach('deploy Audius', async function () {
-    const AudiusFac = await ethers.getContractFactory(
-      'AudiusMock',
-      this.signers[0]
-    )
-
-    AudiusMock = (await AudiusFac.deploy(this.Steak.address)) as AudiusMock
+    const AudiusFac = await smock.mock<AudiusMock__factory>('AudiusMock')
+    AudiusMock = await AudiusFac.deploy(this.Steak.address)
     this.StakingContract = AudiusMock
   })
 

@@ -48,7 +48,7 @@ interface ITenderSwap {
     );
 
     /**
-     * @notice RemoveLiquidity gets emitted when liquidity for both tokens 
+     * @notice RemoveLiquidity gets emitted when liquidity for both tokens
      * is removed from the pool.
      * @param provider address of the account removing liquidity
      * @param tokenAmounts array of token amounts removed corresponding to pool cardinality of [token0, token1]
@@ -78,7 +78,7 @@ interface ITenderSwap {
      * pool's current balances.
      * with different weights than that of the pool.
      * @param provider address of the the account removing liquidity imbalanced
-     * @param tokenAmounts array of amounts of tokens being removed corresponding 
+     * @param tokenAmounts array of amounts of tokens being removed corresponding
      * to pool cardinality of [token0, token1]
      * @param fees fees for each of the tokens removed corresponding to pool cardinality of [token0, token1]
      * @param invariant pool invariant after removing liquidity

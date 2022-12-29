@@ -7,15 +7,15 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../tenderfarm/ITenderFarm.sol";
 
-    enum GovernanceParameter {
-        GOV,
-        NODE,
-        STEAK,
-        PROTOCOL_FEE,
-        LIQUIDITY_FEE,
-        TENDERFARM,
-        STAKING_CONTRACT
-    }
+enum GovernanceParameter {
+    GOV,
+    NODE,
+    STEAK,
+    PROTOCOL_FEE,
+    LIQUIDITY_FEE,
+    TENDERFARM,
+    STAKING_CONTRACT
+}
 
 /**
  * @title Tenderizer is the base contract to be implemented.
@@ -149,7 +149,7 @@ interface ITenderizer {
     function withdraw(uint256 _unstakeLockID) external;
 
     /**
-     * @notice RescueWithdraw withdraws all tokens into the Tenderizer from the underlying protocol 
+     * @notice RescueWithdraw withdraws all tokens into the Tenderizer from the underlying protocol
      * after the unlock period ends
      * @dev To be called after rescueUnlock() with the unstakeLockID returned there.
      * @dev Process unlocks/withdrawals before rescueWithdraw for integrations with WithdrawPools.

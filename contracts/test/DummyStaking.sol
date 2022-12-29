@@ -26,18 +26,24 @@ contract DummyStaking is ERC20, ERC20Permit {
         _mint(msg.sender, initialSupply);
     }
 
-    function stake(uint256 _amount, address /*_node*/) public {
+    function stake(
+        uint256 _amount,
+        address /*_node*/
+    ) public {
         totalStaked += _amount;
         ERC20(address(this)).transferFrom(msg.sender, address(this), _amount);
     }
-    
-    function unstake(uint256 _amount, address /*_node*/) public {
+
+    function unstake(
+        uint256 _amount,
+        address /*_node*/
+    ) public {
         totalStaked -= _amount;
         uint256 lockID = withdrawalLocks.unlock(msg.sender, _amount);
     }
 
     function withdraw(uint256 _withdrawalLockID) public {
-        uint256 amountWithdrawn =  withdrawalLocks.withdraw(msg.sender, _withdrawalLockID);
+        uint256 amountWithdrawn = withdrawalLocks.withdraw(msg.sender, _withdrawalLockID);
         ERC20(address(this)).transfer(msg.sender, amountWithdrawn);
     }
 
@@ -50,5 +56,4 @@ contract DummyStaking is ERC20, ERC20Permit {
         totalStaked -= _amount;
         _burn(address(this), _amount);
     }
-    
 }

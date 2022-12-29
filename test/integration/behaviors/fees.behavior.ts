@@ -57,7 +57,7 @@ export function liquidityFeeTests () {
     this.increase = ethers.utils.parseEther('10')
     await this.StakingContract.setStaked(this.increase.add(this.initialStake))
     await ctx.Tenderizer.claimRewards()
-        
+
     fees = await ctx.Tenderizer.pendingLiquidityFees()
     farmBalanceBefore = await ctx.TenderToken.balanceOf(ctx.TenderFarm.address)
     acc0BalBefore = await ctx.TenderToken.balanceOf(ctx.deployer)

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/naming-convention */
+
 import {
   ethers, upgrades
 } from 'hardhat'
@@ -19,8 +21,7 @@ chai.use(solidity)
 const {
   expect
 } = chai
-chai.use(smock.matchers);
-
+chai.use(smock.matchers)
 
 describe('TenderFarm', () => {
   let snapshotId: any

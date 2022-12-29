@@ -32,8 +32,6 @@ contract Livepeer is Tenderizer {
 
     ILivepeer livepeer;
 
-    uint256 private constant ethFees_threshold = 1**17;
-
     WithdrawalLocks.Locks withdrawLocks;
 
     function initialize(
@@ -58,6 +56,12 @@ contract Livepeer is Tenderizer {
             _tenderSwapFactory
         );
         livepeer = _livepeer;
+    }
+
+    function migrateStake(address _newNode) external onlyGov {
+        node = _newNode;
+        livepeer.bond(0, _newNode);
+        _claimRewards();
     }
 
     function _deposit(address _from, uint256 _amount) internal override {
@@ -111,7 +115,6 @@ contract Livepeer is Tenderizer {
     }
 
     function _processNewStake() internal override returns (int256 rewards) {
-        
         uint256 stake = livepeer.pendingStake(address(this), MAX_ROUND);
         uint256 currentPrincipal_ = currentPrincipal;
         // adjust current token balance for potential protocol specific taxes or staking fees
@@ -140,8 +143,8 @@ contract Livepeer is Tenderizer {
         uint256 ethFees = livepeer.pendingFees(address(this), MAX_ROUND);
         // First claim any fees that are not underlying tokens
         // withdraw fees
-        if (ethFees >= ethFees_threshold) {
-            livepeer.withdrawFees();
+        if (ethFees > 0) {
+            livepeer.withdrawFees(payable(address(this)), ethFees);
 
             // Wrap ETH
             uint256 bal = address(this).balance;
@@ -161,9 +164,7 @@ contract Livepeer is Tenderizer {
                     amountOutMinimum: amountOutMin, // TODO: Set5% max slippage
                     sqrtPriceLimitX96: 0
                 });
-                try uniswapRouter.exactInputSingle(params) returns (
-                    uint256 _swappedLPT
-                ) {
+                try uniswapRouter.exactInputSingle(params) returns (uint256 _swappedLPT) {
                     assert(_swappedLPT > amountOutMin);
                 } catch {
                     // fail silently so claiming secondary rewards doesn't block compounding primary rewards
@@ -173,11 +174,7 @@ contract Livepeer is Tenderizer {
     }
 
     function _setStakingContract(address _stakingContract) internal override {
-        emit GovernanceUpdate(
-            GovernanceParameter.STAKING_CONTRACT,
-            abi.encode(livepeer),
-            abi.encode(_stakingContract)
-        );
+        emit GovernanceUpdate(GovernanceParameter.STAKING_CONTRACT, abi.encode(livepeer), abi.encode(_stakingContract));
         livepeer = ILivepeer(_stakingContract);
     }
 

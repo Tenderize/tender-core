@@ -16,5 +16,8 @@
         "@typescript-eslint"
     ],
     "rules": {
+        "camelcase": "off",
+        "@typescript-eslint/no-unused-vars": "error",
+        "@typescript-eslint/naming-convention": "off"
     }
 }
