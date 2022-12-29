@@ -3,6 +3,6 @@ module.exports = {
         'libs',
         'test',
         'interfaces',
-        'helpers/Faucet.sol'
+        'helpers'
     ]
-  };
+};
