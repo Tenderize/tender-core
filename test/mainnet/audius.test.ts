@@ -33,7 +33,7 @@ describe('Audius Mainnet Fork Test', () => {
   let LpToken: LiquidityPoolToken
   let TenderFarm: TenderFarm
 
-  let Audius: {[name: string]: Deployment}
+  let Audius: { [name: string]: Deployment }
 
   let signers: SignerWithAddress[]
   let deployer: string
@@ -399,7 +399,7 @@ describe('Audius Mainnet Fork Test', () => {
 
       it('reduces TenderToken Balance', async () => {
         // lte to account for any roundoff error in tokenToShare calcualtion during burn
-        expect(await TenderToken.balanceOf(signers[2].address)).to.lte(1)
+        expect(await TenderToken.balanceOf(signers[2].address)).to.lte(2)
       })
 
       it('should emit Unstake event from Tenderizer', async () => {
@@ -444,7 +444,7 @@ describe('Audius Mainnet Fork Test', () => {
     })
 
     describe('user withdrawal', async () => {
-      let AUDIOBalanceBefore : BigNumber
+      let AUDIOBalanceBefore: BigNumber
       it('reverts if account mismatch from unboondigLock', async () => {
         await expect(Tenderizer.connect(signers[1]).withdraw(unbondLockID))
           .to.be.revertedWith('ACCOUNT_MISTMATCH')

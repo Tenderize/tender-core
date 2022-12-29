@@ -9,24 +9,26 @@ import {
 
 import * as rpc from '../util/snapshot'
 
-import { MockContract, smockit } from '@eth-optimism/smock'
+import { MockContract, smock } from '@defi-wonderland/smock'
 
 import { percOf } from '../util/helpers'
 import { signERC2612Permit } from 'eth-permit'
-import { LiquidityPoolToken, TenderFarm, TenderToken } from '../../typechain'
+import { LiquidityPoolToken, TenderFarm, TenderToken, Tenderizer, Livepeer__factory, LiquidityPoolToken__factory, TenderToken__factory } from '../../typechain'
 import { PERC_DIVISOR } from '../util/constants'
 chai.use(solidity)
 const {
   expect
 } = chai
+chai.use(smock.matchers);
+
 
 describe('TenderFarm', () => {
   let snapshotId: any
 
-  let tenderToken: TenderToken
-  let lpToken : LiquidityPoolToken
+  let tenderToken: MockContract<TenderToken>
+  let lpToken: MockContract<LiquidityPoolToken>
   let tenderFarm: any
-  let tenderizerMock: MockContract
+  let tenderizerMock: MockContract<Tenderizer>
 
   let signers: ethersTypes.Signer[]
 
@@ -43,26 +45,15 @@ describe('TenderFarm', () => {
   })
 
   beforeEach('Deploy TenderFarm', async () => {
-    // 1
     signers = await ethers.getSigners()
-    // 2
-    const TenderizerFactory = await ethers.getContractFactory(
-      'Livepeer',
-      signers[0]
-    )
 
-    const tenderizer = (await TenderizerFactory.deploy())
-    tenderizerMock = await smockit(tenderizer)
+    const TenderizerFactory = await smock.mock<Livepeer__factory>('Livepeer')
 
-    const TenderTokenFactory = await ethers.getContractFactory(
-      'TenderToken',
-      signers[0]
-    )
+    tenderizerMock = await TenderizerFactory.deploy()
 
-    const LPTokenFactory = await ethers.getContractFactory(
-      'LiquidityPoolToken',
-      signers[0]
-    )
+    const TenderTokenFactory = await smock.mock<TenderToken__factory>('TenderToken')
+
+    const LPTokenFactory = await smock.mock<LiquidityPoolToken__factory>('LiquidityPoolToken')
 
     const TenderFarmFactory = await ethers.getContractFactory(
       'TenderFarm',
@@ -73,8 +64,8 @@ describe('TenderFarm', () => {
     account1 = await signers[1].getAddress()
     account2 = await signers[2].getAddress()
 
-    lpToken = (await LPTokenFactory.deploy()) as LiquidityPoolToken
-    tenderToken = (await TenderTokenFactory.deploy()) as TenderToken
+    lpToken = await LPTokenFactory.deploy()
+    tenderToken = await TenderTokenFactory.deploy()
     await lpToken.deployed()
     await tenderToken.deployed()
     await tenderToken.initialize('Tender Token', 'Tender', tenderizerMock.address)
@@ -86,7 +77,7 @@ describe('TenderFarm', () => {
     const supply = ethers.utils.parseEther('1000000000000000')
     await lpToken.mint(account0, supply)
     await tenderToken.mint(account0, supply)
-    tenderizerMock.smocked.totalStakedTokens.will.return.with(supply)
+    tenderizerMock.totalStakedTokens.returns(supply)
   })
 
   describe('Genesis', () => {
@@ -320,23 +311,24 @@ describe('TenderFarm', () => {
     })
 
     it('reverts if transfer fails', async () => {
-      const lpMock = await smockit(lpToken)
       const TenderFarmFactory = await ethers.getContractFactory(
         'TenderFarm',
         signers[0]
       )
       tenderFarm = (await TenderFarmFactory.deploy()) as TenderFarm
-      await tenderFarm.initialize(lpMock.address, tenderToken.address, account0)
+      await tenderFarm.initialize(lpToken.address, tenderToken.address, account0)
 
       // stake for an account
-      lpMock.smocked.transferFrom.will.return.with(true)
+      lpToken.transferFrom.returns(true)
       const amount = ethers.utils.parseEther('150')
       await lpToken.approve(tenderFarm.address, amount)
       await tenderFarm.farm(amount)
 
-      lpMock.smocked.transfer.will.return.with(false)
+      lpToken.transfer.returns(false)
 
       await expect(tenderFarm.unfarm(amount)).to.be.revertedWith('TRANSFER_FAIL')
+
+      lpToken.transfer.returns(true)
     })
 
     it('Unfarm tokens fully, no rewards', async () => {
@@ -541,29 +533,15 @@ describe('TenderFarm', () => {
     })
 
     it('reverts if transfer fails', async () => {
-      const ttMock = await smockit(tenderToken)
-      const TenderFarmFactory = await ethers.getContractFactory(
-        'TenderFarm',
-        signers[0]
-      )
-      tenderFarm = (await TenderFarmFactory.deploy()) as TenderFarm
-      await tenderFarm.initialize(lpToken.address, ttMock.address, account0)
-
+      // add rewards
       const amount = ethers.utils.parseEther('100')
-      await lpToken.approve(tenderFarm.address, amount)
-      await tenderFarm.farm(amount)
+      await tenderToken.approve(tenderFarm.address, amount)
+      tenderToken.tokensToShares.returns(amount)
+      tenderToken.sharesToTokens.returns(amount)
+      await tenderFarm.addRewards(amount)
 
-      // Add rewards
-      const rewardAmount = ethers.utils.parseEther('100')
-      await tenderToken.approve(tenderFarm.address, rewardAmount)
-      ttMock.smocked.transferFrom.will.return.with(true)
-      ttMock.smocked.sharesToTokens.will.return.with(rewardAmount)
-      ttMock.smocked.tokensToShares.will.return.with(rewardAmount)
-      await tenderFarm.addRewards(rewardAmount)
-
-      ttMock.smocked.transfer.will.return.with(false)
-
-      await expect(tenderFarm.harvest()).to.be.revertedWith('TRANSFER_FAIL')
+      tenderToken.transfer.reverts()
+      await expect(tenderFarm.harvest()).to.be.reverted
     })
 
     it('if there are no rewards nothing is harvested', async () => {

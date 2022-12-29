@@ -38,7 +38,7 @@ describe('Graph Mainnet Fork Test', () => {
   let TenderSwap: TenderSwap
   let LpToken: LiquidityPoolToken
 
-  let Graph: {[name: string]: Deployment}
+  let Graph: { [name: string]: Deployment }
 
   let signers: SignerWithAddress[]
   let deployer: string
@@ -256,7 +256,7 @@ describe('Graph Mainnet Fork Test', () => {
       })
 
       it('currentPrincipal stays the same', async () => {
-        expect(await Tenderizer.currentPrincipal()).to.eq(supplyAfterTax.sub(1)) // Account for precision loss from the graph share calculation itself
+        expect(await Tenderizer.currentPrincipal()).to.eq(supplyAfterTax.sub(2)) // Account for precision loss from the graph share calculation itself
       })
 
       it('tenderToken price stays the same', async () => {
@@ -266,7 +266,7 @@ describe('Graph Mainnet Fork Test', () => {
       it('should emit RewardsClaimed event from Tenderizer', async () => {
         // Sub 1 to account for round-off error
         expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
-          .withArgs(-1, supplyAfterTax.sub(1), supplyAfterTax) // Account for precision loss from the graph share calculation itself
+          .withArgs(-2, supplyAfterTax.sub(1), supplyAfterTax) // Account for precision loss from the graph share calculation itself
       })
     })
 
@@ -485,7 +485,7 @@ describe('Graph Mainnet Fork Test', () => {
     })
 
     describe('user withdrawal', async () => {
-      let grtBalanceBefore : BigNumber
+      let grtBalanceBefore: BigNumber
       it('reverts if account mismatch from unboondigLock', async () => {
         await expect(Tenderizer.connect(signers[2]).withdraw(unbondLockID))
           .to.be.revertedWith('ACCOUNT_MISTMATCH')

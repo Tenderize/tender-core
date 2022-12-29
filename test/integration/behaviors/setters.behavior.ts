@@ -1,10 +1,10 @@
 import { BigNumber, Contract, ContractTransaction } from 'ethers/lib/ethers'
 import { expect } from 'chai'
-import { smockit } from '@eth-optimism/smock'
+import { FakeContract, MockContract, smock } from '@defi-wonderland/smock'
 import { ethers } from 'hardhat'
 import { Context } from 'mocha'
 
-export default function suite () {
+export default function suite() {
   let tx: ContractTransaction
   let ctx: Context
   enum GovernanceParameter {
@@ -15,22 +15,22 @@ export default function suite () {
     LIQUIDITY_FEE,
     TENDERFARM,
     STAKING_CONTRACT
-}
+  }
   beforeEach(async function () {
     ctx = this.test?.ctx!
   })
   describe('setting staking contract', () => {
-    let newStakingContract: Contract
+    let newStakingContract: FakeContract
     beforeEach(async () => {
-      newStakingContract = await smockit(ctx.StakingContract)
+      newStakingContract = await smock.fake(ctx.StakingContract)
       tx = await ctx.Tenderizer.setStakingContract(newStakingContract.address)
     })
 
     it('should emit GovernanceUpdate event', async () => {
       expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate')
         .withArgs(GovernanceParameter.STAKING_CONTRACT,
-        ethers.utils.hexZeroPad(ctx.StakingContract.address.toLowerCase(), 32),
-        ethers.utils.hexZeroPad(newStakingContract.address.toLowerCase(), 32))
+          ethers.utils.hexZeroPad(ctx.StakingContract.address.toLowerCase(), 32),
+          ethers.utils.hexZeroPad(newStakingContract.address.toLowerCase(), 32))
     })
   })
 
@@ -39,16 +39,16 @@ export default function suite () {
       await expect(ctx.Tenderizer.connect(ctx.signers[1]).setNode(ethers.constants.AddressZero)).to.be.reverted
     })
 
-    describe('sets node successfully', async function(){
+    describe('sets node successfully', async function () {
       const newNodeAddress = '0xf4e8Ef0763BCB2B1aF693F5970a00050a6aC7E1B'
-      beforeEach(async function(){
+      beforeEach(async function () {
         tx = await ctx.Tenderizer.setNode(newNodeAddress)
       })
 
       it('sets correctly', async () => {
         expect((await ctx.Tenderizer.node())).to.equal(newNodeAddress)
       })
-      
+
       it('should emit GovernanceUpdate event', async () => {
         expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs(
           GovernanceParameter.NODE,
@@ -61,7 +61,7 @@ export default function suite () {
   describe('setting steak', async () => {
     const newSteakAddress = '0xd944a0f8c64d292a94c34e85d9038395e3762751'
 
-    beforeEach(async function() {
+    beforeEach(async function () {
       tx = await ctx.Tenderizer.setSteak(newSteakAddress)
     })
 
@@ -99,7 +99,7 @@ export default function suite () {
   describe('setting liquidity fee', async () => {
     let oldFee: BigNumber
     const newFee = ethers.utils.parseEther('0.05')
-    
+
     beforeEach(async function () {
       oldFee = await ctx.Tenderizer.liquidityFee()
       tx = await ctx.Tenderizer.setLiquidityFee(newFee)
@@ -121,7 +121,7 @@ export default function suite () {
 
     describe('sets gov successfully', async () => {
       const newGovAddress = '0xd944a0F8C64D292a94C34e85d9038395e3762751'
-      beforeEach(async function() {
+      beforeEach(async function () {
         tx = await ctx.Tenderizer.setGov(newGovAddress)
       })
 
@@ -131,8 +131,8 @@ export default function suite () {
 
       it('should emit GovernanceUpdate event', async () => {
         expect(tx).to.emit(ctx.Tenderizer, 'GovernanceUpdate').withArgs(
-          GovernanceParameter.GOV, 
-          ethers.utils.hexZeroPad(ctx.deployer.toLowerCase(), 32), 
+          GovernanceParameter.GOV,
+          ethers.utils.hexZeroPad(ctx.deployer.toLowerCase(), 32),
           ethers.utils.hexZeroPad(newGovAddress.toLowerCase(), 32))
       })
     })
