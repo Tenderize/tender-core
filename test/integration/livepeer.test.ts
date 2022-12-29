@@ -1,9 +1,9 @@
 import hre, { ethers } from 'hardhat'
 import * as rpc from '../util/snapshot'
-import { MockContract, smockit } from '@eth-optimism/smock'
+import { MockContract, smock } from '@defi-wonderland/smock'
 
 import {
-  SimpleToken, TenderToken, Livepeer, ISwapRouterWithWETH, IWETH, TenderFarm, TenderSwap, LiquidityPoolToken, LivepeerMock
+  SimpleToken, TenderToken, Livepeer, ISwapRouterWithWETH, IWETH, TenderFarm, TenderSwap, LiquidityPoolToken, LivepeerMock, WETHMock__factory, UniswapRouterMock__factory, Livepeer__factory, UniswapRouterMock, WETHMock, LivepeerMock__factory
 } from '../../typechain/'
 
 import chai from 'chai'
@@ -38,12 +38,12 @@ chai.use(solidity)
 describe('Livepeer Integration Test', () => {
   let snapshotId: any
   // Mocks
-  let LivepeerMock: LivepeerMock
-  let UniswapRouterMock: MockContract
-  let WethMock: MockContract
+  let LivepeerMock: MockContract<LivepeerMock>
+  let UniswapRouterMock: MockContract<UniswapRouterMock>
+  let WethMock: MockContract<WETHMock>
 
   // Deployment
-  let Livepeer: {[name: string]: Deployment}
+  let Livepeer: { [name: string]: Deployment }
 
   const protocolFeesPercent = ethers.utils.parseEther('50')
   const liquidityFeesPercent = ethers.utils.parseEther('50')
@@ -72,35 +72,19 @@ describe('Livepeer Integration Test', () => {
   })
 
   beforeEach('deploy Livepeer', async function () {
-    const LivepeerFac = await ethers.getContractFactory(
-      'LivepeerMock',
-      this.signers[0]
-    )
-
-    LivepeerMock = (await LivepeerFac.deploy(this.Steak.address)) as LivepeerMock
+    const LivepeerFac = await smock.mock<LivepeerMock__factory>('LivepeerMock')
+    LivepeerMock = await LivepeerFac.deploy(this.Steak.address)
     this.StakingContract = LivepeerMock
   })
 
   beforeEach('deploy Uniswap Router Mock', async function () {
-    const UniswapRouterFac = await ethers.getContractFactory(
-      'UniswapRouterMock',
-      this.signers[0]
-    )
-
-    const UniswapRouterNoMock = (await UniswapRouterFac.deploy()) as ISwapRouterWithWETH
-
-    UniswapRouterMock = await smockit(UniswapRouterNoMock)
+    const UniswapRouterFac = await smock.mock<UniswapRouterMock__factory>('UniswapRouterMock')
+    UniswapRouterMock = await UniswapRouterFac.deploy()
   })
 
   beforeEach('deploy WETH Mock', async function () {
-    const WETHFac = await ethers.getContractFactory(
-      'WETHMock',
-      this.signers[0]
-    )
-
-    const WETHNoMock = (await WETHFac.deploy()) as IWETH
-
-    WethMock = await smockit(WETHNoMock)
+    const WETHFac = await smock.mock<WETHMock__factory>('WETHMock')
+    WethMock = await WETHFac.deploy()
   })
 
   beforeEach('deploy Livepeer Tenderizer', async function () {
@@ -142,7 +126,7 @@ describe('Livepeer Integration Test', () => {
     this.TenderSwap = (await ethers.getContractAt('TenderSwap', await this.Tenderizer.tenderSwap())) as TenderSwap
     this.TenderFarm = (await ethers.getContractAt('TenderFarm', await this.Tenderizer.tenderFarm())) as TenderFarm
     this.LpToken = (await ethers.getContractAt('LiquidityPoolToken', await this.TenderSwap.lpToken())) as LiquidityPoolToken
-    UniswapRouterMock.smocked.WETH9.will.return.with(WethMock.address)
+    UniswapRouterMock.WETH9.returns(WethMock.address)
 
     // Set contract variables
     await this.Tenderizer.setProtocolFee(protocolFeesPercent)
@@ -180,9 +164,9 @@ describe('Livepeer Integration Test', () => {
 
           // Set secondary rewards
           await this.StakingContract.setSecondaryRewards(swappedLPTRewards)
-          WethMock.smocked.deposit.will.return()
-          WethMock.smocked.approve.will.return.with(true)
-          UniswapRouterMock.smocked.exactInputSingle.will.return.with(swappedLPTRewards)
+          WethMock.deposit.returns()
+          WethMock.approve.returns(true)
+          UniswapRouterMock.exactInputSingle.returns(swappedLPTRewards)
         })
         describe('Stake increases', stakeIncreaseTests.bind(this))
       })
@@ -190,7 +174,7 @@ describe('Livepeer Integration Test', () => {
       context('Neutral Rebase', async function () {
         beforeEach(async function () {
           await this.Tenderizer.claimRewards()
-          UniswapRouterMock.smocked.exactInputSingle.will.return.with(ethers.constants.Zero)
+          UniswapRouterMock.exactInputSingle.returns(ethers.constants.Zero)
           this.expectedCP = this.initialStake
         })
         describe('Stake stays the same', stakeStaysSameTests.bind(this))

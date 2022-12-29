@@ -1,19 +1,20 @@
 
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { BigNumber, Contract } from 'ethers'
+import { MockContract } from '@defi-wonderland/smock'
+import { BigNumber } from 'ethers'
 import { LiquidityPoolToken, SimpleToken, Tenderizer, TenderSwap, TenderToken } from '../../typechain'
 
 declare module 'mocha' {
-    export interface Context{
+    export interface Context {
         signers: SignerWithAddress[]
         deployer: string
         Steak: SimpleToken
-        StakingContract: Contract
+        StakingContract: MockContract
         methods: {
             stake: string,
             unstake: string,
             withdrawStake: string
-          }
+        }
         NAME: string
         SYMBOL: string
         NODE: string
