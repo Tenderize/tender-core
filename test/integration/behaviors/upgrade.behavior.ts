@@ -1,5 +1,5 @@
 import { BigNumber, Contract, Transaction } from 'ethers/lib/ethers'
-import hre, { ethers } from 'hardhat'
+import { ethers } from 'hardhat'
 import { expect } from 'chai'
 import { EIP173Proxy } from '../../../typechain'
 import { Context } from 'mocha'

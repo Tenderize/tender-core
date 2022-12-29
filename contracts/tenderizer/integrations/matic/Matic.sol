@@ -136,7 +136,6 @@ contract Matic is Tenderizer {
     function _claimSecondaryRewards() internal override {}
 
     function _processNewStake() internal override returns (int256 rewards) {
-        
         uint256 shares = matic.balanceOf(address(this));
         uint256 stake = (shares * _getExchangeRate(matic)) / _getExchangeRatePrecision(matic);
 
@@ -147,7 +146,7 @@ contract Matic is Tenderizer {
         // calculate the new total stake
         stake += currentBal;
 
-        rewards = int256(stake) - int256(currentPrincipal_); 
+        rewards = int256(stake) - int256(currentPrincipal_);
 
         emit RewardsClaimed(rewards, stake, currentPrincipal_);
     }

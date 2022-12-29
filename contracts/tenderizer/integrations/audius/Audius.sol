@@ -69,7 +69,7 @@ contract Audius is Tenderizer {
         amount -= pendingWithdrawals;
 
         // Approve amount to Audius protocol
-       steak.safeIncreaseAllowance(audiusStaking, amount);
+        steak.safeIncreaseAllowance(audiusStaking, amount);
 
         // stake tokens
         uint256 totalNewStake = audius.delegateStake(node, amount);
@@ -85,7 +85,7 @@ contract Audius is Tenderizer {
     ) internal override returns (uint256 unstakeLockID) {
         uint256 amount = _amount;
 
-        unstakeLockID =  withdrawPool.unlock(_account, amount);
+        unstakeLockID = withdrawPool.unlock(_account, amount);
 
         emit Unstake(_account, _node, amount, unstakeLockID);
     }
@@ -140,14 +140,11 @@ contract Audius is Tenderizer {
         // Get the new total delegator stake
         uint256 stake = audius.getTotalDelegatorStake(address(this));
 
-        // calculate what the new currentPrinciple would be excluding 
+        // calculate what the new currentPrinciple would be excluding
         // pending unlocks and pending user withdrawals
-        stake = stake +
-            currentBal -
-            withdrawPool.amount -
-            withdrawPool.pendingUnlock;
+        stake = stake + currentBal - withdrawPool.amount - withdrawPool.pendingUnlock;
 
-        rewards = int256(stake) - int256(currentPrincipal_); 
+        rewards = int256(stake) - int256(currentPrincipal_);
 
         // Difference is negative, slash withdrawalpool
         if (rewards < 0) {
@@ -155,7 +152,7 @@ contract Audius is Tenderizer {
             uint256 unstakePoolTokens = withdrawPool.totalTokens();
             uint256 totalTokens = unstakePoolTokens + currentPrincipal_;
             if (totalTokens > 0) {
-                uint256 unstakePoolSlash = (currentPrincipal_ - stake) * unstakePoolTokens / totalTokens;
+                uint256 unstakePoolSlash = ((currentPrincipal_ - stake) * unstakePoolTokens) / totalTokens;
                 withdrawPool.updateTotalTokens(unstakePoolTokens - unstakePoolSlash);
             }
         }
@@ -164,11 +161,7 @@ contract Audius is Tenderizer {
     }
 
     function _setStakingContract(address _stakingContract) internal override {
-        emit GovernanceUpdate(
-            GovernanceParameter.STAKING_CONTRACT,
-            abi.encode(audius),
-            abi.encode(_stakingContract)
-        );
+        emit GovernanceUpdate(GovernanceParameter.STAKING_CONTRACT, abi.encode(audius), abi.encode(_stakingContract));
         audius = IAudius(_stakingContract);
         audiusStaking = audius.getStakingAddress();
     }

@@ -1,7 +1,9 @@
 import hre, { ethers } from 'hardhat'
 import * as rpc from '../util/snapshot'
+import { MockContract, smock } from '@defi-wonderland/smock'
+
 import {
-  SimpleToken, Matic, TenderToken, TenderFarm, TenderSwap, LiquidityPoolToken, MaticMock
+  SimpleToken, Matic, TenderToken, TenderFarm, TenderSwap, LiquidityPoolToken, MaticMock, MaticMock__factory
 } from '../../typechain'
 import chai from 'chai'
 import { solidity } from 'ethereum-waffle'
@@ -32,9 +34,9 @@ chai.use(solidity)
 
 describe('Matic Integration Test', () => {
   let snapshotId: any
-  let MaticMock: MaticMock
+  let MaticMock: MockContract<MaticMock>
 
-  let Matic: {[name: string]: Deployment}
+  let Matic: { [name: string]: Deployment }
 
   const protocolFeesPercent = ethers.utils.parseEther('50')
   const liquidityFeesPercent = ethers.utils.parseEther('50')
@@ -64,12 +66,9 @@ describe('Matic Integration Test', () => {
   })
 
   beforeEach('deploy Matic', async function () {
-    const MaticFac = await ethers.getContractFactory(
-      'MaticMock',
-      this.signers[0]
-    )
+    const MaticFac = await smock.mock<MaticMock__factory>('MaticMock')
 
-    MaticMock = (await MaticFac.deploy(this.Steak.address)) as MaticMock
+    MaticMock = await MaticFac.deploy(this.Steak.address)
     this.StakingContract = MaticMock
 
     this.NODE = MaticMock.address

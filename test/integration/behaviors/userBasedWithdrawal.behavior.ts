@@ -59,18 +59,18 @@ export default function suite () {
     it('Withdraws correct amount in case of slashing', async () => {
       switch (ctx.NAME) {
         case ('matic'): break
-        default:return
+        default: return
       }
       const deposit = ethers.utils.parseEther('100')
       await ctx.Steak.transfer(ctx.signers[4].address, deposit)
-      const Tenderizer_ = ctx.Tenderizer.connect(ctx.signers[4])
-      await ctx.Steak.connect(ctx.signers[4]).approve(Tenderizer_.address, deposit)
-      await Tenderizer_.deposit(deposit)
-      await Tenderizer_.unstake(deposit)
+      const TenderizerWithSigner = ctx.Tenderizer.connect(ctx.signers[4])
+      await ctx.Steak.connect(ctx.signers[4]).approve(TenderizerWithSigner.address, deposit)
+      await TenderizerWithSigner.deposit(deposit)
+      await TenderizerWithSigner.unstake(deposit)
       ctx.StakingContract.changePendingUndelegation(1, deposit.div(2))
 
       const balBefore = await ctx.Steak.balanceOf(ctx.signers[4].address)
-      const tx = await Tenderizer_.withdraw(1)
+      const tx = await TenderizerWithSigner.withdraw(1)
       await tx.wait()
       const balAfter = await ctx.Steak.balanceOf(ctx.signers[4].address)
       expect(balAfter.sub(balBefore)).to.eq(deposit.div(2))

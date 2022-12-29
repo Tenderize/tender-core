@@ -267,7 +267,6 @@ contract TenderToken is OwnableUpgradeable, ERC20PermitUpgradeable, ITenderToken
     function _mintShares(address _recipient, uint256 _shares) internal {
         require(_recipient != address(0), "MINT_TO_THE_ZERO_ADDRESS");
 
-
         shares[_recipient] += _shares;
 
         // Notice: we're not emitting a Transfer event from the zero address here since shares mint

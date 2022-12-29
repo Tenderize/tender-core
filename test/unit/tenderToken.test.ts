@@ -15,7 +15,7 @@ import { getSignature, getDomainSeparator } from '../util/eip_712'
 
 import { sharesToTokens, tokensToShares } from '../util/helpers'
 import { Livepeer } from '../../typechain/Livepeer'
-import { Livepeer__factory, Tenderizer__factory } from '../../typechain'
+import { Livepeer__factory } from '../../typechain'
 
 chai.use(solidity)
 const {

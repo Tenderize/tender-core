@@ -1,10 +1,10 @@
-import { BigNumber, Contract, ContractTransaction } from 'ethers/lib/ethers'
+import { BigNumber, ContractTransaction } from 'ethers/lib/ethers'
 import { expect } from 'chai'
-import { FakeContract, MockContract, smock } from '@defi-wonderland/smock'
+import { FakeContract, smock } from '@defi-wonderland/smock'
 import { ethers } from 'hardhat'
 import { Context } from 'mocha'
 
-export default function suite() {
+export default function suite () {
   let tx: ContractTransaction
   let ctx: Context
   enum GovernanceParameter {

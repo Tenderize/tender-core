@@ -1,7 +1,9 @@
 import hre, { ethers } from 'hardhat'
 import * as rpc from '../util/snapshot'
+import { MockContract, smock } from '@defi-wonderland/smock'
+
 import {
-  SimpleToken, TenderToken, TenderFarm, TenderSwap, LiquidityPoolToken, GraphMock, Graph
+  SimpleToken, TenderToken, TenderFarm, TenderSwap, LiquidityPoolToken, GraphMock, Graph, GraphMock__factory
 } from '../../typechain'
 
 import { percOf2 } from '../util/helpers'
@@ -36,9 +38,9 @@ chai.use(solidity)
 
 describe('Graph Integration Test', () => {
   let snapshotId: any
-  let GraphMock: GraphMock
+  let GraphMock: MockContract<GraphMock>
 
-  let Graph: {[name: string]: Deployment}
+  let Graph: { [name: string]: Deployment }
 
   const protocolFeesPercent = ethers.utils.parseEther('50')
   const liquidityFeesPercent = ethers.utils.parseEther('50')
@@ -68,12 +70,9 @@ describe('Graph Integration Test', () => {
   })
 
   beforeEach('deploy Graph', async function () {
-    const GraphFac = await ethers.getContractFactory(
-      'GraphMock',
-      this.signers[0]
-    )
+    const GraphFac = await smock.mock<GraphMock__factory>('GraphMock')
 
-    GraphMock = (await GraphFac.deploy(this.Steak.address)) as GraphMock
+    GraphMock = await GraphFac.deploy(this.Steak.address)
     this.StakingContract = GraphMock
   })
 
