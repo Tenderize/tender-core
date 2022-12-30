@@ -101,5 +101,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) { /
 }
 
 func.dependencies = ['Registry', 'TenderToken', 'TenderSwap', 'TenderFarm']
-func.tags = [NAME, 'Deploy'] // this setup a tag so you can execute the script on its own (and its dependencies)
+func.tags = [NAME, 'Tenderizer'] // this setup a tag so you can execute the script on its own (and its dependencies)
 export default func
