@@ -1,8 +1,8 @@
 import { task, types } from 'hardhat/config'
-import { ERC20, DummyStaking } from '../typechain'
+import { DummyStaking } from '../typechain'
 
 task('dummy-rewards', 'deploy DummyStaking')
-.addParam('dummy', 'dummy address', '')
+  .addParam('dummy', 'dummy address', '')
   .addParam('amount', 'initial supply', '10', types.float)
   .setAction(async (args, hre) => {
     const { ethers } = hre

@@ -7,23 +7,23 @@ const NAME = process.env.NAME || ''
 const SYMBOL = process.env.SYMBOL || ''
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-    if (!NAME || !SYMBOL) {
-        throw new Error('Must provide Tenderizer Name and Symbol')
+  if (!NAME || !SYMBOL) {
+    throw new Error('Must provide Tenderizer Name and Symbol')
+  }
+
+  console.log('Running 05')
+  const { deployments, getNamedAccounts } = hre
+  const { deployer } = await getNamedAccounts() // Fetch named accounts from hardhat.process.env.ts
+
+  const tenderizerImplementation = await deployments.deploy(
+    NAME, {
+      from: deployer,
+      args: [],
+      log: true
     }
+  )
 
-    console.log('Running 05')
-    const { deployments, getNamedAccounts } = hre
-    const { deployer } = await getNamedAccounts() // Fetch named accounts from hardhat.process.env.ts
-
-    const tenderizerImplementation = await deployments.deploy(
-        NAME, {
-        from: deployer,
-        args: [],
-        log: true
-    }
-    )
-
-    deployments.save(`${NAME}_Implementation`, tenderizerImplementation)
+  deployments.save(`${NAME}_Implementation`, tenderizerImplementation)
 }
 
 func.dependencies = ['Registry', 'TenderToken', 'TenderSwap', 'TenderFarm', 'Tenderizer']

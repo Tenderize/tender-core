@@ -7,9 +7,7 @@ task('farm', 'farm SWAP tokens to receive rewards')
   .addParam('receiver', 'address to farm tokens for', '', types.string)
   .addParam('tokenamount', 'amount of LP tokens to farm (in 10e18)', 0, types.float)
   .setAction(async (args, hre) => {
-    const { deployments, ethers, getNamedAccounts } = hre
-
-    const { deployer } = await getNamedAccounts()
+    const { deployments, ethers } = hre
 
     let receiver
     if (!args.receiver) {
