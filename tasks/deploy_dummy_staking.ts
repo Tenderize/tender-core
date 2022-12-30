@@ -1,5 +1,4 @@
 import { task, types } from 'hardhat/config'
-import { ERC20, DummyStaking } from '../typechain'
 
 task('deploy-dummy', 'deploy DummyStaking')
   .addParam('supply', 'initial supply', '1000000000000000000', types.string)

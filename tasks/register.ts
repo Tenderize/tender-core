@@ -1,5 +1,5 @@
 import { task, types } from 'hardhat/config'
-import { TenderToken, Tenderizer, TenderSwap, ERC20, TenderFarm, LiquidityPoolToken, Registry } from '../typechain'
+import { TenderToken, Tenderizer, TenderSwap, ERC20, TenderFarm, Registry } from '../typechain'
 
 task('register', 'get contract addresses')
   .addParam('tenderizer', 'tenderizer name e.g. "Livepeer"', '', types.string)

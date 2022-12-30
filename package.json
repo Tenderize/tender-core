@@ -16,7 +16,7 @@
     "deploy:tenderizer": "npx hardhat deploy --tags Deploy,$NAME",
     "prettier": "npx prettier --write 'contracts/**/*.sol'",
     "solhint": "npx solhint 'contracts/**/*.sol'",
-    "eslint": "npx eslint test/**/*.ts scripts/**/*.ts deploy/**/*.ts",
+    "eslint": "npx eslint tasks/**/*.ts test/**/*.ts scripts/**/*.ts deploy/**/*.ts",
     "lint": "yarn solhint && yarn eslint"
   },
   "devDependencies": {
