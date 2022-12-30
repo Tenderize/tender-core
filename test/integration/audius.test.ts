@@ -103,7 +103,7 @@ describe('Audius Integration Test', () => {
     this.unbondLockID = 0
     this.govUnboundLockID = 1
 
-    Audius = await hre.deployments.fixture(['Audius'], {
+    Audius = await hre.deployments.fixture(['Audius', 'Registry', 'TenderToken', 'TenderSwap', 'TenderFarm', 'Tenderizer'], {
       keepExistingDeployments: false
     })
     this.Tenderizer = (await ethers.getContractAt('Audius', Audius.Audius.address)) as Audius
