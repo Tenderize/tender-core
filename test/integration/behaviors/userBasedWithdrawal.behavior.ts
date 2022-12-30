@@ -7,7 +7,7 @@ import { Context } from 'mocha'
 
 const secondDeposit = ethers.utils.parseEther('10')
 
-export default function suite () {
+export default function suite() {
   let tx: ContractTransaction
   let ctx: Context
 
@@ -40,7 +40,7 @@ export default function suite () {
       balBefore = await ctx.Steak.balanceOf(ctx.signers[2].address)
       tx = await ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.lockID)
       balAfter = await ctx.Steak.balanceOf(ctx.signers[2].address)
-      await tx.wait()
+
     })
 
     it('reverts if requested from the wrong account', async () => {
@@ -71,7 +71,7 @@ export default function suite () {
 
       const balBefore = await ctx.Steak.balanceOf(ctx.signers[4].address)
       const tx = await TenderizerWithSigner.withdraw(1)
-      await tx.wait()
+
       const balAfter = await ctx.Steak.balanceOf(ctx.signers[4].address)
       expect(balAfter.sub(balBefore)).to.eq(deposit.div(2))
     })

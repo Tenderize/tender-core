@@ -49,14 +49,14 @@ describe('Matic Integration Test', () => {
     await rpc.revert(snapshotId)
   })
 
-  beforeEach('get signers', async function () {
+  before('get signers', async function () {
     const namedAccs = await hre.getNamedAccounts()
     this.signers = await ethers.getSigners()
 
     this.deployer = namedAccs.deployer
   })
 
-  beforeEach('deploy Matic token', async function () {
+  before('deploy Matic token', async function () {
     const SimpleTokenFactory = await ethers.getContractFactory(
       'SimpleToken',
       this.signers[0]
@@ -65,7 +65,7 @@ describe('Matic Integration Test', () => {
     this.Steak = (await SimpleTokenFactory.deploy('Matic Token', 'MATIC', ethers.utils.parseEther('1000000'))) as SimpleToken
   })
 
-  beforeEach('deploy Matic', async function () {
+  before('deploy Matic', async function () {
     const MaticFac = await smock.mock<MaticMock__factory>('MaticMock')
 
     MaticMock = await MaticFac.deploy(this.Steak.address)
@@ -74,7 +74,7 @@ describe('Matic Integration Test', () => {
     this.NODE = MaticMock.address
   })
 
-  beforeEach('deploy Matic Tenderizer', async function () {
+  before('deploy Matic Tenderizer', async function () {
     const STEAK_AMOUNT = '100000'
     process.env.NAME = 'Matic'
     process.env.SYMBOL = 'MATIC'

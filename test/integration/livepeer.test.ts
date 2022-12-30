@@ -56,14 +56,14 @@ describe('Livepeer Integration Test', () => {
     await rpc.revert(snapshotId)
   })
 
-  beforeEach('get signers', async function () {
+  before('get signers', async function () {
     const namedAccs = await hre.getNamedAccounts()
     this.signers = await ethers.getSigners()
 
     this.deployer = namedAccs.deployer
   })
 
-  beforeEach('deploy Livepeer token (Steak)', async function () {
+  before('deploy Livepeer token (Steak)', async function () {
     const SimpleTokenFactory = await ethers.getContractFactory(
       'SimpleToken',
       this.signers[0]
@@ -71,23 +71,23 @@ describe('Livepeer Integration Test', () => {
     this.Steak = (await SimpleTokenFactory.deploy('Livepeer Token', 'LPT', ethers.utils.parseEther('1000000'))) as SimpleToken
   })
 
-  beforeEach('deploy Livepeer', async function () {
+  before('deploy Livepeer', async function () {
     const LivepeerFac = await smock.mock<LivepeerMock__factory>('LivepeerMock')
     LivepeerMock = await LivepeerFac.deploy(this.Steak.address)
     this.StakingContract = LivepeerMock
   })
 
-  beforeEach('deploy Uniswap Router Mock', async function () {
+  before('deploy Uniswap Router Mock', async function () {
     const UniswapRouterFac = await smock.mock<UniswapRouterMock__factory>('UniswapRouterMock')
     UniswapRouterMock = await UniswapRouterFac.deploy()
   })
 
-  beforeEach('deploy WETH Mock', async function () {
+  before('deploy WETH Mock', async function () {
     const WETHFac = await smock.mock<WETHMock__factory>('WETHMock')
     WethMock = await WETHFac.deploy()
   })
 
-  beforeEach('deploy Livepeer Tenderizer', async function () {
+  before('deploy Livepeer Tenderizer', async function () {
     const STEAK_AMOUNT = '100000'
     this.NODE = '0xf4e8Ef0763BCB2B1aF693F5970a00050a6aC7E1B'
 
