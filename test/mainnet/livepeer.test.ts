@@ -20,6 +20,7 @@ import { Contract, ContractTransaction } from '@ethersproject/contracts'
 import { sharesToTokens, percOf2 } from '../util/helpers'
 import { Signer } from '@ethersproject/abstract-signer'
 import { getCurrentBlockTimestamp } from '../util/evm'
+import { utils } from 'ethers'
 
 chai.use(solidity)
 const {
@@ -35,7 +36,7 @@ describe('Livepeer Mainnet Fork Test', () => {
   let LpToken: LiquidityPoolToken
   let TenderFarm: TenderFarm
 
-  let Livepeer: {[name: string]: Deployment}
+  let Livepeer: { [name: string]: Deployment }
 
   let signers: SignerWithAddress[]
   let deployer: string
@@ -57,24 +58,28 @@ describe('Livepeer Mainnet Fork Test', () => {
     deployer = namedAccs.deployer
   })
 
-  const STEAK_AMOUNT = '100000'
-  const NODE = '0x9C10672CEE058Fd658103d90872fE431bb6C0AFa'
-  const bondingManagerAddr = '0x511bc4556d823ae99630ae8de28b9b80df90ea2e'
-  const roundsManagerAddr = '0x3984fc4ceeef1739135476f625d36d6c35c40dc3'
-  const ticketBrokerAddr = '0x5b1cE829384EeBFa30286F12d1E7A695ca45F5D2'
+  const STEAK_AMOUNT = '1000'
+  const NODE = '0xf4e8Ef0763BCB2B1aF693F5970a00050a6aC7E1B'
+  const bondingManagerAddr = '0x35Bcf3c30594191d53231E4FF333E8A770453e40'
+  const roundsManagerAddr = '0xdd6f56DcC28D3F5f27084381fE8Df634985cc39f'
+  const ticketBrokerAddr = '0xa8bB618B1520E284046F3dFc448851A1Ff26e41B'
+  const livepeerToken = '0x289ba1701C2F088cf0faf8B3705246331cB8A839'
   let bondingManager: Contract
   let roundsManager: Contract
 
-  const LPTDeployer = '0x505f8c2ee81f1c6fa0d88e918ef0491222e05818'
+  const tokenHolder = '0xea015c08ba1cd54a45a0c2e70563a247478e3644'
+
+  const LPTDeployer = '0xb5af4138f0f33be0d6414eb25271b9c2dc245fb5'
   let multisigSigner: Signer
-  const uniswapQuoter = '0xb27308f9f90d607463bb33ea1bebb41c27ce5ab6'
-  const WETHAddress = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
+  const uniswapQuoter = '0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6'
+  const uniswapRouter = '0xE592427A0AEce92De3Edee1F18E0157C05861564'
+  const WETHAddress = '0x82af49447d8a07e3bd95bd0d56f35241523fbab1'
 
   const testTimeout = 1200000
 
   const ONE = ethers.utils.parseEther('1')
 
-  const ALCHEMY_URL = process.env.ALCHEMY_MAINNET
+  const ALCHEMY_URL = process.env.ALCHEMY_ARBITRUM
 
   before('deploy Livepeer Tenderizer', async function () {
     this.timeout(testTimeout)
@@ -84,29 +89,40 @@ describe('Livepeer Mainnet Fork Test', () => {
       params: [{
         forking: {
           jsonRpcUrl: ALCHEMY_URL,
-          blockNumber: 14003805
+          blockNumber: 50420799
         }
       }]
     })
     process.env.NAME = 'Livepeer'
     process.env.SYMBOL = 'LPT'
     process.env.CONTRACT = bondingManagerAddr
-    process.env.TOKEN = '0x58b6A8A3302369DAEc383334672404Ee733aB239'
+    process.env.TOKEN = livepeerToken
     process.env.VALIDATOR = NODE
     process.env.STEAK_AMOUNT = STEAK_AMOUNT
     process.env.ADMIN_FEE = '0'
     process.env.SWAP_FEE = '5000000'
     process.env.AMPLIFIER = '85'
 
-    const uniswapRouter = '0xE592427A0AEce92De3Edee1F18E0157C05861564'
+    await hre.network.provider.request({
+      method: 'hardhat_impersonateAccount',
+      params: [tokenHolder]
+    })
+    await signers[0].sendTransaction({ to: tokenHolder, value: utils.parseEther('1') })
+    const tokenHolderSigner = await ethers.provider.getSigner(tokenHolder)
+    LivepeerToken = (await ethers.getContractAt('ERC20', livepeerToken)) as ERC20
+    await LivepeerToken.connect(tokenHolderSigner).transfer(deployer, ethers.utils.parseEther(process.env.STEAK_AMOUNT).mul(5))
+    await hre.network.provider.request({
+      method: 'hardhat_stopImpersonatingAccount',
+      params: [tokenHolder]
+    })
+    console.log('got tokens')
+    await signers[0].sendTransaction({ to: LPTDeployer, value: utils.parseEther('1') })
 
     await hre.network.provider.request({
       method: 'hardhat_impersonateAccount',
       params: [LPTDeployer]
     })
     multisigSigner = await ethers.provider.getSigner(LPTDeployer)
-    LivepeerToken = (await ethers.getContractAt('ERC20', process.env.TOKEN)) as ERC20
-    await LivepeerToken.connect(multisigSigner).transfer(deployer, ethers.utils.parseEther(process.env.STEAK_AMOUNT).mul(5))
 
     LivepeerStaking = (await ethers.getContractAt('ILivepeer', process.env.CONTRACT)) as ILivepeer
 
@@ -133,6 +149,12 @@ describe('Livepeer Mainnet Fork Test', () => {
     await TenderSwap.addLiquidity([initialStake, initialStake], lpTokensOut, (await getCurrentBlockTimestamp()) + 1000)
     await LpToken.approve(TenderFarm.address, lpTokensOut)
     await TenderFarm.farm(lpTokensOut)
+    // Initialize round
+    roundsManager = new ethers.Contract(roundsManagerAddr, adjustableRoundsManagerAbi, ethers.provider)
+    const initialized = await roundsManager.connect(multisigSigner).currentRoundInitialized()
+    if (!initialized) {
+      await roundsManager.connect(multisigSigner).initializeRound()
+    }
   })
 
   const initialStake = ethers.utils.parseEther(STEAK_AMOUNT).div('2')
@@ -203,8 +225,6 @@ describe('Livepeer Mainnet Fork Test', () => {
         dyBefore = await TenderSwap.calculateSwap(TenderToken.address, ONE)
         this.timeout(testTimeout * 10)
         bondingManager = new ethers.Contract(bondingManagerAddr, bondingManagerAbi, ethers.provider)
-        roundsManager = new ethers.Contract(roundsManagerAddr, adjustableRoundsManagerAbi, ethers.provider)
-
         let currentRound = await roundsManager.currentRound()
         const stakeBefore = await bondingManager.pendingStake(Tenderizer.address, currentRound)
 

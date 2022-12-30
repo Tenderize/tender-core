@@ -91,9 +91,7 @@ contract Graph is Tenderizer {
         uint256 _amount
     ) internal override returns (uint256 unstakeLockID) {
         uint256 amount = _amount;
-
         unstakeLockID = withdrawPool.unlock(_account, amount);
-
         emit Unstake(_account, _node, amount, unstakeLockID);
     }
 

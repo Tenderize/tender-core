@@ -399,7 +399,7 @@ describe('Audius Mainnet Fork Test', () => {
 
       it('reduces TenderToken Balance', async () => {
         // lte to account for any roundoff error in tokenToShare calcualtion during burn
-        expect(await TenderToken.balanceOf(signers[2].address)).to.lte(2)
+        expect(await TenderToken.balanceOf(signers[2].address)).to.lte(5)
       })
 
       it('should emit Unstake event from Tenderizer', async () => {

@@ -180,15 +180,13 @@ describe('TenderSwap', () => {
         .mul(999)
         .div(1000)
 
-      const tx = await swap
+      await swap
         .connect(user1)
         .addLiquidity(
           [String(1e18), String(3e18)],
           calculatedPoolTokenAmountWithSlippage,
           constants.MaxUint256
         )
-
-      await tx.wait()
 
       const actualPoolTokenAmount = await swapToken.balanceOf(user1Address)
 
@@ -508,7 +506,7 @@ describe('TenderSwap', () => {
       )
 
       const calculatedSecondTokenAmount =
-      await swap.calculateRemoveLiquidityOneToken(amountToWithdraw, secondToken.address)
+        await swap.calculateRemoveLiquidityOneToken(amountToWithdraw, secondToken.address)
       expect(calculatedSecondTokenAmount).to.eq(
         BigNumber.from('874340832599982753')
       )

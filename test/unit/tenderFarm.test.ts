@@ -564,7 +564,7 @@ describe('TenderFarm', () => {
       const tx = await tenderFarm.harvest()
       await expect(tx).to.emit(tenderFarm, 'Harvest').withArgs(account0, rewardAmount)
       await expect(tx).to.emit(tenderToken, 'Transfer').withArgs(tenderFarm.address, account0, rewardAmount)
-      await tx.wait()
+
       expect(await tenderToken.balanceOf(account0)).to.eq(balBefore.add(rewardAmount))
       const stake = await tenderFarm.stakes(account0)
       expect(stake.lastCRF).to.eq(percOf(PERC_DIVISOR, rewardAmount, amount))

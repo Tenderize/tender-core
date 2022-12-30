@@ -5,7 +5,7 @@ import { ethers } from 'hardhat'
 import { getSighash } from '../../util/helpers'
 import { Context } from 'mocha'
 
-export default function suite () {
+export default function suite() {
   let ctx: Context
   const secondDeposit = ethers.utils.parseEther('10')
   const acceptableDelta = 2
@@ -34,7 +34,7 @@ export default function suite () {
       await ctx.Tenderizer.processUnstake()
       balBefore = await ctx.Steak.balanceOf(ctx.Tenderizer.address)
       tx = await ctx.Tenderizer.processWithdraw()
-      await tx.wait()
+
     })
 
     it('reverts if undelegateStake() reverts', async () => {
@@ -55,7 +55,7 @@ export default function suite () {
   })
 
   describe('user withdrawal', async () => {
-    let steakBalanceBefore : BigNumber
+    let steakBalanceBefore: BigNumber
     let tx: ContractTransaction
 
     beforeEach(async function () {
@@ -64,7 +64,7 @@ export default function suite () {
       await ctx.Tenderizer.processWithdraw()
       steakBalanceBefore = await ctx.Steak.balanceOf(ctx.signers[2].address)
       tx = await ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.unbondLockID)
-      await tx.wait()
+
     })
 
     it('reverts if account mismatch from unbondigLock', async () => {
@@ -84,7 +84,7 @@ export default function suite () {
   })
 
   describe('gov processes unstakes after being slashed', async function () {
-    let steakBalanceBefore : BigNumber
+    let steakBalanceBefore: BigNumber
     let slashFromWithdrawal: BigNumber
 
     beforeEach(async function () {
@@ -110,13 +110,13 @@ export default function suite () {
   })
 
   describe('gov processes processes withdrawals after being slashed', async function () {
-    let steakBalanceBefore : BigNumber
+    let steakBalanceBefore: BigNumber
     let slashFromWithdrawal: BigNumber
 
     beforeEach(async function () {
       // Gov Unstake
       const tx = await ctx.Tenderizer.processUnstake()
-      await tx.wait()
+
       // reduce staked on mock
       const slashAmount = ethers.utils.parseEther('1')
       const staked = await ctx.StakingContract.staked()
@@ -137,7 +137,7 @@ export default function suite () {
   })
 
   describe('slash occurs after unstake is processed, reduces pending unstake locks', async function () {
-    let steakBalanceBefore : BigNumber
+    let steakBalanceBefore: BigNumber
     let slashFromWithdrawal: BigNumber
 
     beforeEach(async function () {
@@ -145,7 +145,7 @@ export default function suite () {
       // Gov Unstake
       await ctx.Tenderizer.processUnstake()
       let tx = await ctx.Tenderizer.processWithdraw()
-      await tx.wait()
+
       // reduce staked on mock
       const slashAmount = ethers.utils.parseEther('1')
       const staked = await ctx.StakingContract.staked()
@@ -155,7 +155,7 @@ export default function suite () {
       slashFromWithdrawal = slashAmount.mul(ctx.withdrawAmount).div(cpBefore.add(ctx.withdrawAmount))
       steakBalanceBefore = await ctx.Steak.balanceOf(ctx.signers[2].address)
       tx = await ctx.Tenderizer.connect(ctx.signers[2]).withdraw(ctx.unbondLockID)
-      await tx.wait()
+
     })
 
     it('reduces the unstaked amount', async () => {

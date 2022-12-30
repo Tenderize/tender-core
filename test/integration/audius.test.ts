@@ -50,14 +50,14 @@ describe('Audius Integration Test', () => {
     await rpc.revert(snapshotId)
   })
 
-  beforeEach('get signers', async function () {
+  before('get signers', async function () {
     const namedAccs = await hre.getNamedAccounts()
     this.signers = await ethers.getSigners()
 
     this.deployer = namedAccs.deployer
   })
 
-  beforeEach('deploy Audius token', async function () {
+  before('deploy Audius token', async function () {
     const SimpleTokenFactory = await ethers.getContractFactory(
       'SimpleToken',
       this.signers[0]
@@ -66,7 +66,7 @@ describe('Audius Integration Test', () => {
     this.Steak = (await SimpleTokenFactory.deploy('Audius Token', 'AUDIO', ethers.utils.parseEther('1000000'))) as SimpleToken
   })
 
-  beforeEach('deploy Audius', async function () {
+  before('deploy Audius', async function () {
     const AudiusFac = await smock.mock<AudiusMock__factory>('AudiusMock')
     AudiusMock = await AudiusFac.deploy(this.Steak.address)
     this.StakingContract = AudiusMock
@@ -74,7 +74,7 @@ describe('Audius Integration Test', () => {
 
   const STEAK_AMOUNT = '100000'
 
-  beforeEach('deploy Audius Tenderizer', async function () {
+  before('deploy Audius Tenderizer', async function () {
     this.NODE = '0xf4e8Ef0763BCB2B1aF693F5970a00050a6aC7E1B'
     process.env.NAME = 'Audius'
     process.env.SYMBOL = 'AUDIO'

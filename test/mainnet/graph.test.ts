@@ -18,7 +18,7 @@ import { Deployment } from 'hardhat-deploy/dist/types'
 import { BigNumber } from '@ethersproject/bignumber'
 import { Contract, ContractTransaction } from '@ethersproject/contracts'
 
-import { percOf2 } from '../util/helpers'
+import { percOf, percOf2 } from '../util/helpers'
 import { Signer } from '@ethersproject/abstract-signer'
 import { AlchemyProvider } from '@ethersproject/providers'
 
@@ -91,7 +91,7 @@ describe('Graph Mainnet Fork Test', () => {
     const stakingContract = new Contract(stakingAddr, stakingAbi, latestBlockProvider)
     const filter = await stakingContract.filters.AllocationClosed(NODE, null, null, null, null, null, null, null, null)
     const allocationClosedEvents = await stakingContract.queryFilter(filter)
-    const allocationClosedTx = await allocationClosedEvents[allocationClosedEvents.length - 1].getTransaction()
+    const allocationClosedTx = await allocationClosedEvents[0].getTransaction()
     const stakingInterface = new ethers.utils.Interface(stakingAbi)
     const decodedInput = stakingInterface.parseTransaction({ data: allocationClosedTx.data, value: allocationClosedTx.value })
     lastAllocationID = decodedInput.args._allocationID
@@ -103,7 +103,7 @@ describe('Graph Mainnet Fork Test', () => {
       params: [{
         forking: {
           blockNumber: allocationClosedTx.blockNumber! - 2,
-          jsonRpcUrl: `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`
+          jsonRpcUrl: process.env.ALCHEMY_MAINNET
         }
       }]
     })
@@ -213,7 +213,7 @@ describe('Graph Mainnet Fork Test', () => {
       })
 
       it('emits Deposit event from tenderizer', async () => {
-        expect(tx).to.emit(Tenderizer, 'Deposit').withArgs(deployer, deposit)
+        await expect(tx).to.emit(Tenderizer, 'Deposit').withArgs(deployer, deposit)
       })
     })
   })
@@ -247,6 +247,7 @@ describe('Graph Mainnet Fork Test', () => {
     let dyBefore: BigNumber
     let ammBalanceBefore: BigNumber
     let deployerBalanceBefore: BigNumber
+    const acceptableDelta = 2
 
     describe('stake stays the same', () => {
       before(async function () {
@@ -256,7 +257,8 @@ describe('Graph Mainnet Fork Test', () => {
       })
 
       it('currentPrincipal stays the same', async () => {
-        expect(await Tenderizer.currentPrincipal()).to.eq(supplyAfterTax.sub(2)) // Account for precision loss from the graph share calculation itself
+        expect((await Tenderizer.currentPrincipal()).sub(supplyAfterTax).abs()).to.be.lte(acceptableDelta)
+        expect(await Tenderizer.currentPrincipal()).to.eq(supplyAfterTax) // Account for precision loss from the graph share calculation itself
       })
 
       it('tenderToken price stays the same', async () => {
@@ -264,9 +266,8 @@ describe('Graph Mainnet Fork Test', () => {
       })
 
       it('should emit RewardsClaimed event from Tenderizer', async () => {
-        // Sub 1 to account for round-off error
-        expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
-          .withArgs(-2, supplyAfterTax.sub(1), supplyAfterTax) // Account for precision loss from the graph share calculation itself
+        await expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
+          .withArgs(0, supplyAfterTax, supplyAfterTax) // Account for precision loss from the graph share calculation itself
       })
     })
 
@@ -275,13 +276,11 @@ describe('Graph Mainnet Fork Test', () => {
       let stakeBefore: BigNumber
       let farmBalanceBefore: BigNumber
       let newStake: BigNumber
-      let ownerBalBefore: BigNumber
       let otherAcc: SignerWithAddress
       let otherAccBalBefore: BigNumber
 
       before(async function () {
         otherAcc = signers[3]
-        ownerBalBefore = await TenderToken.balanceOf(deployer)
         otherAccBalBefore = await TenderToken.balanceOf(otherAcc.address)
         farmBalanceBefore = await TenderToken.balanceOf(TenderFarm.address)
         this.timeout(testTimeout * 10)
@@ -353,7 +352,7 @@ describe('Graph Mainnet Fork Test', () => {
       })
 
       it('updates currentPrincipal', async () => {
-        expect((await Tenderizer.currentPrincipal()).sub(newStake).abs()).to.lt(acceptableDelta * 5)
+        expect(await Tenderizer.currentPrincipal()).to.eq(newStake)
       })
 
       it('increases tendertoken balances when rewards are added', async () => {
@@ -369,12 +368,22 @@ describe('Graph Mainnet Fork Test', () => {
       })
 
       it('should emit RewardsClaimed event from Tenderizer', async () => {
-        expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
+        await expect(tx).to.emit(Tenderizer, 'RewardsClaimed')
       })
-      it('collects fees', async () => {
+
+      describe('collects fees', async () => {
         it('should increase tenderToken balance of owner', async () => {
-          expect((await TenderToken.balanceOf(deployer)).sub(ownerBalBefore.add(protocolFees)).abs())
-            .to.lte(acceptableDelta)
+          const rewards = percOf(increase.sub(protocolFees).sub(liquidityFees), deployerBalanceBefore, stakeBefore)
+
+          // const rewards = (newStake.sub(liquidityFees).sub(protocolFees)).mul((await TenderToken.balanceOf(deployer)).sub(protocolFees)).div(await Tenderizer.currentPrincipal())
+          expect(
+            (await TenderToken.balanceOf(deployer))
+              .sub(
+                deployerBalanceBefore.add(
+                  rewards.add(protocolFees)
+                )
+                  .abs()
+              )).to.lte(acceptableDelta)
         })
 
         it('should retain the balance for any other account', async () => {
@@ -382,11 +391,11 @@ describe('Graph Mainnet Fork Test', () => {
         })
 
         it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
-          expect(tx).to.emit(Tenderizer, 'ProtocolFeeCollected').withArgs(protocolFees)
+          await expect(tx).to.emit(Tenderizer, 'ProtocolFeeCollected').withArgs((val: BigNumber) => protocolFees.sub(val).lte(acceptableDelta))
         })
       })
 
-      it('collects liquidity provider fees', async () => {
+      describe('collects liquidity provider fees', async () => {
         it('should increase tenderToken balance of tenderFarm', async () => {
           expect((await TenderToken.balanceOf(TenderFarm.address)).sub(farmBalanceBefore.add(liquidityFees)).abs())
             .to.lte(acceptableDelta)
@@ -397,7 +406,7 @@ describe('Graph Mainnet Fork Test', () => {
         })
 
         it('should emit ProtocolFeeCollected event from Tenderizer', async () => {
-          expect(tx).to.emit(Tenderizer, 'LiquidityFeeCollected').withArgs(liquidityFees)
+          await expect(tx).to.emit(Tenderizer, 'LiquidityFeeCollected').withArgs((val: BigNumber) => protocolFees.sub(val).lte(acceptableDelta))
         })
       })
     })
@@ -476,7 +485,6 @@ describe('Graph Mainnet Fork Test', () => {
           await hre.ethers.provider.send('evm_mine', [])
         }
         tx = await Tenderizer.processWithdraw()
-        await tx.wait()
       }).timeout(testTimeout * 10)
 
       it('should emit Withdraw event from Tenderizer', async () => {

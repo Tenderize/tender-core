@@ -53,14 +53,14 @@ describe('Graph Integration Test', () => {
     await rpc.revert(snapshotId)
   })
 
-  beforeEach('get signers', async function () {
+  before('get signers', async function () {
     const namedAccs = await hre.getNamedAccounts()
     this.signers = await ethers.getSigners()
 
     this.deployer = namedAccs.deployer
   })
 
-  beforeEach('deploy Graph token', async function () {
+  before('deploy Graph token', async function () {
     const SimpleTokenFactory = await ethers.getContractFactory(
       'SimpleToken',
       this.signers[0]
@@ -69,7 +69,7 @@ describe('Graph Integration Test', () => {
     this.Steak = (await SimpleTokenFactory.deploy('Graph Token', 'GRT', ethers.utils.parseEther('1000000'))) as SimpleToken
   })
 
-  beforeEach('deploy Graph', async function () {
+  before('deploy Graph', async function () {
     const GraphFac = await smock.mock<GraphMock__factory>('GraphMock')
 
     GraphMock = await GraphFac.deploy(this.Steak.address)
@@ -78,7 +78,7 @@ describe('Graph Integration Test', () => {
 
   const STEAK_AMOUNT = '100000'
 
-  beforeEach('deploy Graph Tenderizer', async function () {
+  before('deploy Graph Tenderizer', async function () {
     this.NODE = '0xf4e8Ef0763BCB2B1aF693F5970a00050a6aC7E1B'
     process.env.NAME = 'Graph'
     process.env.SYMBOL = 'GRT'
@@ -178,9 +178,9 @@ describe('Graph Integration Test', () => {
     describe('Unlock and Withdraw', async function () {
       beforeEach(async function () {
         this.withdrawAmount = await this.TenderToken.balanceOf(this.deployer)
-        await this.StakingContract.setStaked(
-          await this.Tenderizer.totalStakedTokens()
-        )
+        const initialSupply = await this.Tenderizer.totalStakedTokens()
+
+        await this.StakingContract.setStaked(initialSupply)
       })
       describe('Unstake', govBasedUnlock.bind(this))
       describe('Withdrawal', withdrawTests.bind(this))
