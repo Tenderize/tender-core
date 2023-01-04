@@ -11,7 +11,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     throw new Error('Must provide Tenderizer Name and Symbol')
   }
 
-  console.log('Running 05')
   const { deployments, getNamedAccounts } = hre
   const { deployer } = await getNamedAccounts() // Fetch named accounts from hardhat.process.env.ts
 
@@ -26,6 +25,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   deployments.save(`${NAME}_Implementation`, tenderizerImplementation)
 }
 
-func.dependencies = ['Registry', 'TenderToken', 'TenderSwap', 'TenderFarm', 'Tenderizer']
 func.tags = ['Upgrade']
 export default func
