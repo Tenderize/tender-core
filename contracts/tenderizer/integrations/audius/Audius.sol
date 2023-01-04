@@ -109,7 +109,7 @@ contract Audius is Tenderizer {
         emit Withdraw(_account, amount, _withdrawalID);
     }
 
-    function processWithdraw() external onlyGov {
+    function processWithdraw(address /*_node*/) external onlyGov {
         uint256 balBefore = steak.balanceOf(address(this));
 
         audius.undelegateStake();

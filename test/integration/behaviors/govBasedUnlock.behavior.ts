@@ -5,8 +5,7 @@ import { ethers } from 'hardhat'
 import { getSighash } from '../../util/helpers'
 import { Context } from 'mocha'
 
-export function govBasedUnlock() {
-  let unstakeTx: ContractTransaction
+export function govBasedUnlock () {
   let ctx: Context
   const secondDeposit = ethers.utils.parseEther('10')
   const acceptableDelta = 2
@@ -57,13 +56,11 @@ export function govBasedUnlock() {
       it('TenderToken balance of other account stays the same', async () => {
         expect((await ctx.TenderToken.balanceOf(ctx.signers[3].address)).sub(balOtherAcc).abs())
           .to.lte(acceptableDelta)
-
       })
     })
   })
 
   describe('gov unlock', async () => {
-
     beforeEach(async () => {
       await ctx.Tenderizer.connect(ctx.signers[2]).unstake(ctx.withdrawAmount)
     })
@@ -86,7 +83,7 @@ export function govBasedUnlock() {
   })
 }
 
-export function rescueFunctions() {
+export function rescueFunctions () {
   let tx: ContractTransaction
   let ctx: Context
   const lockID = 0
@@ -122,7 +119,7 @@ export function rescueFunctions() {
       principleBefore = await ctx.Tenderizer.currentPrincipal()
       await ctx.Tenderizer.rescueUnlock()
       await ctx.Tenderizer.processUnstake()
-      await ctx.Tenderizer.processWithdraw()
+      await ctx.Tenderizer.processWithdraw(ctx.NODE)
       tx = await ctx.Tenderizer.rescueWithdraw(lockID)
     })
 
