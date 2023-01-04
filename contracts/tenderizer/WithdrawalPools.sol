@@ -83,12 +83,10 @@ library WithdrawalPools {
         // calculate relative amounts to subtract from 'amount' and 'pendingUnlock'
         uint256 amount_ = _pool.amount;
         uint256 pendingUnlock_ = _pool.pendingUnlock;
-        uint256 pendingWithdrawal = _pool.pendingWithdrawal;
-        uint256 total = amount_ + pendingUnlock_ + pendingWithdrawal;
+        uint256 total = amount_ + pendingUnlock_;
         if (total > 0) {
             _pool.amount = (_newAmount * amount_) / total;
             _pool.pendingUnlock = (_newAmount * pendingUnlock_) / total;
-            _pool.pendingWithdrawal = (_newAmount * pendingWithdrawal) / total;
         }
     }
 
