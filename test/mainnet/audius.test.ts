@@ -427,7 +427,7 @@ describe('Audius Mainnet Fork Test', () => {
   describe('withdraw', () => {
     describe('gov withdrawal', async () => {
       it('reverts if undelegateStake() reverts - lockup pending', async () => {
-        await expect(Tenderizer.processWithdraw()).to.be.reverted
+        await expect(Tenderizer.processWithdraw(NODE)).to.be.reverted
       })
 
       it('undelegateStake() succeeds', async () => {
@@ -435,7 +435,7 @@ describe('Audius Mainnet Fork Test', () => {
         for (let j = 0; j < 46523; j++) {
           await hre.ethers.provider.send('evm_mine', [])
         }
-        tx = await Tenderizer.processWithdraw()
+        tx = await Tenderizer.processWithdraw(NODE)
       }).timeout(testTimeout * 10)
 
       it('should emit Withdraw event from Tenderizer', async () => {

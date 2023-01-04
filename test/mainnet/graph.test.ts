@@ -477,14 +477,14 @@ describe('Graph Mainnet Fork Test', () => {
       })
 
       it('reverts if withdrawDelegated() fails - withdraw period pending', async () => {
-        await expect(Tenderizer.processWithdraw()).to.be.reverted
+        await expect(Tenderizer.processWithdraw(NODE)).to.be.reverted
       })
 
       it('withdrawDelegated() succeeds', async () => {
         for (let j = 0; j < 30; j++) {
           await hre.ethers.provider.send('evm_mine', [])
         }
-        tx = await Tenderizer.processWithdraw()
+        tx = await Tenderizer.processWithdraw(NODE)
       }).timeout(testTimeout * 10)
 
       it('should emit Withdraw event from Tenderizer', async () => {

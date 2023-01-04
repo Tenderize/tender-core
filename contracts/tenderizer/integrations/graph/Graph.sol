@@ -29,6 +29,10 @@ contract Graph is Tenderizer {
 
     WithdrawalPools.Pool withdrawPool;
 
+    uint256 pendingMigration;
+
+    address newNode;
+
     function initialize(
         IERC20 _steak,
         string calldata _symbol,
@@ -51,6 +55,27 @@ contract Graph is Tenderizer {
             _tenderSwapFactory
         );
         graph = _graph;
+    }
+
+    function migrateUnlock(address _newNode) external virtual onlyGov returns (uint256 lockID) {
+        uint256 amount = _tokensToMigrate(node);
+
+        // Check that there's no pending migration
+        require(pendingMigration == 0, "PENDING_MIGRATION");
+
+        // store penging migration amount & new node
+        pendingMigration = amount;
+        newNode = _newNode;
+
+        // set new node
+        lockID = _unstake(address(this), node, amount);
+    }
+
+    function migrateWithdraw(uint256 _unstakeLockID) external virtual onlyGov {
+        // reset pending migration amount
+        pendingMigration = 0;
+        _withdraw(address(this), _unstakeLockID);
+        _claimRewards();
     }
 
     function _calcDepositOut(uint256 _amountIn) internal view override returns (uint256) {
@@ -98,21 +123,30 @@ contract Graph is Tenderizer {
     function processUnstake() external onlyGov {
         uint256 amount = withdrawPool.processUnlocks();
 
-        address node_ = node;
-
         // Calculate the amount of shares to undelegate
-        IGraph.DelegationPool memory delPool = graph.delegationPools(node_);
-
+        IGraph.DelegationPool memory delPool = graph.delegationPools(node);
         uint256 totalShares = delPool.shares;
         uint256 totalTokens = delPool.tokens;
 
         uint256 shares = (amount * totalShares) / totalTokens;
 
+        // Check that calculated shares doesn't exceed actual shares owned
+        // account of round-off error resulting in calculating 1 share less
+        IGraph.Delegation memory delegation = graph.getDelegation(node, address(this));
+        if (shares >= delegation.shares - 1) {
+            shares = delegation.shares;
+        }
+
         // Shares =  amount * totalShares / totalTokens
         // undelegate shares
-        graph.undelegate(node_, shares);
+        graph.undelegate(node, shares);
 
-        emit ProcessUnstakes(msg.sender, node_, amount);
+        emit ProcessUnstakes(msg.sender, node, amount);
+
+        if(newNode != address(0)){
+            node = newNode;
+            newNode = address(0);
+        }
     }
 
     function _withdraw(address _account, uint256 _withdrawalID) internal override {
@@ -130,10 +164,10 @@ contract Graph is Tenderizer {
         emit Withdraw(_account, amount, _withdrawalID);
     }
 
-    function processWithdraw() external onlyGov {
+    function processWithdraw(address _node) external onlyGov {
         uint256 balBefore = steak.balanceOf(address(this));
 
-        graph.withdrawDelegated(node, address(0));
+        graph.withdrawDelegated(_node, address(0));
 
         uint256 balAfter = steak.balanceOf(address(this));
         uint256 amount = balAfter - balBefore;
@@ -146,25 +180,19 @@ contract Graph is Tenderizer {
     function _claimSecondaryRewards() internal override {}
 
     function _processNewStake() internal override returns (int256 rewards) {
-        IGraph.Delegation memory delegation = graph.getDelegation(node, address(this));
-        IGraph.DelegationPool memory delPool = graph.delegationPools(node);
-
-        uint256 delShares = delegation.shares;
-        uint256 totalShares = delPool.shares;
-        uint256 totalTokens = delPool.tokens;
-
-        if (totalShares == 0) return 0;
-
-        uint256 stake = (delShares * totalTokens) / totalShares;
+        uint256 stake = _tokensDelegated(node);
 
         uint256 currentPrincipal_ = currentPrincipal;
 
-        uint256 currentBal = _calcDepositOut(steak.balanceOf(address(this)) - withdrawPool.amount);
+        // exclude tokens to be withdrawn from balance
+        // add pendingMigration amount
+        uint256 stakeRemainder = _calcDepositOut(
+            steak.balanceOf(address(this)) - withdrawPool.amount + pendingMigration
+        );
 
-        // calculate what the new currentPrinciple would be excluding
-        // pending unlocks and pending user withdrawals
-        stake = stake + currentBal - withdrawPool.pendingUnlock;
-        // already subtracted withdrawalPool.amount from the current balancee
+        // calculate what the new currentPrinciple would be
+        // exclude pendingUnlocks from stake
+        stake = (stake - withdrawPool.pendingUnlock) + stakeRemainder;
 
         rewards = int256(stake) - int256(currentPrincipal_);
 
@@ -180,6 +208,23 @@ contract Graph is Tenderizer {
         }
 
         emit RewardsClaimed(rewards, stake, currentPrincipal_);
+    }
+
+    function _tokensDelegated(address _node) internal view returns (uint256) {
+        IGraph.Delegation memory delegation = graph.getDelegation(_node, address(this));
+        IGraph.DelegationPool memory delPool = graph.delegationPools(_node);
+
+        uint256 delShares = delegation.shares;
+        uint256 totalShares = delPool.shares;
+        uint256 totalTokens = delPool.tokens;
+
+        if (totalShares == 0) return 0;
+
+        return (delShares * totalTokens) / totalShares;
+    }
+
+    function _tokensToMigrate(address _node) internal view override returns (uint256) {
+        return _tokensDelegated(_node) - withdrawPool.pendingUnlock;
     }
 
     function _setStakingContract(address _stakingContract) internal override {

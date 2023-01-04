@@ -65,7 +65,7 @@ const config: HardhatUserConfig = {
       url: JSON_RPC,
       accounts: PRIVATE_KEY ? [`0x${PRIVATE_KEY}`] : undefined
     },
-    rinkeby: {
+    goerli: {
       url: JSON_RPC,
       accounts: PRIVATE_KEY ? [`0x${PRIVATE_KEY}`] : undefined
     },
@@ -90,6 +90,7 @@ const config: HardhatUserConfig = {
   etherscan: {
     apiKey: {
       mainnet: ETHERSCAN_API_KEY,
+      goerli: ETHERSCAN_API_KEY,
       arbitrumOne: ARBISCAN_API_KEY
     }
   }

@@ -5,7 +5,7 @@ import { Context } from 'mocha'
 
 const acceptableDelta = 2
 
-export function protocolFeeTests() {
+export function protocolFeeTests () {
   let tx: ContractTransaction
   let ctx: Context
   let fees: BigNumber
@@ -23,7 +23,6 @@ export function protocolFeeTests() {
     ownerBalBefore = await ctx.TenderToken.balanceOf(ctx.deployer)
     otherAccBalBefore = await ctx.TenderToken.balanceOf(ctx.signers[2].address)
     tx = await ctx.Tenderizer.collectFees()
-
   })
 
   it('should reset pendingFees', async () => {
@@ -44,7 +43,7 @@ export function protocolFeeTests() {
   })
 }
 
-export function liquidityFeeTests() {
+export function liquidityFeeTests () {
   let tx: ContractTransaction
   let ctx: any
   let fees: BigNumber
@@ -62,7 +61,6 @@ export function liquidityFeeTests() {
     farmBalanceBefore = await ctx.TenderToken.balanceOf(ctx.TenderFarm.address)
     acc0BalBefore = await ctx.TenderToken.balanceOf(ctx.deployer)
     tx = await ctx.Tenderizer.collectLiquidityFees()
-
   })
 
   it('should reset pendingFees', async () => {
