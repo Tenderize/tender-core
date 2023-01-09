@@ -4,11 +4,10 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types'
 
 dotenv.config({ path: './deploy/.env' })
 const NAME = process.env.NAME || ''
-const SYMBOL = process.env.SYMBOL || ''
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  if (!NAME || !SYMBOL) {
-    throw new Error('Must provide Tenderizer Name and Symbol')
+  if (!NAME) {
+    throw new Error('Must provide Tenderizer Name')
   }
 
   const { deployments, getNamedAccounts } = hre
@@ -16,10 +15,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const tenderizerImplementation = await deployments.deploy(
     NAME, {
-      from: deployer,
-      args: [],
-      log: true
-    }
+    from: deployer,
+    args: [],
+    log: true
+  }
   )
 
   deployments.save(`${NAME}_Implementation`, tenderizerImplementation)
