@@ -143,7 +143,7 @@ contract Graph is Tenderizer {
 
         emit ProcessUnstakes(msg.sender, node, amount);
 
-        if(newNode != address(0)){
+        if (newNode != address(0)) {
             node = newNode;
             newNode = address(0);
         }
@@ -187,12 +187,12 @@ contract Graph is Tenderizer {
         // exclude tokens to be withdrawn from balance
         // add pendingMigration amount
         uint256 stakeRemainder = _calcDepositOut(
-            steak.balanceOf(address(this)) - withdrawPool.amount + pendingMigration
+            steak.balanceOf(address(this)) + pendingMigration - withdrawPool.amount
         );
 
         // calculate what the new currentPrinciple would be
         // exclude pendingUnlocks from stake
-        stake = (stake - withdrawPool.pendingUnlock) + stakeRemainder;
+        stake = stake + stakeRemainder - withdrawPool.pendingUnlock;
 
         rewards = int256(stake) - int256(currentPrincipal_);
 
