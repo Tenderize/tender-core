@@ -15,10 +15,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const tenderizerImplementation = await deployments.deploy(
     NAME, {
-    from: deployer,
-    args: [],
-    log: true
-  }
+      from: deployer,
+      args: [],
+      log: true
+    }
   )
 
   deployments.save(`${NAME}_Implementation`, tenderizerImplementation)
