@@ -21,9 +21,9 @@ import fs from 'fs'
 
 dotenv.config()
 const PRIVATE_KEY = process.env.PRIVATE_KEY
-const MAINNET_RPC = process.env.MAINNET_RPC
-const ARBITRUM_RPC = process.env.ARBITRUM_RPC
-const GOERLI_RPC = process.env.GOERLI_RPC
+const MAINNET_RPC = process.env.MAINNET_RPC || ""
+const ARBITRUM_RPC = process.env.ARBITRUM_RPC || ""
+const GOERLI_RPC = process.env.GOERLI_RPC || ""
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY
 const ARBISCAN_API_KEY = process.env.ARBISCAN_API_KEY
 
