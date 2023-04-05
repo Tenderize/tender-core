@@ -2,7 +2,7 @@ import hre, { ethers } from 'hardhat'
 import { getCurrentBlockTimestamp } from '../util/evm'
 
 import {
-  TenderToken, ERC20, IGraph, TenderFarm, Tenderizer, TenderSwap, LiquidityPoolToken
+  TenderToken, IGraph, TenderFarm, Tenderizer, TenderSwap, LiquidityPoolToken, IGraphToken
 } from '../../typechain'
 
 import stakingAbi from './abis/graph/Staking.json'
@@ -19,7 +19,6 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { Contract, ContractTransaction } from '@ethersproject/contracts'
 
 import { percOf, percOf2 } from '../util/helpers'
-import { Signer } from '@ethersproject/abstract-signer'
 import { AlchemyProvider } from '@ethersproject/providers'
 
 chai.use(solidity)
@@ -31,7 +30,7 @@ const ONE = ethers.utils.parseEther('10')
 
 describe('Graph Mainnet Fork Test', () => {
   let GraphStaking: IGraph
-  let GraphToken: ERC20
+  let GraphToken: IGraphToken
   let Tenderizer: Tenderizer
   let TenderToken: TenderToken
   let TenderFarm: TenderFarm
@@ -60,7 +59,7 @@ describe('Graph Mainnet Fork Test', () => {
     deployer = namedAccs.deployer
   })
 
-  const STEAK_AMOUNT = '100000'
+  const STEAK_AMOUNT = '1000'
   const NODE = '0x63e2C9a3Db9fFd3cC108f08EAd601966EA031f5C'
   const stakingAddr = '0xF55041E37E12cD407ad00CE2910B8269B01263b9'
   const curationAddr = '0x8FE00a685Bcb3B2cc296ff6FfEaB10acA4CE1538'
@@ -76,7 +75,6 @@ describe('Graph Mainnet Fork Test', () => {
   const GRTHolder = '0xa64bc086d8bfaff4e05e277f971706d67559b1d1'
   const disputeArbitratorAddr = '0xe1fdd398329c6b74c14cf19100316f0826a492d3'
   const graphGovAddr = '0x48301fe520f72994d32ead72e2b6a8447873cf50'
-  let GRTHolderSinger: Signer
 
   const testTimeout = 120000
 
@@ -122,12 +120,6 @@ describe('Graph Mainnet Fork Test', () => {
     process.env.SWAP_FEE = '5000000'
     process.env.AMPLIFIER = '85'
 
-    await hre.network.provider.request({
-      method: 'hardhat_impersonateAccount',
-      params: [GRTHolder]
-    })
-    GRTHolderSinger = await ethers.provider.getSigner(GRTHolder)
-
     // Transfer some ETH
     await hre.network.provider.send('hardhat_setBalance', [
       GRTHolder,
@@ -142,10 +134,21 @@ describe('Graph Mainnet Fork Test', () => {
       `0x${ethers.utils.parseEther('10').toString()}`
     ])
 
-    // Transfer some GRT
-    GraphToken = (await ethers.getContractAt('ERC20', process.env.TOKEN)) as ERC20
-    await GraphToken.connect(GRTHolderSinger).transfer(deployer, ethers.utils.parseEther(process.env.STEAK_AMOUNT).mul(2))
-    await GraphToken.connect(GRTHolderSinger).transfer(NODE, ethers.utils.parseEther(process.env.STEAK_AMOUNT).mul(2))
+    // Mint some GRT
+    await hre.network.provider.send('hardhat_setBalance', [
+      graphGovAddr,
+      `0x${ethers.utils.parseEther('100').toString()}`
+    ])
+
+    GraphToken = (await ethers.getContractAt('IGraphToken', process.env.TOKEN)) as IGraphToken
+    await hre.network.provider.request({
+      method: 'hardhat_impersonateAccount',
+      params: [graphGovAddr]
+    })
+    const GraphGovernor = await ethers.provider.getSigner(graphGovAddr)
+    await GraphToken.connect(GraphGovernor).addMinter(deployer)
+    await GraphToken.mint(deployer, ethers.utils.parseEther('100000000000'))
+    await GraphToken.mint(NODE, ethers.utils.parseEther('100000000000'))
 
     GraphStaking = (await ethers.getContractAt('IGraph', process.env.CONTRACT)) as IGraph
 
@@ -162,12 +165,7 @@ describe('Graph Mainnet Fork Test', () => {
 
     // Set a shorter Epoch length so it's easier to test against
     const epochManager = new ethers.Contract(epochManagerAddr, epochManagerAbi, ethers.provider)
-    await hre.network.provider.request({
-      method: 'hardhat_impersonateAccount',
-      params: [graphGovAddr]
-    })
-    const graphGov = await ethers.provider.getSigner(graphGovAddr)
-    await epochManager.connect(graphGov).setEpochLength(1)
+    await epochManager.connect(GraphGovernor).setEpochLength(1)
 
     // Deposit initial stake
     await GraphToken.approve(Tenderizer.address, initialStake)

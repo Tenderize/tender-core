@@ -1,6 +1,6 @@
 import hre, { ethers } from 'hardhat'
 
-import { ERC20, Graph, EIP173Proxy, IGraph } from '../../typechain'
+import { IGraphToken, Graph, EIP173Proxy, IGraph } from '../../typechain'
 import epochManagerAbi from './abis/graph/EpochManager.json'
 
 import chai from 'chai'
@@ -13,7 +13,7 @@ chai.use(solidity)
 const { expect } = chai
 
 describe('Graph Mainnet Fork Test - Redelegation', () => {
-  let GraphToken: ERC20
+  let GraphToken: IGraphToken
   let Tenderizer: Graph
   let GraphStaking: IGraph
   let tenderizerOwner: Signer
@@ -37,9 +37,6 @@ describe('Graph Mainnet Fork Test - Redelegation', () => {
   const grtTokenAddress = '0xc944e90c64b2c07662a292be6244bdf05cda44a7'
   const epochManagerAddr = '0x64F990Bf16552A693dCB043BB7bf3866c5E05DdB'
   const graphGovAddr = '0x48301fe520f72994d32ead72e2b6a8447873cf50'
-
-  const GRTHolder = '0xa64bc086d8bfaff4e05e277f971706d67559b1d1'
-  let GRTHolderSinger: Signer
 
   const testTimeout = 120000
   const depositAmount = ethers.utils.parseEther('100')
@@ -72,21 +69,20 @@ describe('Graph Mainnet Fork Test - Redelegation', () => {
     Tenderizer = (await ethers.getContractAt('Graph', tenderizerAddr)) as Graph
     GraphStaking = (await ethers.getContractAt('IGraph', stakingAddr)) as IGraph
 
-    await hre.network.provider.request({
-      method: 'hardhat_impersonateAccount',
-      params: [GRTHolder]
-    })
-    GRTHolderSinger = await ethers.provider.getSigner(GRTHolder)
-
-    // Transfer some ETH
+    // Mint some GRT
     await hre.network.provider.send('hardhat_setBalance', [
-      GRTHolder,
+      graphGovAddr,
       `0x${ethers.utils.parseEther('100').toString()}`
     ])
 
-    // Transfer some GRT
-    GraphToken = (await ethers.getContractAt('ERC20', grtTokenAddress)) as ERC20
-    await GraphToken.connect(GRTHolderSinger).transfer(deployer, ethers.utils.parseEther('100'))
+    GraphToken = (await ethers.getContractAt('IGraphToken', grtTokenAddress)) as IGraphToken
+    await hre.network.provider.request({
+      method: 'hardhat_impersonateAccount',
+      params: [graphGovAddr]
+    })
+    const GraphGovernor = await ethers.provider.getSigner(graphGovAddr)
+    await GraphToken.connect(GraphGovernor).addMinter(deployer)
+    await GraphToken.mint(deployer, ethers.utils.parseEther('100'))
   })
 
   describe('Perform Upgrade', async function () {
@@ -172,7 +168,7 @@ describe('Graph Mainnet Fork Test - Redelegation', () => {
     describe('New deposit and claim rewards', async function () {
       before(async function () {
         // TODO: Change this to be a random user and check its tToken balance stays the same after migration
-        await GraphToken.approve(Tenderizer.address, depositAmount)
+        await GraphToken.connect(signers[0]).approve(Tenderizer.address, depositAmount)
         await Tenderizer.deposit(depositAmount)
         await Tenderizer.claimRewards()
       })
