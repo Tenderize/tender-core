@@ -48,7 +48,7 @@ describe('Graph Mainnet Fork Test - Rebase Fix', () => {
       params: [
         {
           forking: {
-            block: 16448263,
+            blockNumber: 16448263,
             jsonRpcUrl: process.env.ALCHEMY_MAINNET
           }
         }
@@ -115,9 +115,13 @@ describe('Graph Mainnet Fork Test - Rebase Fix', () => {
       let pendingUnlocks = BigNumber.from(0)
       const unlockEventsAfter = await Tenderizer.queryFilter(eventFilter, 16371300, 'latest')
       unlockEventsAfter.forEach(e => { pendingUnlocks = pendingUnlocks.add(e.args.amount) })
-      const expCP =
+      let expCP =
         (bal.add(pendingMigration)).mul(MAX_PPM.sub(DELEGATION_TAX)).div(MAX_PPM)
           .sub(pendingUnlocks)
+
+      const oldCP = await Tenderizer.currentPrincipal()
+      const wpSlash = oldCP.sub(expCP).mul(pendingUnlocks).div(pendingUnlocks.add(oldCP))
+      expCP = expCP.add(wpSlash)
 
       await Tenderizer.claimRewards()
 
