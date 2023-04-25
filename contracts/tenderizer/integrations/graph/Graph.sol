@@ -199,11 +199,12 @@ contract Graph is Tenderizer {
         // Difference is negative, slash withdrawalpool
         if (rewards < 0) {
             // calculate amount to subtract relative to current principal
-            uint256 unstakePoolTokens = withdrawPool.totalTokens();
+            uint256 unstakePoolTokens = withdrawPool.totalTokens() - withdrawPool.getPendingWithdrawal();
             uint256 totalTokens = unstakePoolTokens + currentPrincipal_;
             if (totalTokens > 0) {
                 uint256 unstakePoolSlash = ((currentPrincipal_ - stake) * unstakePoolTokens) / totalTokens;
                 withdrawPool.updateTotalTokens(unstakePoolTokens - unstakePoolSlash);
+                rewards += int256(unstakePoolSlash);
             }
         }
 

@@ -27,11 +27,7 @@ library WithdrawalPools {
         uint256 lastEpoch; // last completed epoch (withdrawal completed)
     }
 
-    function unlock(
-        Pool storage _pool,
-        address _receiver,
-        uint256 _amount
-    ) internal returns (uint256 withdrawalID) {
+    function unlock(Pool storage _pool, address _receiver, uint256 _amount) internal returns (uint256 withdrawalID) {
         withdrawalID = _pool.withdrawalID;
 
         uint256 shares = calcShares(_pool, _amount);
@@ -96,6 +92,10 @@ library WithdrawalPools {
 
     function getAmount(Pool storage _pool) internal view returns (uint256) {
         return _pool.amount;
+    }
+
+    function getPendingWithdrawal(Pool storage _pool) internal view returns (uint256) {
+        return _pool.pendingWithdrawal;
     }
 
     function epoch(Pool storage _pool) internal view returns (uint256) {

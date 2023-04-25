@@ -2,6 +2,8 @@
 
 pragma solidity 0.8.4;
 
+// solhint-disable no-console
+
 import "../tenderswap/ITenderSwap.sol";
 import "hardhat/console.sol";
 

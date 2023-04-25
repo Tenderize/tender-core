@@ -1,6 +1,6 @@
 import hre, { ethers } from 'hardhat'
 
-import { ERC20, Graph, EIP173Proxy, IGraph } from '../../typechain'
+import { Graph, EIP173Proxy, IGraph, IGraphToken } from '../../typechain'
 
 import chai from 'chai'
 import { solidity } from 'ethereum-waffle'
@@ -12,7 +12,7 @@ chai.use(solidity)
 const { expect } = chai
 
 describe('Graph Mainnet Fork Test - Rebase Fix', () => {
-  let GraphToken: ERC20
+  let GraphToken: IGraphToken
   let GraphStaking: IGraph
   let Tenderizer: Graph
   let tenderizerOwner: Signer
@@ -30,9 +30,7 @@ describe('Graph Mainnet Fork Test - Rebase Fix', () => {
   const tenderizerAddr = '0xe66F3ab2f5621FE12ebf37754E1Af6d05b329A07'
   const grtTokenAddress = '0xc944e90c64b2c07662a292be6244bdf05cda44a7'
   const stakingAddr = '0xF55041E37E12cD407ad00CE2910B8269B01263b9'
-
-  const GRTHolder = '0xa64bc086d8bfaff4e05e277f971706d67559b1d1'
-  let GRTHolderSinger: Signer
+  const graphGovAddr = '0x48301fe520f72994d32ead72e2b6a8447873cf50'
 
   const DELEGATION_TAX = BigNumber.from(5000)
   const MAX_PPM = BigNumber.from(1000000)
@@ -48,7 +46,7 @@ describe('Graph Mainnet Fork Test - Rebase Fix', () => {
       params: [
         {
           forking: {
-            block: 16448263,
+            blockNumber: 16448263,
             jsonRpcUrl: process.env.ALCHEMY_MAINNET
           }
         }
@@ -58,26 +56,20 @@ describe('Graph Mainnet Fork Test - Rebase Fix', () => {
     Tenderizer = (await ethers.getContractAt('Graph', tenderizerAddr)) as Graph
     GraphStaking = (await ethers.getContractAt('IGraph', stakingAddr)) as IGraph
 
-    await hre.network.provider.request({
-      method: 'hardhat_impersonateAccount',
-      params: [GRTHolder]
-    })
-    GRTHolderSinger = await ethers.provider.getSigner(GRTHolder)
-
-    // Transfer some ETH
+    // Mint some GRT
     await hre.network.provider.send('hardhat_setBalance', [
-      GRTHolder,
+      graphGovAddr,
       `0x${ethers.utils.parseEther('100').toString()}`
     ])
 
-    // Transfer some GRT
-    GraphToken = (await ethers.getContractAt('ERC20', grtTokenAddress)) as ERC20
-    await GraphToken.connect(GRTHolderSinger).transfer(deployer, ethers.utils.parseEther('100'))
-
+    GraphToken = (await ethers.getContractAt('IGraphToken', grtTokenAddress)) as IGraphToken
     await hre.network.provider.request({
-      method: 'hardhat_stopImpersonatingAccount',
-      params: [GRTHolder]
+      method: 'hardhat_impersonateAccount',
+      params: [graphGovAddr]
     })
+    const GraphGovernor = await ethers.provider.getSigner(graphGovAddr)
+    await GraphToken.connect(GraphGovernor).addMinter(deployer)
+    await GraphToken.mint(deployer, ethers.utils.parseEther('100'))
   })
 
   describe('Pre-Upgrade', async function () {
@@ -115,9 +107,13 @@ describe('Graph Mainnet Fork Test - Rebase Fix', () => {
       let pendingUnlocks = BigNumber.from(0)
       const unlockEventsAfter = await Tenderizer.queryFilter(eventFilter, 16371300, 'latest')
       unlockEventsAfter.forEach(e => { pendingUnlocks = pendingUnlocks.add(e.args.amount) })
-      const expCP =
+      let expCP =
         (bal.add(pendingMigration)).mul(MAX_PPM.sub(DELEGATION_TAX)).div(MAX_PPM)
           .sub(pendingUnlocks)
+
+      const oldCP = await Tenderizer.currentPrincipal()
+      const wpSlash = oldCP.sub(expCP).mul(pendingUnlocks).div(pendingUnlocks.add(oldCP))
+      expCP = expCP.add(wpSlash)
 
       await Tenderizer.claimRewards()
 
